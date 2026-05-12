@@ -1,0 +1,26 @@
+{
+  "palette": {
+    "black": "#000000",
+    "bright_cyan_blue": "#2CA8D4",
+    "dark_cyan_blue": "#00547C",
+    "near_black_grey": "#0B0F19",
+    "deep_navy_grey": "#111725",
+    "dark_panel_grey": "#1F2535",
+    "standard_panel_grey": "#212530",
+    "mid_panel_grey": "#313748",
+    "soft_grey": "#3E4252",
+    "muted_label_grey": "#53596B",
+    "light_text_grey": "#969CAE",
+    "bright_red_orange": "#D55036",
+    "dark_red": "#871300"
+  },
+  "typography": {
+    "display_font": "'Antonio', sans-serif",
+    "body_font": "'Barlow Condensed', sans-serif"
+  },
+  "styling": {
+    "border_radius_window": "12px",
+    "border_radius_card": "8px",
+    "border_radius_button": "4px"
+  }
+}

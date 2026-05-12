@@ -1,0 +1,21 @@
+{
+  "brand_name": "Backroom",
+  "short_brand_name": "Backroom",
+  "site_description": "Mobile-first directory for gay nightlife, fetishes, and darkrooms.",
+  "age_gate_title": "18+ Entry Gate",
+  "age_gate_text": "You must be 18 or older to enter. This site contains adult themes and nightlife information.",
+  "disclaimer_text": "All information provided on this platform is sourced directly from public domains, including but not limited to: official venue websites, Instagram, Facebook, Google Business profiles, and public directory listings. This page is not responsible for the accuracy of this data or for any information that may be considered defamatory. Users rely on this information at their own risk.",
+  "footer_text": "Copyright © 2026 Backdoor. All Rights Reserved.",
+  "default_city": "Berlin",
+  "default_country": "Germany",
+  "version": "v0.1 Prototype",
+  "labels": {
+    "rated_by_gays": "Rated by the gays",
+    "views": "Views",
+    "favorites": "Favorites",
+    "shortlists": "Shortlists",
+    "share": "Share",
+    "show_map": "Show on Map",
+    "translate": "Translate [Placeholder]"
+  }
+}

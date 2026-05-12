@@ -1,0 +1,13 @@
+[
+  {
+    "Event_ID": "EVT-001",
+    "Venue_ID": "BER-LAB-01",
+    "Event_Name": "Friday Naked Party",
+    "Event_Date": "2026-05-15",
+    "Event_Start_Time": "22:00",
+    "Event_End_Time": "08:00",
+    "Status": "Live",
+    "Event_Description": "Strict naked dress code. Clothes check mandatory.",
+    "Dresscode_Info": "Naked / Shoes only"
+  }
+]
