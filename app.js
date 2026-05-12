@@ -7,6 +7,12 @@ const resultsContainer = document.getElementById('results-container');
 const modal = document.getElementById('venue-modal');
 const btnCloseModal = document.getElementById('close-modal');
 const locModal = document.getElementById('location-modal');
+const searchInput = document.getElementById('search-input');
+
+// Mobile Sidebar Elements
+const sidebar = document.getElementById('sidebar');
+const hitArea = document.getElementById('sidebar-hit-area');
+let sidebarTimeout;
 
 async function initApp() {
     try {
@@ -46,7 +52,7 @@ function setupEventListeners() {
     btnCloseModal.addEventListener('click', () => modal.classList.add('hidden'));
     modal.addEventListener('click', (e) => { if (e.target === modal) modal.classList.add('hidden'); });
     
-    // Location Modal Controls
+    // Location Modal
     document.getElementById('btn-location').addEventListener('click', () => locModal.classList.remove('hidden'));
     document.getElementById('close-location-modal').addEventListener('click', () => locModal.classList.add('hidden'));
     document.getElementById('btn-save-location').addEventListener('click', saveLocation);
@@ -56,14 +62,76 @@ function setupEventListeners() {
         document.getElementById('loc-city').value = "GPS Location";
         saveLocation();
     });
+
+    // Mobile Sidebar Interaction 
+    if(hitArea && sidebar) {
+        const showSidebar = () => {
+            sidebar.classList.add('visible');
+            clearTimeout(sidebarTimeout);
+            sidebarTimeout = setTimeout(() => { sidebar.classList.remove('visible'); }, 5000);
+        };
+        hitArea.addEventListener('click', showSidebar);
+        sidebar.addEventListener('click', showSidebar); // Keep open if interacted with
+    }
+
+    // Search Input Logic 
+    searchInput.addEventListener('input', (e) => {
+        const query = e.target.value;
+        const filteredVenues = venues.filter(v => fuzzyMatch(v.Name + " " + v.Description, query));
+        renderListings(filteredVenues);
+    });
+}
+
+// Levenshtein distance for fuzzy search 
+function getLevenshteinDistance(a, b) {
+    if (a.length === 0) return b.length;
+    if (b.length === 0) return a.length;
+    const matrix = [];
+    for (let i = 0; i <= b.length; i++) matrix[i] = [i];
+    for (let j = 0; j <= a.length; j++) matrix[0][j] = j;
+    for (let i = 1; i <= b.length; i++) {
+        for (let j = 1; j <= a.length; j++) {
+            if (b.charAt(i - 1) === a.charAt(j - 1)) {
+                matrix[i][j] = matrix[i - 1][j - 1];
+            } else {
+                matrix[i][j] = Math.min(matrix[i - 1][j - 1] + 1, Math.min(matrix[i][j - 1] + 1, matrix[i - 1][j] + 1));
+            }
+        }
+    }
+    return matrix[b.length][a.length];
+}
+
+function fuzzyMatch(text, query) {
+    if(!query) return true;
+    const str = text.toLowerCase();
+    const q = query.toLowerCase();
+    
+    // Direct substring match
+    if (str.includes(q)) return true;
+    
+    // Fuzzy word-by-word match allowing 1 typo distance
+    const words = str.split(/[\s,.-]+/);
+    const queryWords = q.split(/[\s,.-]+/);
+    
+    for(let qw of queryWords) {
+        if(!qw) continue;
+        let matchFound = false;
+        for(let w of words) {
+            if(!w) continue;
+            // Only compare if length difference is 1 or less to save processing
+            if(Math.abs(w.length - qw.length) <= 1) {
+                if(getLevenshteinDistance(w, qw) <= 1) {
+                    matchFound = true; break;
+                }
+            }
+        }
+        if(!matchFound) return false; // All query words must loosely match something
+    }
+    return true;
 }
 
 function saveLocation() {
-    const loc = {
-        country: document.getElementById('loc-country').value,
-        city: document.getElementById('loc-city').value,
-        postcode: document.getElementById('loc-postcode').value
-    };
+    const loc = { country: document.getElementById('loc-country').value, city: document.getElementById('loc-city').value, postcode: document.getElementById('loc-postcode').value };
     localStorage.setItem('br_location', JSON.stringify(loc));
     updateLocationDisplay(loc);
     locModal.classList.add('hidden');
@@ -71,9 +139,7 @@ function saveLocation() {
 
 function clearLocation() {
     localStorage.removeItem('br_location');
-    document.getElementById('loc-country').value = '';
-    document.getElementById('loc-city').value = '';
-    document.getElementById('loc-postcode').value = '';
+    document.getElementById('loc-country').value = ''; document.getElementById('loc-city').value = ''; document.getElementById('loc-postcode').value = '';
     updateLocationDisplay(null);
 }
 
@@ -81,20 +147,15 @@ function loadSavedLocation() {
     const saved = localStorage.getItem('br_location');
     if(saved) {
         const loc = JSON.parse(saved);
-        document.getElementById('loc-country').value = loc.country || '';
-        document.getElementById('loc-city').value = loc.city || '';
-        document.getElementById('loc-postcode').value = loc.postcode || '';
+        document.getElementById('loc-country').value = loc.country || ''; document.getElementById('loc-city').value = loc.city || ''; document.getElementById('loc-postcode').value = loc.postcode || '';
         updateLocationDisplay(loc);
     }
 }
 
 function updateLocationDisplay(loc) {
     const display = document.getElementById('current-location-display');
-    if(loc && (loc.city || loc.country)) {
-        display.innerText = `Current: ${loc.city ? loc.city : ''} ${loc.country ? loc.country : ''}`;
-    } else {
-        display.innerText = 'No location set.';
-    }
+    if(loc && (loc.city || loc.country)) { display.innerText = `Current: ${loc.city ? loc.city : ''} ${loc.country ? loc.country : ''}`; } 
+    else { display.innerText = 'No location set.'; }
 }
 
 function renderListings(data) {
@@ -102,8 +163,12 @@ function renderListings(data) {
     const today = new Date();
     today.setHours(0,0,0,0);
 
+    if(data.length === 0) {
+        resultsContainer.innerHTML = '<p style="text-align:center; color:var(--label-grey); margin-top:20px;">No venues found.</p>';
+        return;
+    }
+
     data.forEach(venue => {
-        // Find next event for this venue
         let nextEventHtml = '';
         let venueEvents = events.filter(e => e.Venue_ID === venue.Venue_ID && new Date(e.Event_Date) >= today);
         if(venueEvents.length > 0) {
@@ -112,13 +177,11 @@ function renderListings(data) {
             nextEventHtml = `<div class="card-next-event">📅 Next: ${nextE.Event_Name} (${nextE.Event_Date})</div>`;
         }
 
-        // Truncate description for card
         const shortDesc = venue.Description.length > 90 ? venue.Description.substring(0, 90) + '...' : venue.Description;
-
         const card = document.createElement('div');
         card.className = 'card';
         card.innerHTML = `
-            <div class="card-image-wrapper"><div class="image-placeholder">VENUE IMAGE</div></div>
+            <div class="card-image-wrapper"><div class="image-placeholder" style="width:100%; border-radius:0;">VENUE IMAGE</div></div>
             <div class="card-inner-content">
                 <div class="card-header">
                     <div><h3 class="card-title display-font">${venue.Name}</h3><div class="card-meta">${venue.Category} • ${venue.City}</div></div>
@@ -138,12 +201,7 @@ function openModal(venue) {
     document.getElementById('modal-title').innerText = venue.Name;
     document.getElementById('modal-address').innerText = `${venue.Address}`;
     document.getElementById('modal-description').innerText = venue.Description;
-    
-    document.getElementById('modal-public-stats').innerHTML = `
-        <span>🌈 ${systemInfo.labels.rated_by_gays}</span> 
-        <span>👁️ ${venue.Views || 0}</span>
-    `;
-
+    document.getElementById('modal-public-stats').innerHTML = `<span>🌈 ${systemInfo.labels.rated_by_gays}</span> <span>👁️ ${venue.Views || 0}</span>`;
     document.getElementById('modal-ratings').innerHTML = `
         <div class="rating-item"><span>General</span><span>${'🍆'.repeat(venue.Rating_General || 0)}</span></div>
         <div class="rating-item"><span>Darkroom</span><span>${'💦'.repeat(venue.Rating_Darkroom || 0)}</span></div>
@@ -166,28 +224,20 @@ function openModal(venue) {
     if(venueEvents.length > 0) {
         const today = new Date();
         today.setHours(0,0,0,0);
-        
         venueEvents.sort((a, b) => {
             const dateA = new Date(a.Event_Date); const dateB = new Date(b.Event_Date);
             const isPastA = dateA < today; const isPastB = dateB < today;
-            if (isPastA && !isPastB) return 1;
-            if (!isPastA && isPastB) return -1;
+            if (isPastA && !isPastB) return 1; if (!isPastA && isPastB) return -1;
             return Math.abs(dateA - today) - Math.abs(dateB - today);
         });
-
         eventsContainer.innerHTML = venueEvents.map(ev => {
             const isPast = new Date(ev.Event_Date) < today;
-            return `<div class="event-card ${isPast ? 'past' : ''}">
-                <strong>${ev.Event_Name}</strong> ${isPast ? '<small>(Past)</small>' : ''}<br>
-                <span class="meta-text">${ev.Event_Date} | ${ev.Event_Start_Time}</span>
-                <p style="font-size:0.9rem; margin-top:5px;">${ev.Event_Description}</p>
-            </div>`;
+            return `<div class="event-card ${isPast ? 'past' : ''}"><strong>${ev.Event_Name}</strong> ${isPast ? '<small>(Past)</small>' : ''}<br><span class="meta-text">${ev.Event_Date} | ${ev.Event_Start_Time}</span><p style="font-size:0.9rem; margin-top:5px;">${ev.Event_Description}</p></div>`;
         }).join('');
         eventsBlock.classList.remove('hidden');
     } else {
         eventsBlock.classList.add('hidden');
     }
-
     modal.classList.remove('hidden');
 }
 

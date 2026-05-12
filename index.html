@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Backroom Prototype v0.3</title>
+    <title>Backroom Prototype v0.4</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Antonio:wght@400;700&family=Barlow+Condensed:wght@400;500;700&display=swap" rel="stylesheet">
@@ -32,16 +32,18 @@
             </div>
             
             <div class="top-bar-right">
-                <button id="btn-location" class="icon-btn" title="Location">📍</button>
-                <button id="btn-favorites" class="icon-btn" title="Favorites">☆</button>
-                <button id="btn-shortlist" class="icon-btn" title="Shortlist">📑</button>
-                <button id="btn-settings" class="icon-btn" title="Settings">⚙️</button>
-                <div class="translation-placeholder small body-font" title="Language">🌍</div>
-                <input type="text" id="search-input" class="body-font" placeholder="Search..." autocomplete="off">
+                <button id="btn-location" class="top-btn" title="Location">📍 Location</button>
+                <button id="btn-favorites" class="top-btn" title="Favorites">☆ Favourites</button>
+                <button id="btn-shortlist" class="top-btn" title="Shortlist">📑 Shortlist</button>
+                <button id="btn-language" class="top-btn" title="Language">🌍 Language</button>
+                <button id="btn-settings" class="top-btn" title="Settings">⚙️ Settings</button>
+                <input type="text" id="search-input" class="body-font" placeholder="Search name or description" autocomplete="off">
             </div>
         </header>
 
         <div id="workspace">
+            <div id="sidebar-hit-area"></div>
+
             <aside id="sidebar">
                 <div class="sidebar-item tooltip" title="TBA">📌</div>
                 <div class="sidebar-item tooltip" title="TBA">🔥</div>
