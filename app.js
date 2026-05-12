@@ -1,4 +1,5 @@
 let systemInfo = {}, designTheme = {}, venues = [], events = [];
+let activeFilter = 'All';
 
 const ageGate = document.getElementById('age-gate');
 const appShell = document.getElementById('app-shell');
@@ -8,6 +9,7 @@ const modal = document.getElementById('venue-modal');
 const btnCloseModal = document.getElementById('close-modal');
 const locModal = document.getElementById('location-modal');
 const searchInput = document.getElementById('search-input');
+const filterChips = document.querySelectorAll('.chip');
 
 // Mobile Sidebar Elements
 const sidebar = document.getElementById('sidebar');
@@ -25,7 +27,8 @@ async function initApp() {
         venues = await venuesRes.json();
         events = await eventsRes.json();
 
-        applyTheme(); populateSystemText(); setupEventListeners(); loadSavedLocation(); renderListings(venues);
+        applyTheme(); populateSystemText(); setupEventListeners(); loadSavedLocation(); 
+        applyFilters(); // Initial render
     } catch (error) {
         console.error("Local JSON fetch failed. Run via local web server.", error);
         document.getElementById('ag-text').innerText = "Data error. Run via local server.";
@@ -63,7 +66,7 @@ function setupEventListeners() {
         saveLocation();
     });
 
-    // Mobile Sidebar Interaction 
+    // Mobile Sidebar Interaction
     if(hitArea && sidebar) {
         const showSidebar = () => {
             sidebar.classList.add('visible');
@@ -71,18 +74,46 @@ function setupEventListeners() {
             sidebarTimeout = setTimeout(() => { sidebar.classList.remove('visible'); }, 5000);
         };
         hitArea.addEventListener('click', showSidebar);
-        sidebar.addEventListener('click', showSidebar); // Keep open if interacted with
+        sidebar.addEventListener('click', showSidebar);
     }
 
-    // Search Input Logic 
-    searchInput.addEventListener('input', (e) => {
-        const query = e.target.value;
-        const filteredVenues = venues.filter(v => fuzzyMatch(v.Name + " " + v.Description, query));
-        renderListings(filteredVenues);
+    // Search Input
+    searchInput.addEventListener('input', applyFilters);
+
+    // Filter Chips
+    filterChips.forEach(chip => {
+        chip.addEventListener('click', (e) => {
+            filterChips.forEach(c => c.classList.remove('active'));
+            e.target.classList.add('active');
+            activeFilter = e.target.getAttribute('data-filter');
+            applyFilters();
+        });
     });
 }
 
-// Levenshtein distance for fuzzy search 
+function applyFilters() {
+    const query = searchInput.value;
+    let filteredVenues = venues;
+
+    // Apply categorical chip filter first
+    if(activeFilter !== 'All') {
+        filteredVenues = filteredVenues.filter(v => {
+            if(activeFilter === 'Darkroom') return v.Feature_Darkroom;
+            if(activeFilter === 'Men Only') return v.Feature_Men_Only;
+            if(activeFilter === 'Open Now') return v.Status === 'Live'; // Basic prototype proxy for "Open Now"
+            return true;
+        });
+    }
+
+    // Apply fuzzy text search
+    if(query.trim() !== '') {
+        filteredVenues = filteredVenues.filter(v => fuzzyMatch(v.Name + " " + v.Description, query));
+    }
+
+    renderListings(filteredVenues);
+}
+
+// Levenshtein distance
 function getLevenshteinDistance(a, b) {
     if (a.length === 0) return b.length;
     if (b.length === 0) return a.length;
@@ -105,11 +136,8 @@ function fuzzyMatch(text, query) {
     if(!query) return true;
     const str = text.toLowerCase();
     const q = query.toLowerCase();
-    
-    // Direct substring match
     if (str.includes(q)) return true;
     
-    // Fuzzy word-by-word match allowing 1 typo distance
     const words = str.split(/[\s,.-]+/);
     const queryWords = q.split(/[\s,.-]+/);
     
@@ -118,14 +146,13 @@ function fuzzyMatch(text, query) {
         let matchFound = false;
         for(let w of words) {
             if(!w) continue;
-            // Only compare if length difference is 1 or less to save processing
             if(Math.abs(w.length - qw.length) <= 1) {
                 if(getLevenshteinDistance(w, qw) <= 1) {
                     matchFound = true; break;
                 }
             }
         }
-        if(!matchFound) return false; // All query words must loosely match something
+        if(!matchFound) return false; 
     }
     return true;
 }
@@ -164,7 +191,7 @@ function renderListings(data) {
     today.setHours(0,0,0,0);
 
     if(data.length === 0) {
-        resultsContainer.innerHTML = '<p style="text-align:center; color:var(--label-grey); margin-top:20px;">No venues found.</p>';
+        resultsContainer.innerHTML = '<p style="text-align:center; color:var(--label-grey); margin-top:20px; width: 100%; grid-column: 1 / -1;">No venues found matching your criteria.</p>';
         return;
     }
 

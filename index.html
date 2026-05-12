@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Backroom Prototype v0.4</title>
+    <title>Backroom Prototype v0.5</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Antonio:wght@400;700&family=Barlow+Condensed:wght@400;500;700&display=swap" rel="stylesheet">
@@ -26,17 +26,20 @@
     <div id="app-shell" class="hidden">
         
         <header id="top-bar">
-            <div class="top-bar-left">
-                <span class="brand-icon">🚪</span>
+            <div class="top-bar-logo-area">
+                <img src="https://raw.githubusercontent.com/cinaedvsstudios/Backroom-site/refs/heads/main/backdoorlogo.png" alt="Backdoor Logo" class="brand-image">
                 <h1 id="brand-title" class="display-font brand-text">BR</h1>
             </div>
             
-            <div class="top-bar-right">
+            <div class="top-bar-buttons-area">
                 <button id="btn-location" class="top-btn" title="Location">📍 Location</button>
                 <button id="btn-favorites" class="top-btn" title="Favorites">☆ Favourites</button>
                 <button id="btn-shortlist" class="top-btn" title="Shortlist">📑 Shortlist</button>
                 <button id="btn-language" class="top-btn" title="Language">🌍 Language</button>
                 <button id="btn-settings" class="top-btn" title="Settings">⚙️ Settings</button>
+            </div>
+
+            <div class="top-bar-search-area">
                 <input type="text" id="search-input" class="body-font" placeholder="Search name or description" autocomplete="off">
             </div>
         </header>
@@ -51,16 +54,18 @@
             </aside>
 
             <main id="main-content">
-                <div class="filter-chips-container">
-                    <div class="filter-chips">
-                        <button class="chip active">All</button>
-                        <button class="chip">Open Now</button>
-                        <button class="chip">Darkroom</button>
-                        <button class="chip">Men Only</button>
+                <div class="content-wrapper">
+                    <div class="filter-chips-container">
+                        <div class="filter-chips" id="filter-chips">
+                            <button class="chip active" data-filter="All">All</button>
+                            <button class="chip" data-filter="Open Now">Open Now</button>
+                            <button class="chip" data-filter="Darkroom">Darkroom</button>
+                            <button class="chip" data-filter="Men Only">Men Only</button>
+                        </div>
                     </div>
-                </div>
 
-                <section id="results-container"></section>
+                    <section id="results-container"></section>
+                </div>
             </main>
         </div>
     </div>
