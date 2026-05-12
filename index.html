@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Backroom Prototype</title>
+    <title>Backroom Prototype v0.2</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Antonio:wght@400;700&family=Barlow+Condensed:wght@400;500;700&display=swap" rel="stylesheet">
@@ -14,7 +14,7 @@
     <div id="age-gate" class="fullscreen-overlay">
         <div class="age-gate-content">
             <h1 id="ag-title" class="display-font">18+ ENTRY</h1>
-            <p id="ag-text" class="body-font">Loading...</p>
+            <p id="ag-text" class="body-font disclaimer-white">Loading...</p>
             <p id="ag-disclaimer" class="body-font disclaimer">Loading...</p>
             <div class="ag-controls">
                 <button id="btn-enter" class="btn primary-btn display-font">I AM 18+ - ENTER</button>
@@ -23,33 +23,38 @@
         </div>
     </div>
 
-    <div id="app-shell" class="hidden">
-        <header>
-            <h1 id="brand-title" class="display-font brand-text">BACKROOM</h1>
-            <div class="header-controls">
+    <div id="app-shell" class="hidden layout-wrapper">
+        <aside id="sidebar">
+            <div class="sidebar-brand">
+                <h1 id="brand-title" class="display-font brand-text">BR</h1>
+            </div>
+            <div class="sidebar-controls">
                 <button class="icon-btn" title="Shortlists">📑</button>
                 <button class="icon-btn" title="Settings">⚙️</button>
                 <div class="translation-placeholder small body-font">🌍</div>
             </div>
-        </header>
+        </aside>
 
-        <main>
-            <section id="search-filter-area">
-                <input type="text" id="search-input" class="body-font" placeholder="Search venues, tags, cities..." autocomplete="off" autocorrect="off">
-                <div class="filter-chips">
-                    <button class="chip active">All</button>
-                    <button class="chip">Open Now</button>
-                    <button class="chip">Darkroom</button>
-                    <button class="chip">Men Only</button>
+        <div id="main-content">
+            <header id="top-header">
+                <div id="search-filter-area">
+                    <input type="text" id="search-input" class="body-font" placeholder="Search venues, tags, cities..." autocomplete="off" autocorrect="off">
                 </div>
-            </section>
+            </header>
 
-            <section id="results-container">
-                </section>
-        </main>
+            <main>
+                <div class="filter-chips-container">
+                    <div class="filter-chips">
+                        <button class="chip active">All</button>
+                        <button class="chip">Open Now</button>
+                        <button class="chip">Darkroom</button>
+                        <button class="chip">Men Only</button>
+                    </div>
+                </div>
 
-        <footer id="site-footer" class="body-font">
-            </footer>
+                <section id="results-container"></section>
+            </main>
+        </div>
     </div>
 
     <div id="venue-modal" class="modal hidden">
@@ -64,19 +69,24 @@
                 </div>
             </div>
             
-            <div class="modal-image-container">
-                <div class="image-placeholder">VENUE IMAGE</div>
-            </div>
-
             <div class="modal-body body-font">
-                <div id="modal-status-bar" class="status-bar"></div>
-                <p id="modal-address" class="meta-text"></p>
-                <button id="btn-map" class="btn secondary-btn">🗺️ Show Directions</button>
-                
-                <div class="feature-chips" id="modal-features"></div>
-
-                <div class="ratings-grid" id="modal-ratings">
+                <div class="modal-top-split">
+                    <div class="modal-image-container">
+                        <div class="image-placeholder">VENUE IMAGE</div>
                     </div>
+                    
+                    <div class="modal-info-container">
+                        <div id="modal-status-bar" class="status-bar"></div>
+                        <p id="modal-address" class="meta-text"></p>
+                        <button id="btn-map" class="btn secondary-btn">🗺️ Directions</button>
+                        
+                        <div id="modal-public-stats" class="public-stats-block"></div>
+                        
+                        <div class="feature-chips" id="modal-features"></div>
+                        
+                        <div class="ratings-grid" id="modal-ratings"></div>
+                    </div>
+                </div>
 
                 <div class="description-block">
                     <h3 class="display-font">ABOUT</h3>
