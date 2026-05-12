@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Backroom Prototype v0.2</title>
+    <title>Backroom Prototype v0.3</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Antonio:wght@400;700&family=Barlow+Condensed:wght@400;500;700&display=swap" rel="stylesheet">
@@ -23,26 +23,32 @@
         </div>
     </div>
 
-    <div id="app-shell" class="hidden layout-wrapper">
-        <aside id="sidebar">
-            <div class="sidebar-brand">
+    <div id="app-shell" class="hidden">
+        
+        <header id="top-bar">
+            <div class="top-bar-left">
+                <span class="brand-icon">🚪</span>
                 <h1 id="brand-title" class="display-font brand-text">BR</h1>
             </div>
-            <div class="sidebar-controls">
-                <button class="icon-btn" title="Shortlists">📑</button>
-                <button class="icon-btn" title="Settings">⚙️</button>
-                <div class="translation-placeholder small body-font">🌍</div>
+            
+            <div class="top-bar-right">
+                <button id="btn-location" class="icon-btn" title="Location">📍</button>
+                <button id="btn-favorites" class="icon-btn" title="Favorites">☆</button>
+                <button id="btn-shortlist" class="icon-btn" title="Shortlist">📑</button>
+                <button id="btn-settings" class="icon-btn" title="Settings">⚙️</button>
+                <div class="translation-placeholder small body-font" title="Language">🌍</div>
+                <input type="text" id="search-input" class="body-font" placeholder="Search..." autocomplete="off">
             </div>
-        </aside>
+        </header>
 
-        <div id="main-content">
-            <header id="top-header">
-                <div id="search-filter-area">
-                    <input type="text" id="search-input" class="body-font" placeholder="Search venues, tags, cities..." autocomplete="off" autocorrect="off">
-                </div>
-            </header>
+        <div id="workspace">
+            <aside id="sidebar">
+                <div class="sidebar-item tooltip" title="TBA">📌</div>
+                <div class="sidebar-item tooltip" title="TBA">🔥</div>
+                <div class="sidebar-item tooltip" title="TBA">📅</div>
+            </aside>
 
-            <main>
+            <main id="main-content">
                 <div class="filter-chips-container">
                     <div class="filter-chips">
                         <button class="chip active">All</button>
@@ -54,6 +60,28 @@
 
                 <section id="results-container"></section>
             </main>
+        </div>
+    </div>
+
+    <div id="location-modal" class="modal hidden">
+        <div class="modal-content location-content">
+            <button id="close-location-modal" class="btn-close">✕</button>
+            <div class="modal-header">
+                <h2 class="display-font">SET LOCATION</h2>
+            </div>
+            <div class="modal-body body-font">
+                <p class="meta-text">Set your location to find nearby venues and events.</p>
+                <button id="btn-gps" class="btn primary-btn">📍 Use My GPS Location</button>
+                <hr class="divider">
+                <input type="text" id="loc-country" class="form-input" placeholder="Country">
+                <input type="text" id="loc-city" class="form-input" placeholder="City">
+                <input type="text" id="loc-postcode" class="form-input" placeholder="Postcode (Optional)">
+                <div class="modal-actions-row">
+                    <button id="btn-save-location" class="btn primary-btn">Save</button>
+                    <button id="btn-clear-location" class="btn secondary-btn">Clear</button>
+                </div>
+                <p id="current-location-display" class="meta-text" style="text-align:center; margin-top:10px;"></p>
+            </div>
         </div>
     </div>
 
@@ -81,9 +109,7 @@
                         <button id="btn-map" class="btn secondary-btn">🗺️ Directions</button>
                         
                         <div id="modal-public-stats" class="public-stats-block"></div>
-                        
                         <div class="feature-chips" id="modal-features"></div>
-                        
                         <div class="ratings-grid" id="modal-ratings"></div>
                     </div>
                 </div>

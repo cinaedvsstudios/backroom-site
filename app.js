@@ -6,6 +6,7 @@ const btnEnter = document.getElementById('btn-enter');
 const resultsContainer = document.getElementById('results-container');
 const modal = document.getElementById('venue-modal');
 const btnCloseModal = document.getElementById('close-modal');
+const locModal = document.getElementById('location-modal');
 
 async function initApp() {
     try {
@@ -18,7 +19,7 @@ async function initApp() {
         venues = await venuesRes.json();
         events = await eventsRes.json();
 
-        applyTheme(); populateSystemText(); setupEventListeners(); renderListings(venues);
+        applyTheme(); populateSystemText(); setupEventListeners(); loadSavedLocation(); renderListings(venues);
     } catch (error) {
         console.error("Local JSON fetch failed. Run via local web server.", error);
         document.getElementById('ag-text').innerText = "Data error. Run via local server.";
@@ -44,19 +45,89 @@ function setupEventListeners() {
     btnEnter.addEventListener('click', () => { ageGate.classList.add('hidden'); appShell.classList.remove('hidden'); });
     btnCloseModal.addEventListener('click', () => modal.classList.add('hidden'));
     modal.addEventListener('click', (e) => { if (e.target === modal) modal.classList.add('hidden'); });
+    
+    // Location Modal Controls
+    document.getElementById('btn-location').addEventListener('click', () => locModal.classList.remove('hidden'));
+    document.getElementById('close-location-modal').addEventListener('click', () => locModal.classList.add('hidden'));
+    document.getElementById('btn-save-location').addEventListener('click', saveLocation);
+    document.getElementById('btn-clear-location').addEventListener('click', clearLocation);
+    document.getElementById('btn-gps').addEventListener('click', () => {
+        alert("GPS Location requested (Prototype placeholder)");
+        document.getElementById('loc-city').value = "GPS Location";
+        saveLocation();
+    });
+}
+
+function saveLocation() {
+    const loc = {
+        country: document.getElementById('loc-country').value,
+        city: document.getElementById('loc-city').value,
+        postcode: document.getElementById('loc-postcode').value
+    };
+    localStorage.setItem('br_location', JSON.stringify(loc));
+    updateLocationDisplay(loc);
+    locModal.classList.add('hidden');
+}
+
+function clearLocation() {
+    localStorage.removeItem('br_location');
+    document.getElementById('loc-country').value = '';
+    document.getElementById('loc-city').value = '';
+    document.getElementById('loc-postcode').value = '';
+    updateLocationDisplay(null);
+}
+
+function loadSavedLocation() {
+    const saved = localStorage.getItem('br_location');
+    if(saved) {
+        const loc = JSON.parse(saved);
+        document.getElementById('loc-country').value = loc.country || '';
+        document.getElementById('loc-city').value = loc.city || '';
+        document.getElementById('loc-postcode').value = loc.postcode || '';
+        updateLocationDisplay(loc);
+    }
+}
+
+function updateLocationDisplay(loc) {
+    const display = document.getElementById('current-location-display');
+    if(loc && (loc.city || loc.country)) {
+        display.innerText = `Current: ${loc.city ? loc.city : ''} ${loc.country ? loc.country : ''}`;
+    } else {
+        display.innerText = 'No location set.';
+    }
 }
 
 function renderListings(data) {
     resultsContainer.innerHTML = '';
+    const today = new Date();
+    today.setHours(0,0,0,0);
+
     data.forEach(venue => {
+        // Find next event for this venue
+        let nextEventHtml = '';
+        let venueEvents = events.filter(e => e.Venue_ID === venue.Venue_ID && new Date(e.Event_Date) >= today);
+        if(venueEvents.length > 0) {
+            venueEvents.sort((a, b) => new Date(a.Event_Date) - new Date(b.Event_Date));
+            const nextE = venueEvents[0];
+            nextEventHtml = `<div class="card-next-event">📅 Next: ${nextE.Event_Name} (${nextE.Event_Date})</div>`;
+        }
+
+        // Truncate description for card
+        const shortDesc = venue.Description.length > 90 ? venue.Description.substring(0, 90) + '...' : venue.Description;
+
         const card = document.createElement('div');
         card.className = 'card';
         card.innerHTML = `
-            <div class="card-header">
-                <div><h3 class="card-title display-font">${venue.Name}</h3><div class="card-meta">${venue.Category} • ${venue.City}</div></div>
-                <div class="status-badge ${venue.Status.toLowerCase()}">${venue.Status.toUpperCase()}</div>
+            <div class="card-image-wrapper"><div class="image-placeholder">VENUE IMAGE</div></div>
+            <div class="card-inner-content">
+                <div class="card-header">
+                    <div><h3 class="card-title display-font">${venue.Name}</h3><div class="card-meta">${venue.Category} • ${venue.City}</div></div>
+                    <div class="status-badge ${venue.Status.toLowerCase()}">${venue.Status.toUpperCase()}</div>
+                </div>
+                <div class="card-about">${shortDesc}</div>
+                ${nextEventHtml}
+                <div class="card-stats"><span>🌈 ${systemInfo.labels.rated_by_gays}</span><span>👁️ ${venue.Views || 0}</span><span class="star-btn" data-id="${venue.Venue_ID}">☆</span></div>
             </div>
-            <div class="card-stats"><span>🌈 ${systemInfo.labels.rated_by_gays}</span><span>👁️ ${venue.Views || 0}</span><span class="star-btn" data-id="${venue.Venue_ID}">☆</span></div>
         `;
         card.addEventListener('click', (e) => { if(!e.target.classList.contains('star-btn')) openModal(venue); });
         resultsContainer.appendChild(card);
@@ -86,9 +157,8 @@ function openModal(venue) {
     if(venue.Feature_Men_Only) features.push('Men Only');
     if(venue.Feature_Dancefloor) features.push('Dancefloor');
     if(venue.Feature_Sauna) features.push('Sauna');
-    document.getElementById('modal-features').innerHTML = features.map(f => `<span class="chip" style="font-size:0.75rem;">${f}</span>`).join('');
+    document.getElementById('modal-features').innerHTML = features.map(f => `<span class="chip" style="font-size:0.85rem;">${f}</span>`).join('');
 
-    // Event sorting logic
     let venueEvents = events.filter(e => e.Venue_ID === venue.Venue_ID);
     const eventsBlock = document.getElementById('modal-events');
     const eventsContainer = document.getElementById('events-container');
@@ -110,7 +180,7 @@ function openModal(venue) {
             return `<div class="event-card ${isPast ? 'past' : ''}">
                 <strong>${ev.Event_Name}</strong> ${isPast ? '<small>(Past)</small>' : ''}<br>
                 <span class="meta-text">${ev.Event_Date} | ${ev.Event_Start_Time}</span>
-                <p style="font-size:0.85rem; margin-top:5px;">${ev.Event_Description}</p>
+                <p style="font-size:0.9rem; margin-top:5px;">${ev.Event_Description}</p>
             </div>`;
         }).join('');
         eventsBlock.classList.remove('hidden');
