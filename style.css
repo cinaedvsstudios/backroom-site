@@ -19,6 +19,12 @@
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body { background-color: var(--bg-color); color: #fff; font-family: 'Barlow Condensed', sans-serif; overflow-x: hidden; }
 
+/* Custom Scrollbars */
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: var(--bg-color); }
+::-webkit-scrollbar-thumb { background: var(--primary-blue); border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: #00547C; }
+
 .display-font { font-family: 'Antonio', sans-serif; text-transform: uppercase; letter-spacing: 1px; }
 .body-font { font-family: 'Barlow Condensed', sans-serif; font-size: 1.1rem; }
 
@@ -46,20 +52,19 @@ body { background-color: var(--bg-color); color: #fff; font-family: 'Barlow Cond
 .meta-text { color: var(--label-grey); font-size: 0.9rem; }
 .divider { border: 0; height: 1px; background: var(--panel-mid); margin: 15px 0; }
 
-/* Overlays & Age Gate */
+/* Overlays */
 .fullscreen-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: var(--bg-color); z-index: 1000; display: flex; align-items: center; justify-content: center; }
 .age-gate-content { text-align: center; max-width: 400px; padding: 30px; background-color: var(--panel-dark); border-radius: var(--radius-window); box-shadow: 0 0 20px rgba(44, 168, 212, 0.15); border: 1px solid var(--primary-blue); }
 
-/* Map Preview Box */
 .map-preview { width: 100%; height: 150px; background: var(--navy-grey); border: 1px dashed var(--label-grey); border-radius: var(--radius-card); display: flex; flex-direction: column; align-items: center; justify-content: center; color: var(--label-grey); text-align: center; margin-top: 10px; }
 
-/* Desktop Top Bar */
+/* Top Bar */
 #top-bar { position: sticky; top: 0; background-color: var(--near-black); z-index: 100; padding: 15px 20px; border-bottom: 1px solid var(--panel-mid); display: flex; align-items: center; justify-content: space-between; gap: 15px; }
 .top-bar-left { display: flex; align-items: center; flex-shrink: 0; }
 .top-bar-center { display: flex; align-items: center; gap: 10px; flex-grow: 1; max-width: 800px; }
 .top-bar-right { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
 
-.top-bar-logo-area { display: flex; align-items: center; gap: 10px; cursor: pointer; }
+.top-bar-logo-area { display: flex; align-items: center; gap: 10px; }
 .brand-image { height: 42px; }
 .brand-title-image { height: 34px; }
 
@@ -71,7 +76,7 @@ body { background-color: var(--bg-color); color: #fff; font-family: 'Barlow Cond
 .top-btn:hover { background-color: var(--panel-mid); color: #fff; border-color: var(--primary-blue); }
 .icon-only { padding: 8px 12px; font-size: 1.2rem; }
 
-/* Workspace & Sidebar */
+/* Sidebar */
 #workspace { display: flex; min-height: calc(100vh - 70px); }
 #sidebar { width: 220px; background-color: var(--panel-dark); border-right: 1px solid var(--panel-mid); display: flex; flex-direction: column; justify-content: space-between; padding-top: 20px; box-shadow: inset 3px 0 10px rgba(44, 168, 212, 0.2); border-left: 2px solid var(--primary-blue); }
 .sidebar-menu { display: flex; flex-direction: column; gap: 10px; padding: 0 10px; }
@@ -84,7 +89,7 @@ body { background-color: var(--bg-color); color: #fff; font-family: 'Barlow Cond
 .submenu-item:hover { color: #fff; }
 .sidebar-footer { padding: 15px; font-size: 0.85rem; color: var(--label-grey); }
 
-/* Main Content & Cards */
+/* Main Content */
 #main-content { flex-grow: 1; padding: 25px; background-color: var(--bg-color); display: flex; justify-content: center; }
 .content-wrapper { max-width: 1200px; width: 100%; }
 
@@ -95,7 +100,6 @@ body { background-color: var(--bg-color); color: #fff; font-family: 'Barlow Cond
 
 .filter-chips-container { margin-bottom: 25px; padding-bottom: 10px; }
 .filter-chips { display: flex; gap: 10px; overflow-x: auto; scrollbar-width: none; }
-.filter-chips::-webkit-scrollbar { display: none; }
 .chip { background-color: var(--panel-standard); color: var(--text-light); border: 1px solid var(--panel-mid); padding: 6px 14px; cursor: pointer; font-family: 'Barlow Condensed', sans-serif; white-space: nowrap; }
 .chip.active { background-color: var(--primary-blue); color: #fff; border-color: var(--primary-blue); }
 
@@ -114,12 +118,12 @@ body { background-color: var(--bg-color); color: #fff; font-family: 'Barlow Cond
 
 .card-about { font-size: 1rem; color: var(--text-light); margin-bottom: 15px; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
 .card-next-event { background-color: var(--panel-dark); padding: 8px; border-left: 3px solid var(--primary-blue); border-radius: 0 var(--radius-btn) var(--radius-btn) 0; font-size: 0.9rem; color: #fff; margin-bottom: 15px; }
-
 .card-stats { display: flex; align-items: center; gap: 15px; font-size: 0.95rem; color: var(--text-light); margin-top: auto; padding-top: 10px; border-top: 1px solid var(--panel-mid); }
 
 /* Modals */
 .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 2000; display: flex; align-items: center; justify-content: center; padding: 20px; }
 .modal-content { background-color: var(--panel-standard); width: 100%; max-width: 800px; max-height: 90vh; border-radius: var(--radius-window); border: 1px solid var(--panel-mid); box-shadow: 0 0 25px rgba(44, 168, 212, 0.2); display: flex; flex-direction: column; position: relative; overflow: hidden; }
+.venue-modal-style { border: 2px solid var(--primary-blue); box-shadow: 0 0 15px rgba(44, 168, 212, 0.4); }
 .small-modal { max-width: 400px; }
 .modal-header { position: sticky; top: 0; background-color: var(--panel-standard); z-index: 10; padding: 20px 20px 10px 20px; border-bottom: 1px solid var(--panel-mid); display: flex; align-items: center; gap: 15px; }
 .modal-header h2 { flex-grow: 1; margin: 0; font-size: 2rem; color: #fff; }
@@ -130,15 +134,16 @@ body { background-color: var(--bg-color); color: #fff; font-family: 'Barlow Cond
 .modal-top-split { display: flex; flex-direction: row; gap: 20px; margin-bottom: 25px; }
 .modal-image-container { flex: 1; min-width: 0; }
 .modal-image-container img { width: 100%; max-height: 350px; object-fit: cover; border-radius: var(--radius-card); }
+.centered-image { object-position: center !important; }
 .modal-info-container { flex: 1; min-width: 0; display: flex; flex-direction: column; }
 
-/* Profile Avatars - No circles or backgrounds */
-.avatar-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(70px, 1fr)); gap: 15px; max-height: 250px; overflow-y: auto; padding: 10px; background: var(--panel-dark); border-radius: var(--radius-card); }
+/* Profile Avatars - Rectangles */
+.avatar-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(70px, 1fr)); gap: 15px; max-height: 250px; overflow-y: auto; padding: 15px; background: var(--panel-dark); border-radius: var(--radius-card); }
 .avatar-item { text-align: center; cursor: pointer; opacity: 0.5; transition: all 0.2s; }
 .avatar-item:hover { opacity: 0.8; }
 .avatar-item.selected { opacity: 1; transform: scale(1.05); }
-.avatar-item img { width: 60px; height: 60px; object-fit: contain; border-bottom: 2px solid transparent; margin-bottom: 5px; }
-.avatar-item.selected img { border-bottom-color: var(--primary-blue); }
+.avatar-item img { width: 70px; height: 140px; border-radius: 8px; object-fit: cover; border: 2px solid transparent; margin-bottom: 5px; background: #000; }
+.avatar-item.selected img { border-color: var(--primary-blue); }
 .avatar-item span { display: block; font-size: 0.8rem; color: var(--text-light); }
 .avatar-item.selected span { color: #fff; font-weight: bold; }
 
@@ -150,20 +155,26 @@ body { background-color: var(--bg-color); color: #fff; font-family: 'Barlow Cond
 .description-block h3 { margin-bottom: 10px; color: var(--primary-blue); }
 .description-block p { line-height: 1.5; color: #fff; }
 
-/* Event Cards - Darkened Background */
 .events-block { margin-top: 20px; }
 .events-block h3 { margin-bottom: 10px; color: var(--primary-blue); }
 .event-card { background-color: var(--near-black); padding: 12px; border: 1px solid var(--panel-mid); border-left: 3px solid var(--primary-blue); border-radius: 0 var(--radius-card) var(--radius-card) 0; margin-bottom: 10px; display: flex; flex-direction: column; }
 .event-card.past { opacity: 0.6; border-left-color: var(--label-grey); }
+
+/* Event Date Badge (Desktop) */
+.event-date-badge { display: flex; flex-direction: column; align-items: center; justify-content: center; background: var(--panel-standard); border: 1px solid var(--primary-blue); border-radius: var(--radius-btn); padding: 10px; min-width: 70px; }
+.event-date-badge .day { font-family: 'Antonio', sans-serif; font-size: 2rem; color: var(--primary-blue); line-height: 1; }
+.event-date-badge .month-year { font-size: 0.8rem; color: var(--text-light); margin-top: 5px; }
 
 @media (min-width: 1024px) {
     .body-font { font-size: 1.25rem; letter-spacing: 0.5px; }
     .display-font { letter-spacing: 2px; }
     #search-input { font-size: 1.1rem; }
     .card-title { font-size: 1.7rem; }
+    .event-card-inner { display: flex; gap: 15px; align-items: stretch; }
+    .event-card-details { flex-grow: 1; }
 }
 
-/* Mobile Layout Overrides */
+/* Mobile Layout */
 @media (max-width: 768px) {
     #top-bar { display: grid; grid-template-columns: 1fr auto; grid-template-rows: auto auto; gap: 10px; padding: 10px; }
     .top-bar-left { grid-column: 1; grid-row: 1; display: flex; align-items: center; }
@@ -176,16 +187,15 @@ body { background-color: var(--bg-color); color: #fff; font-family: 'Barlow Cond
     .top-btn .btn-text { display: none; }
     .top-btn { padding: 8px 12px; }
     
-    /* Sliding Sidebar Logic - Edge glow applied to the Right side when visible */
     #sidebar { position: fixed; left: -220px; top: 0; height: 100vh; z-index: 500; transition: left 0.3s ease; border-left: none; border-right: 2px solid var(--primary-blue); box-shadow: 2px 0 15px rgba(44, 168, 212, 0.4); }
     #sidebar.visible { left: 0; }
     #sidebar-hit-area { position: fixed; left: 0; top: 0; width: 15px; height: 100vh; z-index: 499; }
-    
-    /* Re-enabled Sidebar Text for Mobile */
     .sidebar-text { display: inline-block; margin-left: 10px; font-size: 1.1rem; }
     .sidebar-footer { display: none; }
 
     .modal-content { height: 100%; max-height: 100%; border-radius: 0; border: none; }
     .modal-top-split { flex-direction: column; }
     .modal-image-container img { height: 200px; max-height: 200px; }
+    
+    .event-date-badge { display: none; }
 }

@@ -13,7 +13,7 @@ let userEvents = JSON.parse(localStorage.getItem('br_events')) || [];
 let userTravel = JSON.parse(localStorage.getItem('br_travel')) || [];
 let importInfo = JSON.parse(localStorage.getItem('br_import_info')) || null;
 
-const APP_VERSION = "v0.19";
+const APP_VERSION = "v0.20";
 const APP_DATE = "May 13, 2026";
 
 const avatarCategories = ["Twink", "Twunk", "Jock", "Muscle", "Geek", "Uncle", "Daddy", "Silver Fox", "Opa", "Bear", "Seal", "Otter", "Cub", "Wolf", "Circuit", "Leather", "Rubber", "Puppy", "Alternative", "Queer", "Femboy", "Slave"];
@@ -54,6 +54,23 @@ function showToast(message) {
         toast.classList.remove('show');
         setTimeout(() => toast.remove(), 300);
     }, 2500);
+}
+
+// ----------------------------------------------------
+// Updated to render dates globally as DD-MM-YYYY
+// ----------------------------------------------------
+function formatDateToDDMMYYYY(ymdDate) {
+    if(!ymdDate) return '';
+    const parts = ymdDate.split('-');
+    if(parts.length !== 3) return ymdDate;
+    return `${parts[2]}-${parts[1]}-${parts[0]}`; // DD-MM-YYYY
+}
+
+function getBadgeDateParts(ymdDate) {
+    if(!ymdDate) return { d:'', my:'' };
+    const parts = ymdDate.split('-');
+    if(parts.length !== 3) return { d:'', my:'' };
+    return { d: parts[2], my: `${parts[1]}-${parts[0]}` };
 }
 
 function recordUserInteraction() {
@@ -156,6 +173,7 @@ function handleRouting() {
     document.getElementById('event-city-filters').classList.add('hidden');
     document.getElementById('btn-new-shortlist-view').classList.add('hidden');
     document.getElementById('main-filters').classList.remove('hidden');
+    document.getElementById('discounts-container').classList.add('hidden');
     welcomeScreen.classList.add('hidden');
 
     if (hash === '' && query === '' && activeFilter === 'All' && sessionStorage.getItem('br_welcome_dismissed') !== 'true') {
@@ -182,6 +200,9 @@ function handleRouting() {
     } else if (hash === '#mytravel') {
         recordUserInteraction();
         renderTravelFullView();
+    } else if (hash === '#discounts') {
+        recordUserInteraction();
+        renderDiscountsView();
     } else if (hash.startsWith('#shortlist=')) {
         recordUserInteraction();
         const name = decodeURIComponent(hash.replace('#shortlist=', ''));
@@ -197,6 +218,12 @@ function renderWelcomeScreen() {
         document.getElementById('welcome-avatar').src = `Profile_images/${userProfile.avatar}`;
     }
     welcomeScreen.classList.remove('hidden');
+}
+
+function renderDiscountsView() {
+    document.getElementById('main-filters').classList.add('hidden');
+    resultsContainer.innerHTML = '';
+    document.getElementById('discounts-container').classList.remove('hidden');
 }
 
 function setupEventListeners() {
@@ -570,7 +597,7 @@ function renderMyEventsView() {
         card.innerHTML = `
             <div class="card-inner-content">
                 <div class="card-header">
-                    <div><h3 class="card-title display-font">${ev.Event_Name}</h3><div class="card-meta">${ev.Event_Date} | @ ${venueName}</div></div>
+                    <div><h3 class="card-title display-font">${ev.Event_Name}</h3><div class="card-meta">${formatDateToDDMMYYYY(ev.Event_Date)} | @ ${venueName}</div></div>
                     <button class="icon-btn" style="color:var(--bright-red-orange); font-size:1.5rem;" onclick="toggleEventFavorite('${ev.Event_ID}', null, true)">❌</button>
                 </div>
                 <div class="card-about">${ev.Event_Description || ''}</div>
@@ -766,8 +793,8 @@ function importUserData(e) {
             importInfo = { date: new Date().toLocaleString(), filename: file.name, userName: userProfile.name || 'Anonymous' };
             localStorage.setItem('br_import_info', JSON.stringify(importInfo));
             
-            alert("Data imported successfully!");
-            window.location.reload();
+            showToast("Data imported successfully!");
+            setTimeout(() => window.location.reload(), 1000);
         } catch(err) {
             alert("Invalid backup file.");
         }
@@ -795,10 +822,12 @@ function handleImageCarousel(imgElement) {
         tempImg.onload = () => {
             imgElement.src = newSrc;
             imgElement.setAttribute('data-index', index);
+            showToast("Double tap the image area to open venue details");
         };
         tempImg.onerror = () => {
             imgElement.src = `Venue_images/${id}-01.jpg`;
             imgElement.setAttribute('data-index', 1);
+            showToast("Double tap the image area to open venue details");
         };
         tempImg.src = newSrc;
     });
@@ -819,7 +848,7 @@ function renderListings(data, isContextView = false) {
         if(venueEvents.length > 0) {
             venueEvents.sort((a, b) => new Date(a.Event_Date) - new Date(b.Event_Date));
             const nextE = venueEvents[0];
-            nextEventHtml = `<div class="card-next-event">📅 Next: ${nextE.Event_Name} (${nextE.Event_Date})</div>`;
+            nextEventHtml = `<div class="card-next-event">📅 Next: ${nextE.Event_Name} (${formatDateToDDMMYYYY(nextE.Event_Date)})</div>`;
         }
 
         const isFav = userFavorites.includes(venue.Venue_ID);
@@ -860,7 +889,7 @@ function renderListings(data, isContextView = false) {
                     document.querySelectorAll('.card.selected').forEach(c => c.classList.remove('selected'));
                     card.classList.add('selected');
                     selectedCardId = venue.Venue_ID;
-                    showToast("Double tap to open card");
+                    showToast("Double tap the card background to open");
                 }
             } 
         });
@@ -898,7 +927,7 @@ function openVenueModal(venue) {
         if (isIOS) {
             window.open(`http://maps.apple.com/?q=${query}`, '_blank');
         } else {
-            window.open(`https://www.google.com/maps/search/?api=1&query=$${query}`, '_blank');
+            window.open(`google.com/maps/search/?api=1&query=...{query}`, '_blank');
         }
     };
 
@@ -943,16 +972,26 @@ function openVenueModal(venue) {
         eventsContainer.innerHTML = venueEvents.map(ev => {
             const isPast = new Date(ev.Event_Date) < today;
             const isSaved = userEvents.includes(ev.Event_ID);
+            const badgeData = getBadgeDateParts(ev.Event_Date);
+            
             return `
                 <div class="event-card ${isPast ? 'past' : ''}">
-                    <div style="display:flex; justify-content:space-between; align-items:flex-start;">
-                        <div>
-                            <strong>${ev.Event_Name}</strong> ${isPast ? '<small>(Past)</small>' : ''}<br>
-                            <span class="meta-text">${ev.Event_Date} | ${ev.Event_Start_Time}</span>
+                    <div class="event-card-inner">
+                        <div class="event-date-badge">
+                            <span class="day">${badgeData.d}</span>
+                            <span class="month-year">${badgeData.my}</span>
                         </div>
-                        <button class="icon-btn ${isSaved ? 'active-star' : ''}" style="font-size: 1.5rem;" onclick="toggleEventFavorite('${ev.Event_ID}', this)">💖</button>
+                        <div class="event-card-details">
+                            <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+                                <div>
+                                    <strong>${ev.Event_Name}</strong> ${isPast ? '<small>(Past)</small>' : ''}<br>
+                                    <span class="meta-text">${formatDateToDDMMYYYY(ev.Event_Date)} | ${ev.Event_Start_Time}</span>
+                                </div>
+                                <button class="icon-btn ${isSaved ? 'active-star' : ''}" style="font-size: 1.5rem;" onclick="toggleEventFavorite('${ev.Event_ID}', this)">💖</button>
+                            </div>
+                            <p style="font-size:0.9rem; margin-top:5px;">${ev.Event_Description}</p>
+                        </div>
                     </div>
-                    <p style="font-size:0.9rem; margin-top:5px;">${ev.Event_Description}</p>
                 </div>`;
         }).join('');
         eventsBlock.classList.remove('hidden');
@@ -966,7 +1005,7 @@ async function shareURL(url, title) {
         try { await navigator.share({title: title, url: url}); } catch (e) {}
     } else {
         navigator.clipboard.writeText(url);
-        alert("Link copied to clipboard!");
+        showToast("Link copied to clipboard!");
     }
 }
 
