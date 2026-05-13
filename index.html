@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Backroom - v0.21</title>
+    <title>Backroom - v0.23</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Antonio:wght@400;700&family=Barlow+Condensed:wght@400;500;700&display=swap" rel="stylesheet">
@@ -106,18 +106,23 @@
 
             <main id="main-content">
                 <div class="content-wrapper">
+                    
                     <div id="welcome-screen" class="hidden">
                         <div class="welcome-card">
-                            <img id="welcome-avatar" src="placeholder_venue.jpg" style="width:100px; height:150px; object-fit:cover; margin-bottom:15px; border-radius:8px; border:2px solid var(--primary-blue);">
-                            <h2 class="display-font" style="font-size: 2.5rem; color: var(--primary-blue); margin-bottom: 20px;">WELCOME <span id="welcome-name">GUEST</span>!</h2>
-                            <div class="features-list">
-                                <h3>New Features:</h3>
-                                <ul>
-                                    <li>🚄 <strong>Travel Pins:</strong> Save cities you plan to visit.</li>
-                                    <li>💖 <strong>My Events:</strong> Pin upcoming parties directly to your schedule.</li>
-                                    <li>👤 <strong>Custom Profiles:</strong> Choose an avatar and save it locally.</li>
-                                    <li>⚜️ <strong>Favourites:</strong> Build your ultimate nightlife list.</li>
-                                </ul>
+                            <div class="welcome-avatar-container">
+                                <img id="welcome-avatar" src="placeholder_venue.jpg" style="width:150px; height:225px; object-fit:cover; border-radius:8px;">
+                            </div>
+                            <div class="welcome-content-container">
+                                <h2 class="display-font" style="font-size: 2.5rem; color: var(--primary-blue); margin-bottom: 10px;">WELCOME <span id="welcome-name">GUEST</span>!</h2>
+                                <div class="features-list" style="margin-top:0;">
+                                    <h3>New Features:</h3>
+                                    <ul>
+                                        <li>🚄 <strong>Travel Pins:</strong> Save cities you plan to visit.</li>
+                                        <li>💖 <strong>My Events:</strong> Pin upcoming parties directly to your schedule.</li>
+                                        <li>👤 <strong>Custom Profiles:</strong> Choose an avatar and save it locally.</li>
+                                        <li>⚜️ <strong>Favourites:</strong> Build your ultimate nightlife list.</li>
+                                    </ul>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -129,7 +134,6 @@
                         <div style="display:flex; align-items:center; flex-wrap:wrap; gap:10px;">
                             <button id="btn-back-to-results" class="btn primary-btn pill-btn" style="width: auto; padding: 6px 14px; font-size: 1rem;">← Back to Results</button>
                             <div id="event-city-filters" class="hidden" style="display:flex; gap:8px; overflow-x:auto;"></div>
-                            <button id="btn-edit-travel-page" class="btn secondary-btn pill-btn hidden" style="width: auto; padding: 6px 14px; font-size: 1rem;" onclick="window.location.hash='#mytravel';">✏️ Edit Travel</button>
                             <button id="btn-new-shortlist-view" class="btn secondary-btn pill-btn hidden" style="width: auto; padding: 6px 14px; font-size: 1rem;">+ New Shortlist</button>
                         </div>
                     </div>

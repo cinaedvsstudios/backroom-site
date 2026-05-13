@@ -13,7 +13,7 @@ let userEvents = JSON.parse(localStorage.getItem('br_events')) || [];
 let userTravel = JSON.parse(localStorage.getItem('br_travel')) || [];
 let importInfo = JSON.parse(localStorage.getItem('br_import_info')) || null;
 
-const APP_VERSION = "v0.22";
+const APP_VERSION = "v0.23";
 const APP_DATE = "May 13, 2026";
 
 const avatarCategories = ["Twink", "Twunk", "Jock", "Muscle", "Geek", "Uncle", "Daddy", "Silver Fox", "Opa", "Bear", "Seal", "Otter", "Cub", "Wolf", "Circuit", "Leather", "Rubber", "Puppy", "Alternative", "Queer", "Femboy", "Slave"];
@@ -88,6 +88,7 @@ function setupCriticalListeners() {
         localStorage.setItem('br_age_verified', 'true');
         ageGate.classList.add('hidden');
         appShell.classList.remove('hidden');
+        showToast("Backroom " + APP_VERSION);
         handleRouting(); 
     };
     btnEnter.addEventListener('click', handleEnter);
@@ -96,6 +97,7 @@ function setupCriticalListeners() {
     if(localStorage.getItem('br_age_verified') === 'true') {
         ageGate.classList.add('hidden');
         appShell.classList.remove('hidden');
+        showToast("Backroom " + APP_VERSION);
     }
 }
 
@@ -142,7 +144,10 @@ async function initApp() {
             systemInfo = { labels: { rated_by_gays: "Rated by gays" } };
             designTheme = {}; venues = []; events = [];
             applyTheme(); populateSystemText(); setupEventListeners(); loadSavedLocation(); 
-            if(localStorage.getItem('br_age_verified') === 'true') handleRouting();
+            if(localStorage.getItem('br_age_verified') === 'true') {
+                showToast("Backroom " + APP_VERSION);
+                handleRouting();
+            }
         };
 
         bypassBtn.addEventListener('click', bypassLogic);
@@ -651,7 +656,9 @@ function renderTravelFullView() {
     contextHeader.classList.remove('hidden');
     document.getElementById('context-title').innerHTML = "🚄 MY TRAVEL PINS";
     document.getElementById('context-desc').innerText = "Cities you plan to visit.";
-    document.getElementById('btn-edit-travel-page').classList.remove('hidden');
+    
+    // Explicitly hide the Edit Travel button from this view as requested
+    document.getElementById('btn-edit-travel-page').classList.add('hidden');
     
     resultsContainer.innerHTML = '';
 
@@ -747,29 +754,32 @@ function renderProfileAvatars() {
     }
 
     avatarCategories.forEach(cat => {
-        const imgName = `${cat.toLowerCase()}01.png`; 
-        const item = document.createElement('div');
-        item.className = 'avatar-item';
-        if(userProfile.avatar === imgName) item.classList.add('selected');
-        
-        item.innerHTML = `<img src="Profile_images/${imgName}" onerror="this.src='placeholder_venue.jpg'" alt="${cat}"><span>${cat}</span>`;
-        item.addEventListener('click', () => {
-            if (item.classList.contains('selected')) {
-                // Deselect and show all
-                document.querySelectorAll('.avatar-item').forEach(el => el.classList.remove('selected', 'hidden'));
-                userProfile.avatar = '';
-            } else {
-                // Select and hide others
-                document.querySelectorAll('.avatar-item').forEach(el => {
-                    el.classList.remove('selected');
-                    if (el !== item) el.classList.add('hidden');
-                });
-                item.classList.add('selected');
-                userProfile.avatar = imgName;
-                showToast("Click the avatar again to go back to the list");
-            }
-        });
-        grid.appendChild(item);
+        for(let i=1; i<=3; i++) {
+            const numStr = i < 10 ? '0' + i : i;
+            const imgName = `${cat.toLowerCase()}${numStr}.png`; 
+            const item = document.createElement('div');
+            item.className = 'avatar-item';
+            if(userProfile.avatar === imgName) item.classList.add('selected');
+            
+            // Magic Trick: If the image doesn't exist on the server, it hides its own container
+            item.innerHTML = `<img src="Profile_images/${imgName}" onerror="this.parentElement.style.display='none';" alt="${cat} ${i}"><span>${cat} ${i}</span>`;
+            
+            item.addEventListener('click', () => {
+                if (item.classList.contains('selected')) {
+                    document.querySelectorAll('.avatar-item').forEach(el => el.classList.remove('selected', 'hidden'));
+                    userProfile.avatar = '';
+                } else {
+                    document.querySelectorAll('.avatar-item').forEach(el => {
+                        el.classList.remove('selected');
+                        if (el !== item) el.classList.add('hidden');
+                    });
+                    item.classList.add('selected');
+                    userProfile.avatar = imgName;
+                    showToast("Click the avatar again to go back to the list");
+                }
+            });
+            grid.appendChild(item);
+        }
     });
 }
 
@@ -977,7 +987,6 @@ function renderListings(data, isContextView = false) {
 function openVenueModal(venue) {
     document.getElementById('modal-title').innerText = venue.Name;
     
-    // Dynamic Layout build for Desktop Split
     const dynamicLayout = document.getElementById('modal-dynamic-layout');
     
     const ageEmojis = ['🧒🏼', '🧑🏻', '🧔🏻‍♂️', '👨🏻‍🦳', '👴🏼'];

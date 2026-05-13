@@ -1,7 +1,6 @@
-// Admin State
 let liveData = [];
 let draftData = [];
-let currentMode = 'venues'; // 'venues' or 'events'
+let currentMode = 'venues'; 
 let lastSavedDate = localStorage.getItem('br_admin_timestamp') || 'Never';
 let activeTableFilters = {}; 
 
@@ -10,32 +9,66 @@ const adminShell = document.getElementById('admin-shell');
 const tableContainer = document.getElementById('admin-table-container');
 const pinInput = document.getElementById('admin-pin');
 
-// Auto-login if local token exists
 if(localStorage.getItem('br_admin_logged_in') === 'true') {
     pinGate.classList.add('hidden');
     adminShell.classList.remove('hidden');
     loadDraftsFromLocal();
 }
 
-// Clipboard Logic
+// Draggable Clipboard Logic
+const clipboardFloat = document.getElementById('clipboard-float');
+const clipHeader = document.getElementById('clipboard-header');
+let isDragging = false, initialX, initialY, startX, startY;
+
+clipHeader.addEventListener('mousedown', (e) => {
+    isDragging = true;
+    startX = e.clientX; startY = e.clientY;
+    const rect = clipboardFloat.getBoundingClientRect();
+    initialX = rect.left; initialY = rect.top;
+    clipboardFloat.style.bottom = 'auto'; 
+    clipboardFloat.style.right = 'auto';
+    clipboardFloat.style.left = initialX + 'px';
+    clipboardFloat.style.top = initialY + 'px';
+});
+
+document.addEventListener('mousemove', (e) => {
+    if(isDragging) {
+        clipboardFloat.style.left = (initialX + e.clientX - startX) + 'px';
+        clipboardFloat.style.top = (initialY + e.clientY - startY) + 'px';
+    }
+});
+document.addEventListener('mouseup', () => isDragging = false);
+
 const clipboard = document.getElementById('clipboard-text');
 clipboard.value = localStorage.getItem('br_admin_clipboard') || '';
 clipboard.addEventListener('input', (e) => {
     localStorage.setItem('br_admin_clipboard', e.target.value);
 });
 
-// Keypad & Keyboard Logic
+// Keypad & Global Keyboard Logic
 window.addPin = (num) => {
     if(pinInput.value.length < 4) pinInput.value += num;
     checkPin();
 };
 window.delPin = () => pinInput.value = pinInput.value.slice(0, -1);
 
-pinInput.addEventListener('keyup', checkPin);
+document.addEventListener('keydown', (e) => {
+    if (!pinGate.classList.contains('hidden')) {
+        if (/^[0-9]$/.test(e.key) && pinInput.value.length < 4) {
+            pinInput.value += e.key;
+            checkPin();
+        } else if (e.key === 'Backspace') {
+            delPin();
+        } else if (e.key === 'Enter') {
+            checkPin();
+        }
+    }
+});
+
 document.getElementById('btn-login').addEventListener('click', checkPin);
 
 function checkPin() {
-    if (pinInput.value === '1234') {
+    if (pinInput.value === '6997') {
         localStorage.setItem('br_admin_logged_in', 'true');
         pinGate.classList.add('hidden');
         adminShell.classList.remove('hidden');
@@ -46,26 +79,20 @@ function checkPin() {
     }
 }
 
-// View Switching
 window.switchView = function(view) {
     currentMode = view;
     document.getElementById('summary-title').innerText = view === 'venues' ? 'VENUE DATA' : 'EVENT DATA';
     activeTableFilters = {};
-    
-    // Switch live/draft data based on mode
     loadDraftsFromLocal();
 }
 
-// Data Handling
 function loadDraftsFromLocal() {
     const draftKey = currentMode === 'venues' ? 'br_admin_venues_draft' : 'br_admin_events_draft';
     const draft = localStorage.getItem(draftKey);
     if(draft) draftData = JSON.parse(draft);
     else draftData = [];
     
-    // Also try to fetch live for mismatch matching if available
     fetchLiveSilently();
-    
     document.getElementById('summary-timestamp').innerText = `Showing Data From: ${lastSavedDate}`;
     renderFilters();
     renderTable();
@@ -80,7 +107,6 @@ function saveDraftsToLocal() {
     updateMismatchCount();
 }
 
-// Fetch Live
 async function fetchLiveSilently() {
     try {
         const url = currentMode === 'venues' ? 'listings.json' : 'events.json';
@@ -96,7 +122,7 @@ document.getElementById('btn-fetch-live').addEventListener('click', async () => 
         const res = await fetch(url);
         if(!res.ok) throw new Error("Could not find file.");
         liveData = await res.json();
-        draftData = JSON.parse(JSON.stringify(liveData)); // clone to draft
+        draftData = JSON.parse(JSON.stringify(liveData)); 
         saveDraftsToLocal();
         renderTable();
         alert(`Live ${currentMode} data loaded and saved to local draft!`);
@@ -105,7 +131,6 @@ document.getElementById('btn-fetch-live').addEventListener('click', async () => 
     }
 });
 
-// Manual Upload
 document.getElementById('file-upload').addEventListener('change', (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -120,7 +145,6 @@ document.getElementById('file-upload').addEventListener('change', (e) => {
     reader.readAsText(file);
 });
 
-// Download All
 document.getElementById('btn-download-all').addEventListener('click', () => {
     const vDraft = localStorage.getItem('br_admin_venues_draft');
     const eDraft = localStorage.getItem('br_admin_events_draft');
@@ -138,7 +162,6 @@ document.getElementById('btn-download-all').addEventListener('click', () => {
     if(eDraft) setTimeout(() => download(eDraft, 'events.json'), 500);
 });
 
-// Table Rendering & Filtering
 function applyTableFilters() {
     return draftData.filter(row => {
         for(let col in activeTableFilters) {
@@ -165,8 +188,8 @@ function renderFilters() {
 }
 
 window.toggleColumn = function(idx) {
-    const cells = document.querySelectorAll(`.col-idx-${idx}`);
-    cells.forEach(c => c.classList.toggle('hidden-col'));
+    const th = document.querySelector(`th.col-idx-${idx}`);
+    if(th) th.classList.toggle('hidden-col');
 }
 
 window.unhideAllColumns = function() {
@@ -189,8 +212,8 @@ function renderTable() {
     columns.forEach((col, idx) => {
         html += `<th class="col-idx-${idx}">
             <div style="display:flex; justify-content:space-between; align-items:center;">
-                <span class="eye-btn" onclick="toggleColumn(${idx})" title="Hide Column">👁️</span>
-                <span style="flex-grow:1;">${col}</span>
+                <span class="eye-btn" onclick="toggleColumn(${idx})" title="Toggle Hide">👁️</span>
+                <span class="col-title" style="flex-grow:1;">${col}</span>
             </div>
             <input type="text" class="filter-header-input" placeholder="Filter..." data-col="${col}">
         </th>`;
@@ -201,10 +224,9 @@ function renderTable() {
     filteredData.forEach((row, rowIndex) => {
         const id = row.Venue_ID || row.Event_ID || rowIndex;
         html += `<tr data-id="${id}">
-            <td style="text-align:center; font-size:1.5rem;" onclick="alert('WYSIWYG Editor modal for ${id} coming in next phase update!')">✏️</td>`;
+            <td style="text-align:center; font-size:1.5rem;" onclick="alert('WYSIWYG Editor modal coming in Phase 2!')">✏️</td>`;
         
         columns.forEach((col, idx) => {
-            // Check if cell is edited compared to live
             const idField = currentMode === 'venues' ? 'Venue_ID' : 'Event_ID';
             let isEdited = false;
             if (liveData.length > 0) {
@@ -213,7 +235,7 @@ function renderTable() {
             }
             
             const editedClass = isEdited ? 'edited-cell' : '';
-            html += `<td class="col-idx-${idx} ${editedClass}" onclick="editCell(this, ${rowIndex}, '${col}')">${String(row[col] || '')}</td>`;
+            html += `<td class="${editedClass}" onclick="editCell(this, ${rowIndex}, '${col}')">${String(row[col] || '')}</td>`;
         });
         html += `</tr>`;
     });
@@ -221,7 +243,6 @@ function renderTable() {
     html += `</tbody></table>`;
     tableContainer.innerHTML = html;
 
-    // Attach Header Filter Listeners
     document.querySelectorAll('.filter-header-input').forEach(inp => {
         inp.addEventListener('keypress', (e) => {
             if(e.key === 'Enter' && e.target.value.trim() !== '') {
@@ -236,14 +257,12 @@ function renderTable() {
     updateMismatchCount();
 }
 
-// Cell Editing
 window.editCell = function(td, rowIndex, col) {
-    if(col === 'Venue_ID' || col === 'Event_ID') return; // Locked IDs
-    if(td.querySelector('select')) return; // Already editing
+    if(col === 'Venue_ID' || col === 'Event_ID') return; 
+    if(td.querySelector('select')) return; 
     
     const currentVal = td.innerText;
     
-    // Dropdown logic for specific known columns
     if(col === 'Status' || col.startsWith('Feature_') || col.startsWith('Rating_')) {
         let options = '';
         if(col === 'Status') options = '<option value="Live">Live</option><option value="Closed">Closed</option><option value="Hold">Hold</option><option value="Flag">Flag</option>';
@@ -254,7 +273,6 @@ window.editCell = function(td, rowIndex, col) {
         td.querySelector('select').value = currentVal;
         td.querySelector('select').focus();
     } else {
-        // Normal text edit (we will upgrade this to a better UI in the WYSIWYG phase, but for now simple prompt)
         const newVal = prompt(`Edit ${col}:`, currentVal);
         if(newVal !== null && newVal !== currentVal) {
             draftData[rowIndex][col] = newVal;
@@ -267,7 +285,6 @@ window.editCell = function(td, rowIndex, col) {
 
 window.saveCell = function(selectEl, rowIndex, col) {
     const newVal = selectEl.value;
-    // Convert string booleans back to actual booleans for JSON
     let finalVal = newVal;
     if(newVal === 'true') finalVal = true;
     if(newVal === 'false') finalVal = false;
@@ -277,10 +294,9 @@ window.saveCell = function(selectEl, rowIndex, col) {
     selectEl.parentElement.innerText = newVal;
     selectEl.parentElement.classList.add('edited-cell');
     saveDraftsToLocal();
-    renderTable(); // Re-render to clear inputs and update formats
+    renderTable(); 
 }
 
-// Mismatch Logic
 let currentMismatchIds = [];
 
 function updateMismatchCount() {
@@ -334,7 +350,6 @@ document.getElementById('btn-highlight-changes').addEventListener('click', () =>
     });
 });
 
-// Close Modals
 document.querySelectorAll('.close-modal-btn').forEach(btn => {
     btn.addEventListener('click', (e) => e.target.closest('.modal').classList.add('hidden'));
 });
