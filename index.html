@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Backroom Prototype v0.5</title>
+    <title>Backroom Prototype v0.6</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Antonio:wght@400;700&family=Barlow+Condensed:wght@400;500;700&display=swap" rel="stylesheet">
@@ -26,9 +26,16 @@
     <div id="app-shell" class="hidden">
         
         <header id="top-bar">
-            <div class="top-bar-logo-area">
-                <img src="https://raw.githubusercontent.com/cinaedvsstudios/Backroom-site/refs/heads/main/backdoorlogo.png" alt="Backdoor Logo" class="brand-image">
-                <h1 id="brand-title" class="display-font brand-text">BR</h1>
+            <div class="top-bar-left">
+                <div class="top-bar-logo-area">
+                    <img src="https://raw.githubusercontent.com/cinaedvsstudios/Backroom-site/refs/heads/main/backdoorlogo.png" alt="Backdoor Logo" class="brand-image">
+                    <img src="backdoortitle.png" alt="Backroom Title" class="brand-title-image" onerror="this.style.display='none'; document.getElementById('brand-title-text').style.display='block';">
+                    <h1 id="brand-title-text" class="display-font brand-text" style="display:none;">BR</h1>
+                </div>
+                
+                <div class="top-bar-search-area">
+                    <input type="text" id="search-input" class="body-font" placeholder="Search name or description" autocomplete="off">
+                </div>
             </div>
             
             <div class="top-bar-buttons-area">
@@ -38,19 +45,21 @@
                 <button id="btn-language" class="top-btn" title="Language">🌍 Language</button>
                 <button id="btn-settings" class="top-btn" title="Settings">⚙️ Settings</button>
             </div>
-
-            <div class="top-bar-search-area">
-                <input type="text" id="search-input" class="body-font" placeholder="Search name or description" autocomplete="off">
-            </div>
         </header>
 
         <div id="workspace">
             <div id="sidebar-hit-area"></div>
 
             <aside id="sidebar">
-                <div class="sidebar-item tooltip" title="TBA">📌</div>
-                <div class="sidebar-item tooltip" title="TBA">🔥</div>
-                <div class="sidebar-item tooltip" title="TBA">📅</div>
+                <div class="sidebar-item tooltip" title="Pins">
+                    <span class="icon">📌</span><span class="sidebar-text display-font">Pins</span>
+                </div>
+                <div class="sidebar-item tooltip" title="Trending">
+                    <span class="icon">🔥</span><span class="sidebar-text display-font">Trending</span>
+                </div>
+                <div class="sidebar-item tooltip" title="Events">
+                    <span class="icon">📅</span><span class="sidebar-text display-font">Events</span>
+                </div>
             </aside>
 
             <main id="main-content">

@@ -1,5 +1,6 @@
 let systemInfo = {}, designTheme = {}, venues = [], events = [];
 let activeFilter = 'All';
+let selectedCardId = null; // Track selected card for double-click logic
 
 const ageGate = document.getElementById('age-gate');
 const appShell = document.getElementById('app-shell');
@@ -11,7 +12,6 @@ const locModal = document.getElementById('location-modal');
 const searchInput = document.getElementById('search-input');
 const filterChips = document.querySelectorAll('.chip');
 
-// Mobile Sidebar Elements
 const sidebar = document.getElementById('sidebar');
 const hitArea = document.getElementById('sidebar-hit-area');
 let sidebarTimeout;
@@ -28,7 +28,14 @@ async function initApp() {
         events = await eventsRes.json();
 
         applyTheme(); populateSystemText(); setupEventListeners(); loadSavedLocation(); 
-        applyFilters(); // Initial render
+        
+        // Age Gate LocalStorage Check
+        if(localStorage.getItem('br_age_verified') === 'true') {
+            ageGate.classList.add('hidden');
+            appShell.classList.remove('hidden');
+        }
+
+        applyFilters(); 
     } catch (error) {
         console.error("Local JSON fetch failed. Run via local web server.", error);
         document.getElementById('ag-text').innerText = "Data error. Run via local server.";
@@ -47,15 +54,19 @@ function applyTheme() {
 function populateSystemText() {
     document.getElementById('ag-text').innerText = systemInfo.age_gate_text;
     document.getElementById('ag-disclaimer').innerText = systemInfo.disclaimer_text;
-    if(systemInfo.short_brand_name) document.getElementById('brand-title').innerText = systemInfo.short_brand_name;
 }
 
 function setupEventListeners() {
-    btnEnter.addEventListener('click', () => { ageGate.classList.add('hidden'); appShell.classList.remove('hidden'); });
+    // Save Age Gate to localStorage
+    btnEnter.addEventListener('click', () => { 
+        localStorage.setItem('br_age_verified', 'true');
+        ageGate.classList.add('hidden'); 
+        appShell.classList.remove('hidden'); 
+    });
+    
     btnCloseModal.addEventListener('click', () => modal.classList.add('hidden'));
     modal.addEventListener('click', (e) => { if (e.target === modal) modal.classList.add('hidden'); });
     
-    // Location Modal
     document.getElementById('btn-location').addEventListener('click', () => locModal.classList.remove('hidden'));
     document.getElementById('close-location-modal').addEventListener('click', () => locModal.classList.add('hidden'));
     document.getElementById('btn-save-location').addEventListener('click', saveLocation);
@@ -66,7 +77,6 @@ function setupEventListeners() {
         saveLocation();
     });
 
-    // Mobile Sidebar Interaction
     if(hitArea && sidebar) {
         const showSidebar = () => {
             sidebar.classList.add('visible');
@@ -77,10 +87,8 @@ function setupEventListeners() {
         sidebar.addEventListener('click', showSidebar);
     }
 
-    // Search Input
     searchInput.addEventListener('input', applyFilters);
 
-    // Filter Chips
     filterChips.forEach(chip => {
         chip.addEventListener('click', (e) => {
             filterChips.forEach(c => c.classList.remove('active'));
@@ -94,18 +102,17 @@ function setupEventListeners() {
 function applyFilters() {
     const query = searchInput.value;
     let filteredVenues = venues;
+    selectedCardId = null; // Reset selection on filter change
 
-    // Apply categorical chip filter first
     if(activeFilter !== 'All') {
         filteredVenues = filteredVenues.filter(v => {
             if(activeFilter === 'Darkroom') return v.Feature_Darkroom;
             if(activeFilter === 'Men Only') return v.Feature_Men_Only;
-            if(activeFilter === 'Open Now') return v.Status === 'Live'; // Basic prototype proxy for "Open Now"
+            if(activeFilter === 'Open Now') return v.Status === 'Live';
             return true;
         });
     }
 
-    // Apply fuzzy text search
     if(query.trim() !== '') {
         filteredVenues = filteredVenues.filter(v => fuzzyMatch(v.Name + " " + v.Description, query));
     }
@@ -113,7 +120,6 @@ function applyFilters() {
     renderListings(filteredVenues);
 }
 
-// Levenshtein distance
 function getLevenshteinDistance(a, b) {
     if (a.length === 0) return b.length;
     if (b.length === 0) return a.length;
@@ -219,7 +225,22 @@ function renderListings(data) {
                 <div class="card-stats"><span>🌈 ${systemInfo.labels.rated_by_gays}</span><span>👁️ ${venue.Views || 0}</span><span class="star-btn" data-id="${venue.Venue_ID}">☆</span></div>
             </div>
         `;
-        card.addEventListener('click', (e) => { if(!e.target.classList.contains('star-btn')) openModal(venue); });
+        
+        // Two-click interaction logic
+        card.addEventListener('click', (e) => { 
+            if(!e.target.classList.contains('star-btn')) {
+                if(selectedCardId === venue.Venue_ID) {
+                    // Second click: open the modal
+                    openModal(venue);
+                } else {
+                    // First click: select the card (glow)
+                    document.querySelectorAll('.card.selected').forEach(c => c.classList.remove('selected'));
+                    card.classList.add('selected');
+                    selectedCardId = venue.Venue_ID;
+                }
+            } 
+        });
+        
         resultsContainer.appendChild(card);
     });
 }
