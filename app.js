@@ -7,7 +7,7 @@ let currentTargetVenue = null;
 let userFavorites = JSON.parse(localStorage.getItem('br_favorites')) || [];
 let userShortlists = JSON.parse(localStorage.getItem('br_shortlists')) || {};
 
-const APP_VERSION = "v0.10";
+const APP_VERSION = "v0.13";
 const APP_DATE = "May 13, 2026";
 
 // --- DOM Elements ---
@@ -75,7 +75,20 @@ async function initApp() {
         
     } catch (error) {
         console.error("Local JSON fetch failed.", error);
+        const errorText = document.getElementById('error-text');
+        errorText.innerText = "Data error: " + error.message + ". If you are testing this locally on a mobile phone file manager, standard browsers will block local file loading. Please upload to GitHub Pages or click bypass below to view the empty UI shell.";
         errorPanel.classList.remove('hidden');
+        
+        const bypassContainer = document.getElementById('bypass-container');
+        bypassContainer.innerHTML = '';
+        const btn = document.createElement('button');
+        btn.innerText = "Continue Without Data";
+        btn.className = "btn secondary-btn display-font";
+        btn.onclick = () => {
+            errorPanel.classList.add('hidden');
+            applyTheme(); populateSystemText(); setupEventListeners(); handleRouting();
+        };
+        bypassContainer.appendChild(btn);
     }
 }
 
@@ -132,9 +145,7 @@ function setupEventListeners() {
         handleRouting();
     });
 
-    // Top Bar 
     document.getElementById('btn-location').addEventListener('click', () => {
-        // Force return to results from favorites/shortlist before setting location
         if(window.location.hash === '#favorites' || window.location.hash.startsWith('#shortlist=')) {
             window.location.hash = '';
         }
@@ -147,10 +158,8 @@ function setupEventListeners() {
     document.getElementById('btn-language').addEventListener('click', () => alert("Translation widget placeholder [Phase 2]"));
     document.getElementById('btn-ag-lang').addEventListener('click', () => alert("Translation widget placeholder [Phase 2]"));
 
-    // Context Clear
     document.getElementById('btn-back-to-results').addEventListener('click', () => window.location.hash = '');
 
-    // Location
     document.getElementById('btn-save-location').addEventListener('click', saveLocation);
     document.getElementById('btn-clear-location').addEventListener('click', clearLocation);
     document.getElementById('btn-gps').addEventListener('click', () => {
@@ -162,7 +171,6 @@ function setupEventListeners() {
         } else alert("Geolocation not supported.");
     });
 
-    // Settings
     document.getElementById('btn-reset-age').addEventListener('click', () => {
         localStorage.removeItem('br_age_verified');
         window.location.reload();
@@ -178,7 +186,6 @@ function setupEventListeners() {
     document.getElementById('btn-export-data').addEventListener('click', exportUserData);
     document.getElementById('import-data-file').addEventListener('change', importUserData);
 
-    // Shortlist
     document.getElementById('btn-create-shortlist').addEventListener('click', () => {
         const name = document.getElementById('new-shortlist-name').value.trim();
         if(name) { userShortlists[name] = []; saveUserShortlists(); openShortlistsMenu(); document.getElementById('new-shortlist-name').value = '';}
@@ -408,7 +415,6 @@ function importUserData(e) {
     reader.readAsText(file);
 }
 
-// Carousel Tapping Logic
 function handleImageCarousel(imgElement) {
     imgElement.addEventListener('click', (e) => {
         e.stopPropagation(); 
@@ -423,7 +429,6 @@ function handleImageCarousel(imgElement) {
             imgElement.setAttribute('data-index', index);
         };
         tempImg.onerror = () => {
-            // Loop back to 01 if next image fails to load
             imgElement.src = `Venue_images/${id}-01.jpg`;
             imgElement.setAttribute('data-index', 1);
         };
@@ -454,7 +459,6 @@ function renderListings(data, isContextView = false) {
         const card = document.createElement('div');
         card.className = 'card';
         
-        // Dynamically load image or fallback
         const baseImageSrc = `Venue_images/${venue.Venue_ID}-01.jpg`;
         
         card.innerHTML = `
@@ -470,7 +474,7 @@ function renderListings(data, isContextView = false) {
                 ${nextEventHtml}
                 <div class="card-stats">
                     <span>🌈 ${systemInfo.labels?.rated_by_gays || 'Rated by gays'}</span><span>👁️ ${venue.Views || 0}</span>
-                    <span class="star-btn icon-btn ${isFav ? 'active-star' : ''}" style="margin-left:auto; font-size:1.4rem;">${isFav ? '★' : '☆'}</span>
+                    <span class="star-btn icon-btn ${isFav ? 'active-star' : ''}" style="margin-left:auto; font-size:1.8rem; line-height:1;">${isFav ? '★' : '☆'}</span>
                 </div>
             </div>
         `;
@@ -500,14 +504,12 @@ function openVenueModal(venue) {
     document.getElementById('modal-description').innerText = venue.Description;
     document.getElementById('modal-public-stats').innerHTML = `<span>🌈 ${systemInfo.labels?.rated_by_gays || 'Rated'}</span> <span>👁️ ${venue.Views || 0}</span>`;
     
-    // Modal Image Carousel
     const modalImage = document.getElementById('modal-venue-image');
     modalImage.setAttribute('data-id', venue.Venue_ID);
     modalImage.setAttribute('data-index', 1);
     modalImage.src = `Venue_images/${venue.Venue_ID}-01.jpg`;
     modalImage.onerror = () => modalImage.src = 'placeholder_venue.jpg';
 
-    // To prevent stacking multiple listeners on the modal image, clone and replace it
     const newModalImage = modalImage.cloneNode(true);
     modalImage.parentNode.replaceChild(newModalImage, modalImage);
     handleImageCarousel(newModalImage);
@@ -522,12 +524,22 @@ function openVenueModal(venue) {
     document.getElementById('modal-share').onclick = () => shareURL(`${window.location.origin}${window.location.pathname}?venue=${venue.Venue_ID}#venue=${venue.Venue_ID}`, venue.Name);
     document.getElementById('btn-map').onclick = () => alert("Native Maps intent placeholder");
 
+    const ageEmojis = ['🧒🏼', '🧑🏻', '🧔🏻‍♂️', '👨🏻‍🦳', '👴🏼'];
+    const sizeEmojis = ['🤏', '👍', '✌️', '🖐️', '🤲'];
+    const popEmojis = ['💀', '🍹', '🕺', '👯‍♀️', '🎉'];
+    
+    const ageScale = ageEmojis.slice(0, venue.Rating_Age_Range || 0).join('');
+    const sizeScale = sizeEmojis.slice(0, venue.Rating_Size || 0).join('');
+    const popScale = popEmojis.slice(0, venue.Rating_Busyness || 0).join('');
+
     document.getElementById('modal-ratings').innerHTML = `
         <div class="rating-item"><span>General</span><span>${'🍆'.repeat(venue.Rating_General || 0)}</span></div>
         <div class="rating-item"><span>Darkroom</span><span>${'💦'.repeat(venue.Rating_Darkroom || 0)}</span></div>
         <div class="rating-item"><span>Cost</span><span>${'💰'.repeat(venue.Rating_Cost || 0)}</span></div>
         <div class="rating-item"><span>Location</span><span>${'🍑'.repeat(venue.Rating_Location || 0)}</span></div>
-        <div class="rating-item"><span>Busyness</span><span>${'🎉'.repeat(venue.Rating_Busyness || 0)}</span></div>
+        <div class="rating-item"><span>Popularity</span><span>${popScale}</span></div>
+        <div class="rating-item"><span>Age Range</span><span>${ageScale}</span></div>
+        <div class="rating-item"><span>Size</span><span>${sizeScale}</span></div>
     `;
 
     const features = [];
