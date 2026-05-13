@@ -10,6 +10,13 @@ const adminShell = document.getElementById('admin-shell');
 const tableContainer = document.getElementById('admin-table-container');
 const pinInput = document.getElementById('admin-pin');
 
+// Auto-login if local token exists
+if(localStorage.getItem('br_admin_logged_in') === 'true') {
+    pinGate.classList.add('hidden');
+    adminShell.classList.remove('hidden');
+    loadDraftsFromLocal();
+}
+
 // Clipboard Logic
 const clipboard = document.getElementById('clipboard-text');
 clipboard.value = localStorage.getItem('br_admin_clipboard') || '';
@@ -17,20 +24,27 @@ clipboard.addEventListener('input', (e) => {
     localStorage.setItem('br_admin_clipboard', e.target.value);
 });
 
-// Keypad Logic
-window.addPin = (num) => pinInput.value += num;
+// Keypad & Keyboard Logic
+window.addPin = (num) => {
+    if(pinInput.value.length < 4) pinInput.value += num;
+    checkPin();
+};
 window.delPin = () => pinInput.value = pinInput.value.slice(0, -1);
 
-document.getElementById('btn-login').addEventListener('click', () => {
+pinInput.addEventListener('keyup', checkPin);
+document.getElementById('btn-login').addEventListener('click', checkPin);
+
+function checkPin() {
     if (pinInput.value === '1234') {
+        localStorage.setItem('br_admin_logged_in', 'true');
         pinGate.classList.add('hidden');
         adminShell.classList.remove('hidden');
         loadDraftsFromLocal();
-    } else {
+    } else if (pinInput.value.length === 4) {
         document.getElementById('pin-error').classList.remove('hidden');
         pinInput.value = '';
     }
-});
+}
 
 // View Switching
 window.switchView = function(view) {

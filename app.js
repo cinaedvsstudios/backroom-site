@@ -13,7 +13,7 @@ let userEvents = JSON.parse(localStorage.getItem('br_events')) || [];
 let userTravel = JSON.parse(localStorage.getItem('br_travel')) || [];
 let importInfo = JSON.parse(localStorage.getItem('br_import_info')) || null;
 
-const APP_VERSION = "v0.21";
+const APP_VERSION = "v0.22";
 const APP_DATE = "May 13, 2026";
 
 const avatarCategories = ["Twink", "Twunk", "Jock", "Muscle", "Geek", "Uncle", "Daddy", "Silver Fox", "Opa", "Bear", "Seal", "Otter", "Cub", "Wolf", "Circuit", "Leather", "Rubber", "Puppy", "Alternative", "Queer", "Femboy", "Slave"];
@@ -73,6 +73,13 @@ function getBadgeDateParts(ymdDate) {
 function recordUserInteraction() {
     sessionStorage.setItem('br_welcome_dismissed', 'true');
     welcomeScreen.classList.add('hidden');
+}
+
+function getDistanceFromLatLonInKm(lat1, lon1, lat2, lon2) {
+    if (!lat1 || !lon1 || !lat2 || !lon2) return Infinity;
+    var R = 6371; var dLat = (lat2-lat1) * (Math.PI/180); var dLon = (lon2-lon1) * (Math.PI/180); 
+    var a = Math.sin(dLat/2) * Math.sin(dLat/2) + Math.cos(lat1 * (Math.PI/180)) * Math.cos(lat2 * (Math.PI/180)) * Math.sin(dLon/2) * Math.sin(dLon/2); 
+    return R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a))); 
 }
 
 function setupCriticalListeners() {
@@ -169,6 +176,7 @@ function handleRouting() {
     contextHeader.classList.add('hidden');
     document.getElementById('event-city-filters').classList.add('hidden');
     document.getElementById('btn-new-shortlist-view').classList.add('hidden');
+    document.getElementById('btn-edit-travel-page').classList.add('hidden');
     document.getElementById('main-filters').classList.remove('hidden');
     document.getElementById('discounts-container').classList.add('hidden');
     welcomeScreen.classList.add('hidden');
@@ -264,11 +272,21 @@ function setupEventListeners() {
     document.getElementById('btn-gps').addEventListener('click', () => {
         if(navigator.geolocation) {
             navigator.geolocation.getCurrentPosition(
-                (pos) => { 
+                async (pos) => { 
                     const lat = pos.coords.latitude;
                     const lon = pos.coords.longitude;
                     const cityInput = document.getElementById('loc-city');
-                    cityInput.value = `My Location`;
+                    
+                    try {
+                        const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`);
+                        const data = await res.json();
+                        const city = data.address.city || data.address.town || data.address.village || 'My Location';
+                        cityInput.value = city;
+                        document.getElementById('loc-country').value = data.address.country || '';
+                    } catch (e) {
+                        cityInput.value = `My Location`;
+                    }
+                    
                     cityInput.dataset.lat = lat;
                     cityInput.dataset.lon = lon;
                     initLeafletMap(lat, lon);
@@ -633,6 +651,7 @@ function renderTravelFullView() {
     contextHeader.classList.remove('hidden');
     document.getElementById('context-title').innerHTML = "🚄 MY TRAVEL PINS";
     document.getElementById('context-desc').innerText = "Cities you plan to visit.";
+    document.getElementById('btn-edit-travel-page').classList.remove('hidden');
     
     resultsContainer.innerHTML = '';
 
@@ -735,9 +754,20 @@ function renderProfileAvatars() {
         
         item.innerHTML = `<img src="Profile_images/${imgName}" onerror="this.src='placeholder_venue.jpg'" alt="${cat}"><span>${cat}</span>`;
         item.addEventListener('click', () => {
-            document.querySelectorAll('.avatar-item').forEach(el => el.classList.remove('selected'));
-            item.classList.add('selected');
-            userProfile.avatar = imgName;
+            if (item.classList.contains('selected')) {
+                // Deselect and show all
+                document.querySelectorAll('.avatar-item').forEach(el => el.classList.remove('selected', 'hidden'));
+                userProfile.avatar = '';
+            } else {
+                // Select and hide others
+                document.querySelectorAll('.avatar-item').forEach(el => {
+                    el.classList.remove('selected');
+                    if (el !== item) el.classList.add('hidden');
+                });
+                item.classList.add('selected');
+                userProfile.avatar = imgName;
+                showToast("Click the avatar again to go back to the list");
+            }
         });
         grid.appendChild(item);
     });
@@ -861,7 +891,31 @@ function renderListings(data, isContextView = false) {
     const today = new Date(); today.setHours(0,0,0,0);
 
     if(!data || data.length === 0) {
-        resultsContainer.innerHTML = `<p style="text-align:center; color:var(--label-grey); margin-top:20px; width: 100%; grid-column: 1 / -1;">No venues found.</p>`;
+        let emptyHtml = `<p style="text-align:center; color:var(--label-grey); margin-top:20px; width: 100%; grid-column: 1 / -1;">No venues found.</p>`;
+        
+        const cityInput = document.getElementById('loc-city');
+        const userLat = parseFloat(cityInput.dataset.lat);
+        const userLon = parseFloat(cityInput.dataset.lon);
+        
+        if (!isNaN(userLat) && !isNaN(userLon) && venues.length > 0) {
+            let nearest = null;
+            let minDist = Infinity;
+            venues.forEach(v => {
+                const dist = getDistanceFromLatLonInKm(userLat, userLon, parseFloat(v.Latitude), parseFloat(v.Longitude));
+                if (dist < minDist) { minDist = dist; nearest = v; }
+            });
+            
+            if (nearest && minDist !== Infinity) {
+                const distRounded = Math.round(minDist);
+                emptyHtml = `<p style="text-align:center; color:var(--label-grey); margin-top:20px; width: 100%; grid-column: 1 / -1;">
+                    No venues found here.<br><br>
+                    <a href="javascript:void(0)" onclick="document.getElementById('search-input').value='${nearest.City}'; applyFilters();" style="color:var(--primary-blue); font-weight:bold; font-size:1.1rem; text-decoration:underline;">
+                        Closest venue is ${distRounded} km away in ${nearest.City}.<br>Click here to load ${nearest.City}.
+                    </a>
+                </p>`;
+            }
+        }
+        resultsContainer.innerHTML = emptyHtml;
         return;
     }
 
@@ -1007,11 +1061,11 @@ function openVenueModal(venue) {
             </div>
             
             <div class="desktop-stats">
-                ${statsHtml}
-                <hr style="border: 0; height: 2px; background: var(--bright-red-orange); margin: 15px 0;">
-                <div class="description-block">
-                    <h3 class="display-font">ABOUT</h3>
-                    <p>${venue.Description}</p>
+                <div class="desktop-stats-container">
+                    ${statsHtml}
+                    <hr style="border: 0; height: 2px; background: var(--bright-red-orange); margin: 15px 0;">
+                    <h3 class="display-font" style="color: var(--primary-blue); margin-bottom:10px;">ABOUT</h3>
+                    <p style="color: #fff; line-height: 1.5;">${venue.Description}</p>
                 </div>
                 ${eventsHtml}
             </div>
