@@ -15,14 +15,52 @@ if(localStorage.getItem('br_admin_logged_in') === 'true') {
     loadDraftsFromLocal();
 }
 
-// Clipboard Logic
+function showToast(message) {
+    const container = document.getElementById('toast-container');
+    if(!container) return;
+    container.classList.remove('hidden');
+    const toast = document.createElement('div');
+    toast.className = 'toast';
+    toast.innerText = message;
+    container.appendChild(toast);
+    
+    setTimeout(() => toast.classList.add('show'), 10);
+    setTimeout(() => {
+        toast.classList.remove('show');
+        setTimeout(() => toast.remove(), 300);
+    }, 2500);
+}
+
+// Draggable Clipboard Logic
+const clipboardFloat = document.getElementById('clipboard-float');
+const clipHeader = document.getElementById('clipboard-header');
+let isDragging = false, startX, startY, initialLeft, initialTop;
+
+clipHeader.addEventListener('mousedown', (e) => {
+    isDragging = true;
+    startX = e.clientX; startY = e.clientY;
+    const rect = clipboardFloat.getBoundingClientRect();
+    // remove centering transform so explicit pixel drags work flawlessly
+    clipboardFloat.style.transform = 'none';
+    initialLeft = rect.left; initialTop = rect.top;
+    clipboardFloat.style.left = initialLeft + 'px';
+    clipboardFloat.style.top = initialTop + 'px';
+});
+
+document.addEventListener('mousemove', (e) => {
+    if(isDragging) {
+        clipboardFloat.style.left = (initialLeft + e.clientX - startX) + 'px';
+        clipboardFloat.style.top = (initialTop + e.clientY - startY) + 'px';
+    }
+});
+document.addEventListener('mouseup', () => isDragging = false);
+
 const clipboard = document.getElementById('clipboard-text');
 clipboard.value = localStorage.getItem('br_admin_clipboard') || '';
 clipboard.addEventListener('input', (e) => {
     localStorage.setItem('br_admin_clipboard', e.target.value);
 });
 
-// Keypad & Global Keyboard Logic
 window.addPin = (num) => {
     if(pinInput.value.length < 4) pinInput.value += num;
     checkPin();
@@ -102,13 +140,12 @@ document.getElementById('btn-fetch-live').addEventListener('click', async () => 
         draftData = JSON.parse(JSON.stringify(liveData)); 
         saveDraftsToLocal();
         renderTable();
-        alert(`Live ${currentMode} data loaded and saved to local draft!`);
+        showToast(`Live ${currentMode} data loaded and saved to draft!`);
     } catch(err) {
-        alert(err.message + " Try Manual Upload.");
+        showToast("Fetch failed. Try Manual Upload.");
     }
 });
 
-// JSON Replace Upload
 document.getElementById('file-upload-replace').addEventListener('change', (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -118,12 +155,12 @@ document.getElementById('file-upload-replace').addEventListener('change', (e) =>
             draftData = JSON.parse(event.target.result);
             saveDraftsToLocal();
             renderTable();
-        } catch (err) { alert("Error parsing JSON. File may be corrupted."); }
+            showToast("Data replaced successfully!");
+        } catch (err) { alert("Error parsing JSON."); }
     };
     reader.readAsText(file);
 });
 
-// JSON Merge Upload
 document.getElementById('file-upload-merge').addEventListener('change', (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -150,13 +187,12 @@ document.getElementById('file-upload-merge').addEventListener('change', (e) => {
             
             saveDraftsToLocal();
             renderTable();
-            alert(`Merge Complete: ${mergedCount} updated, ${addedCount} new entries added.`);
-        } catch (err) { alert("Error merging JSON. Ensure the structure matches."); }
+            showToast(`Merge Complete: ${mergedCount} updated, ${addedCount} new.`);
+        } catch (err) { alert("Error merging JSON."); }
     };
     reader.readAsText(file);
 });
 
-// CSV Export
 document.getElementById('btn-export-csv').addEventListener('click', () => {
     if(!draftData || draftData.length === 0) return alert('No data available to export.');
     
@@ -166,7 +202,6 @@ document.getElementById('btn-export-csv').addEventListener('click', () => {
     draftData.forEach(row => {
         csvString += cols.map(c => {
             let val = row[c] === null || row[c] === undefined ? '' : String(row[c]);
-            // Escape quotes by doubling them, wrap field in quotes for safe parsing
             val = val.replace(/"/g, '""'); 
             return `"${val}"`; 
         }).join(',') + '\n';
@@ -308,7 +343,6 @@ window.editCell = function(td, rowIndex, col) {
         td.querySelector('select').value = currentVal;
         td.querySelector('select').focus();
     } else {
-        // Direct ContentEditable Inline Editing
         if (td.isContentEditable) return; 
         
         td.contentEditable = "true";

@@ -74,11 +74,11 @@ body { background-color: var(--bg-color); color: #fff; font-family: 'Barlow Cond
 .top-btn:hover { background-color: var(--panel-mid); color: #fff; border-color: var(--primary-blue); }
 .icon-only { padding: 8px 12px; font-size: 1.2rem; }
 
-/* Re-styled profile button and crop */
+/* Increased Profile Icon Size */
 .profile-btn-wrap { padding: 4px 8px !important; }
 #top-profile-avatar { 
-    width: 32px; 
-    height: 32px; 
+    width: 40px; 
+    height: 40px; 
     object-fit: none; 
     object-position: center 10%; 
     border-radius: 4px; 
@@ -98,7 +98,6 @@ body { background-color: var(--bg-color); color: #fff; font-family: 'Barlow Cond
 .submenu-item { cursor: pointer; color: var(--label-grey); transition: color 0.2s; padding: 5px 8px; border-radius: var(--radius-btn); }
 .submenu-item:hover { color: #fff; background-color: rgba(255,255,255,0.05); }
 
-/* Travel active highlight */
 .submenu-item.active-travel { background-color: var(--primary-blue) !important; color: #fff !important; font-weight: bold; }
 .travel-fav-box { border: 1px solid var(--primary-blue); border-radius: var(--radius-card); padding: 5px; margin-top: 5px; display: flex; flex-direction: column; gap: 2px; }
 .travel-fav-box .submenu-item { color: var(--primary-blue); }
@@ -173,16 +172,14 @@ body { background-color: var(--bg-color); color: #fff; font-family: 'Barlow Cond
 .avatar-item:not(.selected) img { width: 70px; height: 140px; border-radius: 8px; object-fit: cover; border: 2px solid transparent; margin-bottom: 5px; transition: border-color 0.2s; }
 .avatar-item:not(.selected) span { display: block; font-size: 0.8rem; color: var(--text-light); }
 
-
-.desktop-stats-container { background-color: var(--near-black); border-radius: var(--radius-card); padding: 15px; margin-top: 15px; }
+.desktop-stats-container { background-color: var(--near-black); border-radius: var(--radius-card); padding: 15px; }
 .public-stats-block { display: flex; gap: 15px; color: #fff; font-size: 1.1rem; }
 .feature-chips { display: flex; flex-wrap: wrap; gap: 5px; }
 .ratings-grid { display: grid; grid-template-columns: 1fr; gap: 5px; background-color: var(--near-black); padding: 15px; border-radius: var(--radius-card); }
 .rating-item { display: flex; justify-content: space-between; font-size: 1rem; color: var(--text-light); }
-.description-block { background-color: var(--near-black); padding: 15px; border-radius: var(--radius-card); margin-bottom: 10px; }
-.description-block h3 { margin-bottom: 10px; color: var(--primary-blue); }
-.description-block p { line-height: 1.5; color: #fff; }
 
+/* Updated Full-Width About & Events */
+.full-width-about { background-color: var(--near-black); padding: 20px; border-radius: var(--radius-card); margin-bottom: 15px; }
 .events-block { margin-top: 10px; }
 .events-block h3 { margin-bottom: 10px; color: var(--primary-blue); }
 .event-card { background-color: var(--near-black); padding: 12px; border: 1px solid var(--panel-mid); border-left: 3px solid var(--primary-blue); border-radius: 0 var(--radius-card) var(--radius-card) 0; margin-bottom: 10px; display: flex; flex-direction: column; }
@@ -207,7 +204,7 @@ body { background-color: var(--bg-color); color: #fff; font-family: 'Barlow Cond
 
 @media (max-width: 1023px) {
     .desktop-stats { display: none; }
-    .mobile-stats { display: block; margin-top: 15px; }
+    .mobile-stats { display: block; margin-bottom: 15px; }
 }
 
 @media (max-width: 768px) {

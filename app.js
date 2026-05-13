@@ -13,7 +13,7 @@ let userEvents = JSON.parse(localStorage.getItem('br_events')) || [];
 let userTravel = JSON.parse(localStorage.getItem('br_travel')) || [];
 let importInfo = JSON.parse(localStorage.getItem('br_import_info')) || null;
 
-const APP_VERSION = "v0.29";
+const APP_VERSION = "v0.30";
 const APP_DATE = "May 13, 2026";
 
 const avatarCategories = ["Twink", "Twunk", "Jock", "Muscle", "Geek", "Uncle", "Daddy", "Silver Fox", "Opa", "Bear", "Seal", "Otter", "Cub", "Wolf", "Circuit", "Leather", "Rubber", "Puppy", "Alternative", "Queer", "Femboy", "Slave"];
@@ -709,7 +709,6 @@ function renderMyEventsView() {
         const venueName = venue ? venue.Name : 'Unknown Venue';
         const card = document.createElement('div');
         card.className = 'card';
-        // Enforced blue border for Event Cards here
         card.style.border = '1px solid var(--primary-blue)';
         card.innerHTML = `
             <div class="card-inner-content">
@@ -1083,13 +1082,31 @@ function openVenueModal(venue) {
     const dynamicLayout = document.getElementById('modal-dynamic-layout');
     if(!dynamicLayout) return;
     
+    // Emoji Rendering Logic with 60% Transparency
+    const renderScale = (val, emojisArr) => {
+        let html = '';
+        for(let i=0; i<5; i++) {
+            if(i < emojisArr.length) {
+                html += `<span style="opacity: ${i < val ? '1' : '0.4'}">${emojisArr[i]}</span>`;
+            }
+        }
+        return html;
+    };
+    const renderRepeat = (val, emoji) => {
+        let html = '';
+        for(let i=0; i<5; i++) {
+            html += `<span style="opacity: ${i < val ? '1' : '0.4'}">${emoji}</span>`;
+        }
+        return html;
+    };
+
     const ageEmojis = ['🧒🏼', '🧑🏻', '🧔🏻‍♂️', '👨🏻‍🦳', '👴🏼'];
     const sizeEmojis = ['🤏', '👍', '✌️', '🖐️', '🤲'];
     const popEmojis = ['💀', '🍹', '🕺', '👯‍♀️', '🎉'];
     
-    const ageScale = ageEmojis.slice(0, venue.Rating_Age_Range || 0).join('');
-    const sizeScale = sizeEmojis.slice(0, venue.Rating_Size || 0).join('');
-    const popScale = popEmojis.slice(0, venue.Rating_Busyness || 0).join('');
+    const ageScale = renderScale(venue.Rating_Age_Range || 0, ageEmojis);
+    const sizeScale = renderScale(venue.Rating_Size || 0, sizeEmojis);
+    const popScale = renderScale(venue.Rating_Busyness || 0, popEmojis);
 
     const features = [];
     if(venue.Feature_Darkroom) features.push('Darkroom');
@@ -1108,10 +1125,10 @@ function openVenueModal(venue) {
     
     const ratingsHtml = `
         <div class="ratings-grid" id="modal-ratings">
-            <div class="rating-item"><span>General</span><span>${'🍆'.repeat(venue.Rating_General || 0)}</span></div>
-            <div class="rating-item"><span>Darkroom</span><span>${'💦'.repeat(venue.Rating_Darkroom || 0)}</span></div>
-            <div class="rating-item"><span>Cost</span><span>${'💰'.repeat(venue.Rating_Cost || 0)}</span></div>
-            <div class="rating-item"><span>Location</span><span>${'🍑'.repeat(venue.Rating_Location || 0)}</span></div>
+            <div class="rating-item"><span>General</span><span>${renderRepeat(venue.Rating_General || 0, '🍆')}</span></div>
+            <div class="rating-item"><span>Darkroom</span><span>${renderRepeat(venue.Rating_Darkroom || 0, '💦')}</span></div>
+            <div class="rating-item"><span>Cost</span><span>${renderRepeat(venue.Rating_Cost || 0, '💰')}</span></div>
+            <div class="rating-item"><span>Location</span><span>${renderRepeat(venue.Rating_Location || 0, '🍑')}</span></div>
             <div class="rating-item"><span>Popularity</span><span>${popScale}</span></div>
             <div class="rating-item"><span>Age Range</span><span>${ageScale}</span></div>
             <div class="rating-item"><span>Size</span><span>${sizeScale}</span></div>
@@ -1157,43 +1174,43 @@ function openVenueModal(venue) {
         eventsHtml += `</div>`;
     }
 
+    // FULL WIDTH MODAL LAYOUT RESTRUCTURE
     dynamicLayout.innerHTML = `
-        <div class="modal-left-col">
-            <div class="modal-image-container">
-                <img id="modal-venue-image" class="venue-image centered-image" src="Venue_images/${venue.Venue_ID}-01.jpg" onerror="this.src='placeholder_venue.jpg'" data-id="${venue.Venue_ID}" data-index="1" title="Tap for next image">
+        <div class="modal-top-split">
+            <div class="modal-left-col">
+                <div class="modal-image-container">
+                    <img id="modal-venue-image" class="venue-image centered-image" src="Venue_images/${venue.Venue_ID}-01.jpg" onerror="this.src='placeholder_venue.jpg'" data-id="${venue.Venue_ID}" data-index="1" title="Tap for next image">
+                </div>
+                
+                <div class="desktop-stats">
+                    <div class="desktop-stats-container">
+                        ${statsHtml}
+                    </div>
+                </div>
             </div>
-            
-            <div class="desktop-stats">
-                <div class="desktop-stats-container">
+
+            <div class="modal-right-col">
+                <div style="display:flex; align-items:center; gap:8px; margin-bottom:10px;">
+                    <button id="btn-map" class="btn secondary-btn pill-btn" style="padding: 2px 8px; font-size: 0.75rem; width: auto; flex-shrink: 0;">🗺️ Directions</button>
+                    <p class="meta-text" style="margin:0;">${venue.Address || ''}</p>
+                </div>
+                
+                <div class="mobile-stats">
                     ${statsHtml}
-                    <hr style="border: 0; height: 2px; background: var(--bright-red-orange); margin: 15px 0;">
-                    <h3 class="display-font" style="color: var(--primary-blue); margin-bottom:10px;">ABOUT</h3>
-                    <p style="color: #fff; line-height: 1.5;">${venue.Description}</p>
                 </div>
-                ${eventsHtml}
+                
+                ${ratingsHtml}
             </div>
         </div>
-
-        <div class="modal-right-col">
-            <div style="display:flex; align-items:center; gap:8px; margin-bottom:10px;">
-                <button id="btn-map" class="btn secondary-btn pill-btn" style="padding: 2px 8px; font-size: 0.75rem; width: auto; flex-shrink: 0;">🗺️ Directions</button>
-                <p class="meta-text" style="margin:0;">${venue.Address}</p>
-            </div>
-            
-            <div class="mobile-stats">
-                ${statsHtml}
-            </div>
-            
-            ${ratingsHtml}
-
-            <div class="mobile-stats">
-                <div class="description-block">
-                    <h3 class="display-font">ABOUT</h3>
-                    <p>${venue.Description}</p>
-                </div>
-                ${eventsHtml}
-            </div>
+        
+        <hr style="border: 0; height: 2px; background: var(--bright-red-orange); margin: 20px 0;">
+        
+        <div class="full-width-about" style="background-color: var(--near-black); padding: 20px; border-radius: var(--radius-card); margin-bottom: 15px;">
+            <h3 class="display-font" style="color: var(--primary-blue); margin-bottom:10px;">ABOUT</h3>
+            <p style="color: #fff; line-height: 1.5;">${venue.Description || ''}</p>
         </div>
+        
+        ${eventsHtml}
     `;
 
     const img = document.getElementById('modal-venue-image');
@@ -1224,7 +1241,7 @@ function openVenueModal(venue) {
             if (isIOS) {
                 window.open(`http://maps.apple.com/?q=${query}`, '_blank');
             } else {
-                window.open(`http://googleusercontent.com/maps.google.com/maps?q=${query}`, '_blank');
+                window.open(`https://www.google.com/maps/search/?api=1&query=${query}`, '_blank');
             }
         };
     }
