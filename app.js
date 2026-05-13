@@ -12,11 +12,15 @@ let userEvents = JSON.parse(localStorage.getItem('br_events')) || [];
 let userTravel = JSON.parse(localStorage.getItem('br_travel')) || [];
 let importInfo = JSON.parse(localStorage.getItem('br_import_info')) || null;
 
-const APP_VERSION = "v0.16";
+const APP_VERSION = "v0.17";
 const APP_DATE = "May 13, 2026";
 
-// Avatar Categories
+// Avatar Categories (Updated to .png)
 const avatarCategories = ["Twink", "Twunk", "Jock", "Muscle", "Geek", "Uncle", "Daddy", "Silver Fox", "Opa", "Bear", "Seal", "Otter", "Cub", "Wolf", "Circuit", "Leather", "Rubber", "Puppy", "Alternative", "Queer", "Femboy", "Slave"];
+
+// Leaflet Map State
+let leafletMap = null;
+let leafletMarker = null;
 
 // --- DOM Elements ---
 const ageGate = document.getElementById('age-gate');
@@ -32,7 +36,6 @@ const welcomeScreen = document.getElementById('welcome-screen');
 const venueModal = document.getElementById('venue-modal');
 const locModal = document.getElementById('location-modal');
 const settingsModal = document.getElementById('settings-modal');
-const shortlistsModal = document.getElementById('shortlists-modal');
 const addShortlistModal = document.getElementById('add-to-shortlist-modal');
 const profileModal = document.getElementById('profile-modal');
 
@@ -150,6 +153,8 @@ function handleRouting() {
     
     document.querySelectorAll('.modal').forEach(m => m.classList.add('hidden'));
     contextHeader.classList.add('hidden');
+    document.getElementById('event-city-filters').classList.add('hidden');
+    document.getElementById('btn-new-shortlist-view').classList.add('hidden');
     document.getElementById('main-filters').classList.remove('hidden');
     welcomeScreen.classList.add('hidden');
 
@@ -169,9 +174,11 @@ function handleRouting() {
         renderFavoritesView();
     } else if (hash === '#myevents') {
         renderMyEventsView();
+    } else if (hash === '#myshortlists') {
+        renderShortlistsFullView();
     } else if (hash.startsWith('#shortlist=')) {
         const name = decodeURIComponent(hash.replace('#shortlist=', ''));
-        renderShortlistView(name);
+        renderSingleShortlist(name);
     } else {
         applyFilters();
     }
@@ -204,7 +211,7 @@ function setupEventListeners() {
     document.getElementById('btn-settings').addEventListener('click', () => settingsModal.classList.remove('hidden'));
     document.getElementById('btn-profile-menu').addEventListener('click', openProfileMenu);
     document.getElementById('btn-favorites').addEventListener('click', () => window.location.hash = '#favorites');
-    document.getElementById('btn-shortlists-menu').addEventListener('click', openShortlistsMenu);
+    document.getElementById('btn-shortlists-menu').addEventListener('click', () => window.location.hash = '#myshortlists');
     
     document.getElementById('btn-sidebar-travel').addEventListener('click', () => {
         const drop = document.getElementById('travel-dropdown');
@@ -216,7 +223,7 @@ function setupEventListeners() {
     });
     document.getElementById('btn-save-travel').addEventListener('click', () => {
         const city = document.getElementById('loc-city').value.trim();
-        if(city && !userTravel.includes(city)) {
+        if(city && city !== 'My Location' && !userTravel.includes(city)) {
             userTravel.push(city);
             localStorage.setItem('br_travel', JSON.stringify(userTravel));
             showToast(`Saved to Travel 🚄: ${city}`);
@@ -227,17 +234,51 @@ function setupEventListeners() {
     document.getElementById('btn-language').addEventListener('click', () => alert("Translation widget placeholder"));
     document.getElementById('btn-ag-lang').addEventListener('click', () => alert("Translation widget placeholder"));
 
-    document.getElementById('btn-back-to-results').addEventListener('click', () => window.location.hash = '');
+    document.getElementById('btn-back-to-results').addEventListener('click', () => {
+        searchInput.value = '';
+        window.location.hash = '';
+    });
 
     document.getElementById('btn-save-location').addEventListener('click', saveLocation);
     document.getElementById('btn-clear-location').addEventListener('click', clearLocation);
+    
+    // Leaflet GPS & Search
     document.getElementById('btn-gps').addEventListener('click', () => {
         if(navigator.geolocation) {
             navigator.geolocation.getCurrentPosition(
-                (pos) => { document.getElementById('loc-city').value = `GPS: ${pos.coords.latitude.toFixed(2)}, ${pos.coords.longitude.toFixed(2)}`; },
+                (pos) => { 
+                    const lat = pos.coords.latitude;
+                    const lon = pos.coords.longitude;
+                    const cityInput = document.getElementById('loc-city');
+                    cityInput.value = `My Location`;
+                    cityInput.dataset.lat = lat;
+                    cityInput.dataset.lon = lon;
+                    initLeafletMap(lat, lon);
+                },
                 (err) => { alert("GPS Denied or Unavailable."); }
             );
         } else alert("Geolocation not supported.");
+    });
+
+    document.getElementById('btn-search-map').addEventListener('click', async () => {
+        const country = document.getElementById('loc-country').value.trim();
+        const city = document.getElementById('loc-city').value.trim();
+        const pc = document.getElementById('loc-postcode').value.trim();
+        const query = `${pc} ${city}, ${country}`.trim();
+        
+        if(!query) return;
+        
+        try {
+            const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}`);
+            const data = await res.json();
+            if(data && data.length > 0) {
+                initLeafletMap(data[0].lat, data[0].lon);
+            } else {
+                alert("Location not found on map, but will be saved for filtering.");
+            }
+        } catch(e) {
+            console.error("OSM Error", e);
+        }
     });
 
     document.getElementById('btn-reset-age').addEventListener('click', () => {
@@ -254,10 +295,6 @@ function setupEventListeners() {
     document.querySelectorAll('.btn-export-trigger').forEach(btn => btn.addEventListener('click', exportUserData));
     document.getElementById('import-data-file').addEventListener('change', importUserData);
 
-    document.getElementById('btn-create-shortlist').addEventListener('click', () => {
-        const name = document.getElementById('new-shortlist-name').value.trim();
-        if(name) { userShortlists[name] = []; saveUserShortlists(); openShortlistsMenu(); document.getElementById('new-shortlist-name').value = '';}
-    });
     document.getElementById('btn-add-create-shortlist').addEventListener('click', () => {
         const name = document.getElementById('add-new-shortlist-name').value.trim();
         if(name && currentTargetVenue) { 
@@ -275,6 +312,19 @@ function setupEventListeners() {
         updateProfileDisplay();
         showToast("Profile saved locally!");
         if(window.location.hash === '' && searchInput.value === '') renderWelcomeScreen();
+    });
+
+    document.getElementById('btn-new-profile').addEventListener('click', () => {
+        if(confirm("Do you want to clear EVERYTHING (including Favorites and Shortlists) to start fresh?\n\nClick OK to clear everything.\nClick Cancel to keep data but clear profile info.")) {
+            localStorage.clear();
+            window.location.reload();
+        } else {
+            userProfile = { name: '', avatar: '' };
+            localStorage.setItem('br_profile', JSON.stringify(userProfile));
+            document.getElementById('profile-name').value = '';
+            renderProfileAvatars();
+            updateProfileDisplay();
+        }
     });
 
     if(hitArea && sidebar) {
@@ -299,6 +349,27 @@ function setupEventListeners() {
     });
 }
 
+function initLeafletMap(lat, lng) {
+    document.getElementById('map-preview-placeholder').classList.add('hidden');
+    const mapDiv = document.getElementById('loc-map');
+    mapDiv.style.display = 'block';
+    
+    if (!leafletMap) {
+        leafletMap = L.map('loc-map').setView([lat, lng], 13);
+        L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            attribution: '&copy; OpenStreetMap contributors'
+        }).addTo(leafletMap);
+        leafletMarker = L.marker([lat, lng]).addTo(leafletMap);
+    } else {
+        leafletMap.setView([lat, lng], 13);
+        leafletMarker.setLatLng([lat, lng]);
+    }
+    
+    // Invalidate size after modal rendering logic completes to avoid visual tear
+    setTimeout(() => leafletMap.invalidateSize(), 150);
+}
+
 function updateProfileDisplay() {
     const topAvatar = document.getElementById('top-profile-avatar');
     const topName = document.getElementById('top-profile-name');
@@ -308,7 +379,7 @@ function updateProfileDisplay() {
     if(userProfile.avatar) {
         topAvatar.src = `Profile_images/${userProfile.avatar}`;
         topAvatar.style.display = 'inline-block';
-        if(!userProfile.name) topName.style.display = 'none'; // hide generic icon if image exists but no name
+        if(!userProfile.name) topName.style.display = 'none'; 
     } else {
         topAvatar.style.display = 'none';
         topName.style.display = 'inline-block';
@@ -427,7 +498,6 @@ window.toggleEventFavorite = function(eventId, btnElement, isRemovalView = false
 
 function renderFavoritesView() {
     document.getElementById('main-filters').classList.add('hidden');
-    document.getElementById('event-city-filters').classList.add('hidden');
     contextHeader.classList.remove('hidden');
     document.getElementById('context-title').innerHTML = "⚜️ MY FAVOURITES";
     document.getElementById('context-desc').innerText = "Venues you have starred locally.";
@@ -454,7 +524,6 @@ function renderMyEventsView() {
         return;
     }
 
-    // Build city filters dynamically
     const cities = new Set();
     myEvts.forEach(ev => {
         const venue = (venues||[]).find(v => v.Venue_ID === ev.Venue_ID);
@@ -472,7 +541,6 @@ function renderMyEventsView() {
     createCityBtn('All', 'All');
     cities.forEach(city => createCityBtn(city, city));
 
-    // Filter events by selected city
     if(currentEventCityFilter !== 'All') {
         myEvts = myEvts.filter(ev => {
             const venue = (venues||[]).find(v => v.Venue_ID === ev.Venue_ID);
@@ -499,10 +567,55 @@ function renderMyEventsView() {
     });
 }
 
-function renderShortlistView(listName) {
+function renderShortlistsFullView() {
+    document.getElementById('main-filters').classList.add('hidden');
+    contextHeader.classList.remove('hidden');
+    document.getElementById('context-title').innerHTML = "📑 MY SHORTLISTS";
+    document.getElementById('context-desc').innerText = "Your named venue collections.";
+    
+    const newBtn = document.getElementById('btn-new-shortlist-view');
+    newBtn.classList.remove('hidden');
+    newBtn.onclick = () => {
+        const name = prompt("Enter new shortlist name:");
+        if(name && name.trim() !== '') {
+            userShortlists[name.trim()] = [];
+            saveUserShortlists();
+            renderShortlistsFullView();
+        }
+    };
+
+    resultsContainer.innerHTML = '';
+    const lists = Object.keys(userShortlists);
+
+    if(lists.length === 0) {
+        resultsContainer.innerHTML = `<p style="text-align:center; color:var(--label-grey); margin-top:20px; width: 100%; grid-column: 1 / -1;">No shortlists created yet.</p>`;
+        return;
+    }
+
+    lists.forEach(name => {
+        const count = userShortlists[name].length;
+        const card = document.createElement('div');
+        card.className = 'card';
+        card.style.cursor = 'pointer';
+        card.innerHTML = `
+            <div class="card-inner-content" style="flex-direction:row; justify-content:space-between; align-items:center;">
+                <div onclick="window.location.hash='#shortlist=${encodeURIComponent(name)}';" style="flex-grow:1;">
+                    <h3 class="card-title display-font" style="color:var(--primary-blue);">${name}</h3>
+                    <p class="meta-text" style="margin-top:5px;">${count} venue${count === 1 ? '' : 's'}</p>
+                </div>
+                <div style="display:flex; gap:10px;">
+                    <button class="icon-btn" onclick="shareShortlist('${name}')" title="Share">🔗</button>
+                    <button class="icon-btn" style="color:var(--bright-red-orange);" onclick="event.stopPropagation(); if(confirm('Delete shortlist ${name}?')){ delete userShortlists['${name}']; saveUserShortlists(); renderShortlistsFullView(); }">✕</button>
+                </div>
+            </div>
+        `;
+        resultsContainer.appendChild(card);
+    });
+}
+
+function renderSingleShortlist(listName) {
     if(!userShortlists[listName]) { window.location.hash=''; return; }
     document.getElementById('main-filters').classList.add('hidden');
-    document.getElementById('event-city-filters').classList.add('hidden');
     contextHeader.classList.remove('hidden');
     document.getElementById('context-title').innerText = listName.toUpperCase();
     document.getElementById('context-desc').innerText = "Saved Shortlist";
@@ -516,7 +629,7 @@ function renderProfileAvatars() {
     const grid = document.getElementById('avatar-grid');
     grid.innerHTML = '';
     avatarCategories.forEach(cat => {
-        const imgName = `${cat}01.jpg`;
+        const imgName = `${cat}01.png`; // Updated to .png based on feedback
         const item = document.createElement('div');
         item.className = 'avatar-item';
         if(userProfile.avatar === imgName) item.classList.add('selected');
@@ -535,36 +648,6 @@ function openProfileMenu() {
     document.getElementById('profile-name').value = userProfile.name || '';
     renderProfileAvatars();
     profileModal.classList.remove('hidden');
-}
-
-function openShortlistsMenu() {
-    const container = document.getElementById('shortlists-list');
-    container.innerHTML = '';
-    const lists = Object.keys(userShortlists);
-    
-    if(lists.length === 0) {
-        container.innerHTML = '<p class="meta-text">No shortlists created yet.</p>';
-    } else {
-        lists.forEach(name => {
-            const row = document.createElement('div');
-            row.className = 'shortlist-row';
-            row.innerHTML = `<span style="flex-grow:1; color:#fff; cursor:pointer;" onclick="window.location.hash='#shortlist=${encodeURIComponent(name)}'; document.getElementById('shortlists-modal').classList.add('hidden');">${name} (${userShortlists[name].length})</span>
-                             <button class="icon-btn" onclick="shareShortlist('${name}')" title="Share">🔗</button>
-                             <button class="del-btn icon-btn" title="Delete" style="color:var(--bright-red-orange);">✕</button>`;
-            
-            row.querySelector('.del-btn').addEventListener('click', (e) => {
-                e.stopPropagation();
-                if(confirm(`Delete shortlist "${name}"?`)) {
-                    delete userShortlists[name];
-                    saveUserShortlists();
-                    openShortlistsMenu();
-                    if(window.location.hash === `#shortlist=${encodeURIComponent(name)}`) window.location.hash='';
-                }
-            });
-            container.appendChild(row);
-        });
-    }
-    shortlistsModal.classList.remove('hidden');
 }
 
 function promptAddToShortlist(venue) {
@@ -590,6 +673,7 @@ function promptAddToShortlist(venue) {
                 }
                 saveUserShortlists();
                 addShortlistModal.classList.add('hidden');
+                showToast(isAdded ? "Removed from Shortlist" : "Added to Shortlist");
             });
             container.appendChild(btn);
         });
@@ -830,7 +914,20 @@ function shareShortlist(name) {
 }
 
 function saveLocation() {
-    const loc = { country: document.getElementById('loc-country').value, city: document.getElementById('loc-city').value, postcode: document.getElementById('loc-postcode').value };
+    const cityInp = document.getElementById('loc-city');
+    const loc = { 
+        country: document.getElementById('loc-country').value, 
+        city: cityInp.value, 
+        postcode: document.getElementById('loc-postcode').value 
+    };
+    
+    // Fuzzy search routing connection
+    if(loc.city && loc.city !== 'My Location') {
+        searchInput.value = loc.city;
+        window.location.hash = '';
+        applyFilters();
+    }
+    
     localStorage.setItem('br_location', JSON.stringify(loc));
     updateLocationDisplay(loc);
     locModal.classList.add('hidden');
@@ -838,7 +935,13 @@ function saveLocation() {
 
 function clearLocation() {
     localStorage.removeItem('br_location');
-    document.getElementById('loc-country').value = ''; document.getElementById('loc-city').value = ''; document.getElementById('loc-postcode').value = '';
+    document.getElementById('loc-country').value = ''; 
+    document.getElementById('loc-city').value = ''; 
+    document.getElementById('loc-city').dataset.lat = '';
+    document.getElementById('loc-city').dataset.lon = '';
+    document.getElementById('loc-postcode').value = '';
+    document.getElementById('loc-map').style.display = 'none';
+    document.getElementById('map-preview-placeholder').classList.remove('hidden');
     updateLocationDisplay(null);
 }
 
@@ -846,7 +949,9 @@ function loadSavedLocation() {
     const saved = localStorage.getItem('br_location');
     if(saved) {
         const loc = JSON.parse(saved);
-        document.getElementById('loc-country').value = loc.country || ''; document.getElementById('loc-city').value = loc.city || ''; document.getElementById('loc-postcode').value = loc.postcode || '';
+        document.getElementById('loc-country').value = loc.country || ''; 
+        document.getElementById('loc-city').value = loc.city || ''; 
+        document.getElementById('loc-postcode').value = loc.postcode || '';
         updateLocationDisplay(loc);
     }
 }

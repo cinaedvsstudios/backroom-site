@@ -24,7 +24,7 @@ body { background-color: var(--bg-color); color: #fff; font-family: 'Barlow Cond
 
 /* Toast Popups */
 .toast-container { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); z-index: 9999; display: flex; flex-direction: column; gap: 10px; pointer-events: none; }
-.toast { background-color: var(--primary-blue); color: #fff; padding: 12px 24px; border-radius: var(--radius-pill); font-family: 'Barlow Condensed', sans-serif; font-size: 1.1rem; box-shadow: 0 4px 15px rgba(0,0,0,0.5); opacity: 0; transform: translateY(20px); transition: opacity 0.3s, transform 0.3s; }
+.toast { background-color: var(--primary-blue); color: #fff; padding: 12px 24px; border-radius: var(--radius-pill); font-family: 'Barlow Condensed', sans-serif; font-size: 1.1rem; box-shadow: 0 4px 15px rgba(0,0,0,0.5); opacity: 0; transform: translateY(20px); transition: opacity 0.3s, transform 0.3s; text-align: center; }
 .toast.show { opacity: 1; transform: translateY(0); }
 
 /* Buttons & Inputs */
@@ -59,21 +59,20 @@ body { background-color: var(--bg-color); color: #fff; font-family: 'Barlow Cond
 /* Map Preview Box */
 .map-preview { width: 100%; height: 150px; background: var(--navy-grey); border: 1px dashed var(--label-grey); border-radius: var(--radius-card); display: flex; flex-direction: column; align-items: center; justify-content: center; color: var(--label-grey); text-align: center; margin-top: 10px; }
 
-/* Desktop Top Bar (Grid layout) */
-#top-bar { position: sticky; top: 0; background-color: var(--near-black); z-index: 100; padding: 15px 20px; border-bottom: 1px solid var(--panel-mid); display: flex; align-items: center; gap: 15px; }
-.top-bar-row.row-1 { display: flex; align-items: center; gap: 15px; }
-.top-bar-row.row-2 { display: flex; align-items: center; gap: 15px; flex-grow: 1; }
+/* Desktop Top Bar (Flexbox layout) */
+#top-bar { position: sticky; top: 0; background-color: var(--near-black); z-index: 100; padding: 15px 20px; border-bottom: 1px solid var(--panel-mid); display: flex; align-items: center; justify-content: space-between; gap: 15px; }
+.top-bar-left { display: flex; align-items: center; flex-shrink: 0; }
+.top-bar-center { display: flex; align-items: center; gap: 10px; flex-grow: 1; max-width: 800px; }
+.top-bar-right { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
 
-.top-bar-logo-area { display: flex; align-items: center; gap: 10px; cursor: pointer; flex-shrink: 0; }
-.brand-image { height: 42px; } /* Increased 20% */
-.brand-title-image { height: 34px; } /* Increased 20% */
+.top-bar-logo-area { display: flex; align-items: center; gap: 10px; cursor: pointer; }
+.brand-image { height: 42px; }
+.brand-title-image { height: 34px; }
 
-.top-bar-right-controls { display: flex; align-items: center; gap: 8px; margin-left: auto; order: 3; } /* Forced right on desktop */
-
-.top-bar-search-area { flex-grow: 1; max-width: 400px; }
+.search-wrapper { flex-grow: 1; }
 #search-input { width: 100%; padding: 8px 15px; background-color: var(--panel-dark); border: 1px solid var(--panel-mid); color: #fff; outline: none; }
+.nav-buttons-wrapper { display: flex; gap: 8px; }
 
-.top-bar-buttons-area { display: flex; gap: 8px; align-items: center; }
 .top-btn { background-color: var(--panel-standard); color: var(--text-light); border: 1px solid var(--panel-mid); padding: 8px 12px; cursor: pointer; display: flex; align-items: center; gap: 5px; font-family: 'Barlow Condensed', sans-serif; font-size: 1rem; }
 .top-btn:hover { background-color: var(--panel-mid); color: #fff; border-color: var(--primary-blue); }
 .icon-only { padding: 8px 12px; font-size: 1.2rem; }
@@ -151,7 +150,7 @@ body { background-color: var(--bg-color); color: #fff; font-family: 'Barlow Cond
 .avatar-item { text-align: center; cursor: pointer; opacity: 0.5; transition: all 0.2s; }
 .avatar-item:hover { opacity: 0.8; }
 .avatar-item.selected { opacity: 1; transform: scale(1.05); }
-.avatar-item img { width: 60px; height: 60px; border-radius: 50%; object-fit: cover; border: 2px solid transparent; margin-bottom: 5px; }
+.avatar-item img { width: 60px; height: 60px; border-radius: 50%; object-fit: cover; border: 2px solid transparent; margin-bottom: 5px; background: #000; }
 .avatar-item.selected img { border-color: var(--primary-blue); }
 .avatar-item span { display: block; font-size: 0.8rem; color: var(--text-light); }
 .avatar-item.selected span { color: #fff; font-weight: bold; }
@@ -177,19 +176,22 @@ body { background-color: var(--bg-color); color: #fff; font-family: 'Barlow Cond
     .card-title { font-size: 1.7rem; }
 }
 
-/* Mobile Layout Overrides - 2 Row Strict Structure */
+/* Mobile Layout Overrides - 2 Row Strict CSS Grid */
 @media (max-width: 768px) {
-    #top-bar { display: flex; flex-direction: column; gap: 10px; padding: 10px; }
+    #top-bar { 
+        display: grid; 
+        grid-template-columns: 1fr auto; 
+        grid-template-rows: auto auto; 
+        gap: 10px; 
+        padding: 10px; 
+    }
     
-    /* Row 1: Logo, Title, Profile, Lang, Settings */
-    .top-bar-row.row-1 { display: flex; justify-content: space-between; align-items: center; width: 100%; }
-    .top-bar-logo-area { display: flex; align-items: center; }
-    .top-bar-right-controls { display: flex; gap: 5px; margin-left: auto; }
+    .top-bar-left { grid-column: 1; grid-row: 1; display: flex; align-items: center; }
+    .top-bar-right { grid-column: 2; grid-row: 1; display: flex; gap: 5px; align-items: center; justify-content: flex-end; }
+    .top-bar-center { grid-column: 1 / span 2; grid-row: 2; display: flex; gap: 10px; align-items: center; }
     
-    /* Row 2: Search, Loc, Fav, List */
-    .top-bar-row.row-2 { display: flex; gap: 10px; width: 100%; align-items: center; }
-    .top-bar-search-area { flex: 1; min-width: 100px; }
-    .top-bar-buttons-area { display: flex; gap: 5px; }
+    .search-wrapper { flex: 1; min-width: 100px; }
+    .nav-buttons-wrapper { display: flex; gap: 5px; }
     
     .top-btn .btn-text { display: none; }
     .top-btn { padding: 8px 12px; }
