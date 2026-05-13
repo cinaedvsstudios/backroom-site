@@ -2,13 +2,12 @@
 let systemInfo = {}, designTheme = {}, venues = [], events = [];
 let activeFilter = 'All';
 let selectedCardId = null;
-let currentTargetVenue = null; // Used for Add to Shortlist flow
+let currentTargetVenue = null; 
 
-// User Data from Local Storage
 let userFavorites = JSON.parse(localStorage.getItem('br_favorites')) || [];
 let userShortlists = JSON.parse(localStorage.getItem('br_shortlists')) || {};
 
-const APP_VERSION = "v0.9";
+const APP_VERSION = "v0.10";
 const APP_DATE = "May 13, 2026";
 
 // --- DOM Elements ---
@@ -21,26 +20,23 @@ const searchInput = document.getElementById('search-input');
 const filterChips = document.querySelectorAll('.chip');
 const contextHeader = document.getElementById('context-header');
 
-// Modals
 const venueModal = document.getElementById('venue-modal');
 const locModal = document.getElementById('location-modal');
 const settingsModal = document.getElementById('settings-modal');
 const shortlistsModal = document.getElementById('shortlists-modal');
 const addShortlistModal = document.getElementById('add-to-shortlist-modal');
 
-// Mobile Sidebar Elements
 const sidebar = document.getElementById('sidebar');
 const hitArea = document.getElementById('sidebar-hit-area');
 let sidebarTimeout;
 
-// --- Initialization ---
 function setupCriticalListeners() {
     const handleEnter = (e) => {
         if(e.cancelable) e.preventDefault();
         localStorage.setItem('br_age_verified', 'true');
         ageGate.classList.add('hidden');
         appShell.classList.remove('hidden');
-        handleRouting(); // Process URL after gate clears
+        handleRouting(); 
     };
     btnEnter.addEventListener('click', handleEnter);
     btnEnter.addEventListener('touchstart', handleEnter, {passive: false});
@@ -73,7 +69,6 @@ async function initApp() {
         setupEventListeners(); 
         loadSavedLocation(); 
         
-        // Let routing handle the initial render
         if(localStorage.getItem('br_age_verified') === 'true') {
             handleRouting();
         }
@@ -105,7 +100,6 @@ window.addEventListener('hashchange', handleRouting);
 function handleRouting() {
     const hash = window.location.hash;
     
-    // Close modals by default on route change
     document.querySelectorAll('.modal').forEach(m => m.classList.add('hidden'));
     contextHeader.classList.add('hidden');
     document.getElementById('main-filters').classList.remove('hidden');
@@ -115,36 +109,37 @@ function handleRouting() {
         const venue = venues.find(v => v.Venue_ID === id);
         if (venue) {
             openVenueModal(venue);
-            applyFilters(); // Render background listings
-        } else {
-            window.location.hash = ''; // invalid ID
-        }
+            applyFilters(); 
+        } else window.location.hash = ''; 
     } else if (hash === '#favorites') {
         renderFavoritesView();
     } else if (hash.startsWith('#shortlist=')) {
         const name = decodeURIComponent(hash.replace('#shortlist=', ''));
         renderShortlistView(name);
     } else {
-        // Default Home Route
         applyFilters();
     }
 }
 
 // --- Event Listeners ---
 function setupEventListeners() {
-    // Universal Close Modal Buttons
     document.querySelectorAll('.close-modal-btn').forEach(btn => {
         btn.addEventListener('click', (e) => e.target.closest('.modal').classList.add('hidden'));
     });
     
-    // Venue Modal specific close (Return to previous hash)
     document.getElementById('close-modal').addEventListener('click', () => {
         window.history.pushState(null, '', window.location.pathname + window.location.search);
         handleRouting();
     });
 
-    // Top Bar Buttons
-    document.getElementById('btn-location').addEventListener('click', () => locModal.classList.remove('hidden'));
+    // Top Bar 
+    document.getElementById('btn-location').addEventListener('click', () => {
+        // Force return to results from favorites/shortlist before setting location
+        if(window.location.hash === '#favorites' || window.location.hash.startsWith('#shortlist=')) {
+            window.location.hash = '';
+        }
+        locModal.classList.remove('hidden');
+    });
     document.getElementById('btn-settings').addEventListener('click', () => settingsModal.classList.remove('hidden'));
     document.getElementById('btn-favorites').addEventListener('click', () => window.location.hash = '#favorites');
     document.getElementById('btn-shortlists-menu').addEventListener('click', openShortlistsMenu);
@@ -153,9 +148,9 @@ function setupEventListeners() {
     document.getElementById('btn-ag-lang').addEventListener('click', () => alert("Translation widget placeholder [Phase 2]"));
 
     // Context Clear
-    document.getElementById('btn-clear-context').addEventListener('click', () => window.location.hash = '');
+    document.getElementById('btn-back-to-results').addEventListener('click', () => window.location.hash = '');
 
-    // Location Actions
+    // Location
     document.getElementById('btn-save-location').addEventListener('click', saveLocation);
     document.getElementById('btn-clear-location').addEventListener('click', clearLocation);
     document.getElementById('btn-gps').addEventListener('click', () => {
@@ -167,7 +162,7 @@ function setupEventListeners() {
         } else alert("Geolocation not supported.");
     });
 
-    // Settings Actions
+    // Settings
     document.getElementById('btn-reset-age').addEventListener('click', () => {
         localStorage.removeItem('br_age_verified');
         window.location.reload();
@@ -183,7 +178,7 @@ function setupEventListeners() {
     document.getElementById('btn-export-data').addEventListener('click', exportUserData);
     document.getElementById('import-data-file').addEventListener('change', importUserData);
 
-    // Shortlist Actions
+    // Shortlist
     document.getElementById('btn-create-shortlist').addEventListener('click', () => {
         const name = document.getElementById('new-shortlist-name').value.trim();
         if(name) { userShortlists[name] = []; saveUserShortlists(); openShortlistsMenu(); document.getElementById('new-shortlist-name').value = '';}
@@ -198,7 +193,6 @@ function setupEventListeners() {
         }
     });
 
-    // Mobile Sidebar
     if(hitArea && sidebar) {
         const showSidebar = () => {
             sidebar.classList.add('visible');
@@ -209,7 +203,6 @@ function setupEventListeners() {
         sidebar.addEventListener('click', showSidebar);
     }
 
-    // Search and Filters
     searchInput.addEventListener('input', () => { window.location.hash=''; applyFilters(); });
     filterChips.forEach(chip => {
         chip.addEventListener('click', (e) => {
@@ -222,7 +215,6 @@ function setupEventListeners() {
     });
 }
 
-// --- Data Filtering & Search ---
 function applyFilters() {
     const query = searchInput.value;
     let filteredVenues = venues;
@@ -244,7 +236,6 @@ function applyFilters() {
     renderListings(filteredVenues);
 }
 
-// Levenshtein distance & Fuzzy Matching
 function getLevenshteinDistance(a, b) {
     if (a.length === 0) return b.length;
     if (b.length === 0) return a.length;
@@ -283,7 +274,6 @@ function fuzzyMatch(text, query) {
     return true;
 }
 
-// --- Local Storage Management ---
 function saveUserFavorites() { localStorage.setItem('br_favorites', JSON.stringify(userFavorites)); }
 function saveUserShortlists() { localStorage.setItem('br_shortlists', JSON.stringify(userShortlists)); }
 
@@ -299,11 +289,9 @@ function toggleFavorite(id, btnElement) {
         btnElement.classList.add('active-star');
     }
     saveUserFavorites();
-    // If currently looking at favorites list, re-render it
     if(window.location.hash === '#favorites') renderFavoritesView();
 }
 
-// --- Context Views (Favorites & Shortlists) ---
 function renderFavoritesView() {
     document.getElementById('main-filters').classList.add('hidden');
     contextHeader.classList.remove('hidden');
@@ -386,7 +374,6 @@ function promptAddToShortlist(venue) {
     addShortlistModal.classList.remove('hidden');
 }
 
-// --- Data Export & Import ---
 function exportUserData() {
     const data = {
         favorites: userFavorites,
@@ -421,7 +408,29 @@ function importUserData(e) {
     reader.readAsText(file);
 }
 
-// --- Render Methods ---
+// Carousel Tapping Logic
+function handleImageCarousel(imgElement) {
+    imgElement.addEventListener('click', (e) => {
+        e.stopPropagation(); 
+        const id = imgElement.getAttribute('data-id');
+        let index = parseInt(imgElement.getAttribute('data-index') || '1') + 1;
+        let numStr = index < 10 ? '0' + index : index;
+        let newSrc = `Venue_images/${id}-${numStr}.jpg`;
+        
+        let tempImg = new Image();
+        tempImg.onload = () => {
+            imgElement.src = newSrc;
+            imgElement.setAttribute('data-index', index);
+        };
+        tempImg.onerror = () => {
+            // Loop back to 01 if next image fails to load
+            imgElement.src = `Venue_images/${id}-01.jpg`;
+            imgElement.setAttribute('data-index', 1);
+        };
+        tempImg.src = newSrc;
+    });
+}
+
 function renderListings(data, isContextView = false) {
     resultsContainer.innerHTML = '';
     const today = new Date(); today.setHours(0,0,0,0);
@@ -444,8 +453,14 @@ function renderListings(data, isContextView = false) {
         const shortDesc = venue.Description.length > 90 ? venue.Description.substring(0, 90) + '...' : venue.Description;
         const card = document.createElement('div');
         card.className = 'card';
+        
+        // Dynamically load image or fallback
+        const baseImageSrc = `Venue_images/${venue.Venue_ID}-01.jpg`;
+        
         card.innerHTML = `
-            <div class="card-image-wrapper"><div class="image-placeholder" style="width:100%; border-radius:0;">VENUE IMAGE</div></div>
+            <div class="card-image-wrapper">
+                <img class="venue-image" src="${baseImageSrc}" onerror="this.src='placeholder_venue.jpg'" data-id="${venue.Venue_ID}" data-index="1" title="Tap to see next photo">
+            </div>
             <div class="card-inner-content">
                 <div class="card-header">
                     <div><h3 class="card-title display-font">${venue.Name}</h3><div class="card-meta">${venue.Category} • ${venue.City}</div></div>
@@ -460,12 +475,14 @@ function renderListings(data, isContextView = false) {
             </div>
         `;
         
+        handleImageCarousel(card.querySelector('.venue-image'));
+
         card.addEventListener('click', (e) => { 
             if(e.target.classList.contains('star-btn')) {
                 toggleFavorite(venue.Venue_ID, e.target);
-            } else {
+            } else if (!e.target.classList.contains('venue-image')) {
                 if(selectedCardId === venue.Venue_ID) {
-                    window.location.hash = `#venue=${venue.Venue_ID}`; // Route triggers modal
+                    window.location.hash = `#venue=${venue.Venue_ID}`; 
                 } else {
                     document.querySelectorAll('.card.selected').forEach(c => c.classList.remove('selected'));
                     card.classList.add('selected');
@@ -483,7 +500,18 @@ function openVenueModal(venue) {
     document.getElementById('modal-description').innerText = venue.Description;
     document.getElementById('modal-public-stats').innerHTML = `<span>🌈 ${systemInfo.labels?.rated_by_gays || 'Rated'}</span> <span>👁️ ${venue.Views || 0}</span>`;
     
-    // Reset buttons logic for the modal
+    // Modal Image Carousel
+    const modalImage = document.getElementById('modal-venue-image');
+    modalImage.setAttribute('data-id', venue.Venue_ID);
+    modalImage.setAttribute('data-index', 1);
+    modalImage.src = `Venue_images/${venue.Venue_ID}-01.jpg`;
+    modalImage.onerror = () => modalImage.src = 'placeholder_venue.jpg';
+
+    // To prevent stacking multiple listeners on the modal image, clone and replace it
+    const newModalImage = modalImage.cloneNode(true);
+    modalImage.parentNode.replaceChild(newModalImage, modalImage);
+    handleImageCarousel(newModalImage);
+
     const starBtn = document.getElementById('modal-star');
     const isFav = userFavorites.includes(venue.Venue_ID);
     starBtn.innerText = isFav ? '★' : '☆';
@@ -531,7 +559,6 @@ function openVenueModal(venue) {
     venueModal.classList.remove('hidden');
 }
 
-// --- Utility Functions ---
 async function shareURL(url, title) {
     if (navigator.share) {
         try { await navigator.share({title: title, url: url}); } catch (e) {}
