@@ -13,7 +13,7 @@ let userEvents = JSON.parse(localStorage.getItem('br_events')) || [];
 let userTravel = JSON.parse(localStorage.getItem('br_travel')) || [];
 let importInfo = JSON.parse(localStorage.getItem('br_import_info')) || null;
 
-const APP_VERSION = "v0.24";
+const APP_VERSION = "v0.25";
 const APP_DATE = "May 13, 2026";
 
 const avatarCategories = ["Twink", "Twunk", "Jock", "Muscle", "Geek", "Uncle", "Daddy", "Silver Fox", "Opa", "Bear", "Seal", "Otter", "Cub", "Wolf", "Circuit", "Leather", "Rubber", "Puppy", "Alternative", "Queer", "Femboy", "Slave"];
@@ -108,17 +108,25 @@ async function initApp() {
     checkImportPreview();
 
     try {
-        const [sysRes, themeRes, venuesRes, eventsRes] = await Promise.all([
-            fetch('system_info.json'), fetch('design_theme.json'),
-            fetch('listings.json'), fetch('events.json')
-        ]);
-        
-        if(!sysRes.ok || !venuesRes.ok) throw new Error("Core JSON missing");
-        
-        systemInfo = await sysRes.json();
-        designTheme = await themeRes.json();
-        venues = await venuesRes.json();
-        events = await eventsRes.json();
+        // Cache buster function to prevent GitHub Pages from serving stale files
+        const fetchJson = async (url) => {
+            const cacheBuster = '?v=' + new Date().getTime();
+            const res = await fetch(url + cacheBuster);
+            if (!res.ok) throw new Error(`HTTP ${res.status} on ${url}`);
+            return res.json();
+        };
+
+        // Fetch optional config safely
+        try { systemInfo = await fetchJson('system_info.json'); } catch(e) { console.warn("Using default system info."); }
+        try { designTheme = await fetchJson('design_theme.json'); } catch(e) { console.warn("Using default theme."); }
+        try { events = await fetchJson('events.json'); } catch(e) { events = []; }
+
+        // Fetch mandatory database
+        try {
+            venues = await fetchJson('listings.json');
+        } catch (e) {
+            throw new Error(`Failed to load listings.json. Error: ${e.message}`);
+        }
 
         applyTheme(); 
         populateSystemText(); 
@@ -128,8 +136,10 @@ async function initApp() {
         if(localStorage.getItem('br_age_verified') === 'true') handleRouting();
         
     } catch (error) {
-        console.error("Local JSON fetch failed.", error);
-        document.getElementById('error-text').innerText = "Failed to load core system files due to local browser restrictions (CORS). Click bypass below to view a dummy UI.";
+        console.error("Data load failed:", error);
+        
+        // Print the real error
+        document.getElementById('error-text').innerText = `SYSTEM ERROR: ${error.message}. Click bypass below to view a dummy UI.`;
         errorPanel.classList.remove('hidden');
         
         const bypassContainer = document.getElementById('bypass-container');
@@ -141,24 +151,23 @@ async function initApp() {
         const bypassLogic = (e) => {
             if(e && e.cancelable) e.preventDefault();
             errorPanel.classList.add('hidden');
-            systemInfo = { labels: { rated_by_gays: "Rated by gays" } };
-            designTheme = {}; 
+            if(!systemInfo.labels) systemInfo = { labels: { rated_by_gays: "Rated by gays" } };
             
-            // Injecting a dummy venue so the user has something to interact with when JSON fails locally
+            // Injecting a dummy venue so you can still test the UI
             venues = [{ 
                 Venue_ID: "LOCAL-01", 
-                Name: "Local Test Venue", 
+                Name: "Dummy GitHub Venue", 
                 City: "Berlin", 
                 Category: "Club", 
                 Status: "Live", 
-                Description: "This is a local dummy venue because your browser blocked the JSON files via the file:// protocol. Use a local server to test real data.", 
+                Description: "If you see this on GitHub, it means listings.json failed to load. Check the red error message that appeared previously.", 
                 Views: 420,
                 Rating_Age_Range: 3,
                 Rating_Size: 4,
                 Rating_Popularity: 5,
                 Feature_Darkroom: true
             }]; 
-            events = [];
+            if(!events) events = [];
             
             applyTheme(); populateSystemText(); setupEventListeners(); loadSavedLocation(); 
             if(localStorage.getItem('br_age_verified') === 'true') {
