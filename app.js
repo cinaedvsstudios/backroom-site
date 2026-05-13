@@ -13,7 +13,7 @@ let userEvents = JSON.parse(localStorage.getItem('br_events')) || [];
 let userTravel = JSON.parse(localStorage.getItem('br_travel')) || [];
 let importInfo = JSON.parse(localStorage.getItem('br_import_info')) || null;
 
-const APP_VERSION = "v0.23";
+const APP_VERSION = "v0.24";
 const APP_DATE = "May 13, 2026";
 
 const avatarCategories = ["Twink", "Twunk", "Jock", "Muscle", "Geek", "Uncle", "Daddy", "Silver Fox", "Opa", "Bear", "Seal", "Otter", "Cub", "Wolf", "Circuit", "Leather", "Rubber", "Puppy", "Alternative", "Queer", "Femboy", "Slave"];
@@ -129,20 +129,37 @@ async function initApp() {
         
     } catch (error) {
         console.error("Local JSON fetch failed.", error);
-        document.getElementById('error-text').innerText = "Data error: " + error.message + ". Browsers block local file loading. Click bypass below to view UI.";
+        document.getElementById('error-text').innerText = "Failed to load core system files due to local browser restrictions (CORS). Click bypass below to view a dummy UI.";
         errorPanel.classList.remove('hidden');
         
         const bypassContainer = document.getElementById('bypass-container');
         bypassContainer.innerHTML = '';
         const bypassBtn = document.createElement('button');
-        bypassBtn.innerText = "Continue Without Data";
+        bypassBtn.innerText = "Continue Without Data (Dummy Mode)";
         bypassBtn.className = "btn secondary-btn pill-btn display-font";
         
         const bypassLogic = (e) => {
-            if(e.cancelable) e.preventDefault();
+            if(e && e.cancelable) e.preventDefault();
             errorPanel.classList.add('hidden');
             systemInfo = { labels: { rated_by_gays: "Rated by gays" } };
-            designTheme = {}; venues = []; events = [];
+            designTheme = {}; 
+            
+            // Injecting a dummy venue so the user has something to interact with when JSON fails locally
+            venues = [{ 
+                Venue_ID: "LOCAL-01", 
+                Name: "Local Test Venue", 
+                City: "Berlin", 
+                Category: "Club", 
+                Status: "Live", 
+                Description: "This is a local dummy venue because your browser blocked the JSON files via the file:// protocol. Use a local server to test real data.", 
+                Views: 420,
+                Rating_Age_Range: 3,
+                Rating_Size: 4,
+                Rating_Popularity: 5,
+                Feature_Darkroom: true
+            }]; 
+            events = [];
+            
             applyTheme(); populateSystemText(); setupEventListeners(); loadSavedLocation(); 
             if(localStorage.getItem('br_age_verified') === 'true') {
                 showToast("Backroom " + APP_VERSION);
