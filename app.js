@@ -6,9 +6,15 @@ let currentTargetVenue = null;
 
 let userFavorites = JSON.parse(localStorage.getItem('br_favorites')) || [];
 let userShortlists = JSON.parse(localStorage.getItem('br_shortlists')) || {};
+let userProfile = JSON.parse(localStorage.getItem('br_profile')) || { name: '', avatar: '' };
+let userEvents = JSON.parse(localStorage.getItem('br_events')) || [];
+let importInfo = JSON.parse(localStorage.getItem('br_import_info')) || null;
 
-const APP_VERSION = "v0.14";
+const APP_VERSION = "v0.15";
 const APP_DATE = "May 13, 2026";
+
+// Avatar Categories
+const avatarCategories = ["Twink", "Twunk", "Jock", "Muscle", "Geek", "Uncle", "Daddy", "Silver Fox", "Opa", "Bear", "Seal", "Otter", "Cub", "Wolf", "Circuit", "Leather", "Rubber", "Puppy", "Alternative", "Queer", "Femboy", "Slave"];
 
 // --- DOM Elements ---
 const ageGate = document.getElementById('age-gate');
@@ -25,6 +31,7 @@ const locModal = document.getElementById('location-modal');
 const settingsModal = document.getElementById('settings-modal');
 const shortlistsModal = document.getElementById('shortlists-modal');
 const addShortlistModal = document.getElementById('add-to-shortlist-modal');
+const profileModal = document.getElementById('profile-modal');
 
 const sidebar = document.getElementById('sidebar');
 const hitArea = document.getElementById('sidebar-hit-area');
@@ -50,6 +57,8 @@ function setupCriticalListeners() {
 async function initApp() {
     setupCriticalListeners();
     document.getElementById('sidebar-version-display').innerHTML = `${APP_VERSION}<br>${APP_DATE}`;
+    renderProfileAvatars();
+    checkImportPreview();
 
     try {
         const [sysRes, themeRes, venuesRes, eventsRes] = await Promise.all([
@@ -80,18 +89,22 @@ async function initApp() {
         
         const bypassContainer = document.getElementById('bypass-container');
         bypassContainer.innerHTML = '';
-        const btn = document.createElement('button');
-        btn.innerText = "Continue Without Data";
-        btn.className = "btn secondary-btn pill-btn display-font";
-        btn.onclick = () => {
+        const bypassBtn = document.createElement('button');
+        bypassBtn.innerText = "Continue Without Data";
+        bypassBtn.className = "btn secondary-btn pill-btn display-font";
+        
+        const bypassLogic = (e) => {
+            if(e.cancelable) e.preventDefault();
             errorPanel.classList.add('hidden');
-            // Provide minimal mock data to prevent crashes
             systemInfo = { labels: { rated_by_gays: "Rated by gays" } };
             designTheme = {}; venues = []; events = [];
             applyTheme(); populateSystemText(); setupEventListeners(); loadSavedLocation(); 
             if(localStorage.getItem('br_age_verified') === 'true') handleRouting();
         };
-        bypassContainer.appendChild(btn);
+
+        bypassBtn.addEventListener('click', bypassLogic);
+        bypassBtn.addEventListener('touchstart', bypassLogic, {passive: false});
+        bypassContainer.appendChild(bypassBtn);
     }
 }
 
@@ -129,6 +142,8 @@ function handleRouting() {
         } else window.location.hash = ''; 
     } else if (hash === '#favorites') {
         renderFavoritesView();
+    } else if (hash === '#myevents') {
+        renderMyEventsView();
     } else if (hash.startsWith('#shortlist=')) {
         const name = decodeURIComponent(hash.replace('#shortlist=', ''));
         renderShortlistView(name);
@@ -149,12 +164,12 @@ function setupEventListeners() {
     });
 
     document.getElementById('btn-location').addEventListener('click', () => {
-        if(window.location.hash === '#favorites' || window.location.hash.startsWith('#shortlist=')) {
-            window.location.hash = '';
-        }
+        if(window.location.hash !== '') window.location.hash = '';
         locModal.classList.remove('hidden');
     });
+    
     document.getElementById('btn-settings').addEventListener('click', () => settingsModal.classList.remove('hidden'));
+    document.getElementById('btn-profile-menu').addEventListener('click', openProfileMenu);
     document.getElementById('btn-favorites').addEventListener('click', () => window.location.hash = '#favorites');
     document.getElementById('btn-shortlists-menu').addEventListener('click', openShortlistsMenu);
     
@@ -179,14 +194,13 @@ function setupEventListeners() {
         window.location.reload();
     });
     document.getElementById('btn-clear-data').addEventListener('click', () => {
-        if(confirm("Are you sure you want to delete all favorites, shortlists, and settings? This cannot be undone.")) {
-            localStorage.removeItem('br_favorites');
-            localStorage.removeItem('br_shortlists');
-            localStorage.removeItem('br_location');
+        if(confirm("Are you sure you want to delete all favorites, shortlists, events, and settings? This cannot be undone.")) {
+            localStorage.clear();
             window.location.reload();
         }
     });
-    document.getElementById('btn-export-data').addEventListener('click', exportUserData);
+    
+    document.querySelectorAll('.btn-export-trigger').forEach(btn => btn.addEventListener('click', exportUserData));
     document.getElementById('import-data-file').addEventListener('change', importUserData);
 
     document.getElementById('btn-create-shortlist').addEventListener('click', () => {
@@ -201,6 +215,13 @@ function setupEventListeners() {
             addShortlistModal.classList.add('hidden');
             alert(`Added to new shortlist: ${name}`);
         }
+    });
+    
+    document.getElementById('btn-save-profile').addEventListener('click', () => {
+        userProfile.name = document.getElementById('profile-name').value.trim();
+        localStorage.setItem('br_profile', JSON.stringify(userProfile));
+        profileModal.classList.add('hidden');
+        alert("Profile saved locally!");
     });
 
     if(hitArea && sidebar) {
@@ -286,6 +307,7 @@ function fuzzyMatch(text, query) {
 
 function saveUserFavorites() { localStorage.setItem('br_favorites', JSON.stringify(userFavorites)); }
 function saveUserShortlists() { localStorage.setItem('br_shortlists', JSON.stringify(userShortlists)); }
+function saveUserEvents() { localStorage.setItem('br_events', JSON.stringify(userEvents)); }
 
 function toggleFavorite(id, btnElement) {
     const index = userFavorites.indexOf(id);
@@ -300,6 +322,18 @@ function toggleFavorite(id, btnElement) {
     if(window.location.hash === '#favorites') renderFavoritesView();
 }
 
+function toggleEventFavorite(eventId, btnElement) {
+    const index = userEvents.indexOf(eventId);
+    if(index > -1) {
+        userEvents.splice(index, 1);
+        btnElement.classList.remove('active-star');
+    } else {
+        userEvents.push(eventId);
+        btnElement.classList.add('active-star');
+    }
+    saveUserEvents();
+}
+
 function renderFavoritesView() {
     document.getElementById('main-filters').classList.add('hidden');
     contextHeader.classList.remove('hidden');
@@ -308,6 +342,38 @@ function renderFavoritesView() {
     
     const favVenues = (venues||[]).filter(v => userFavorites.includes(v.Venue_ID));
     renderListings(favVenues, true);
+}
+
+function renderMyEventsView() {
+    document.getElementById('main-filters').classList.add('hidden');
+    contextHeader.classList.remove('hidden');
+    document.getElementById('context-title').innerText = "MY EVENTS";
+    document.getElementById('context-desc').innerText = "Events you have pinned locally.";
+    
+    resultsContainer.innerHTML = '';
+    const myEvts = (events||[]).filter(e => userEvents.includes(e.Event_ID));
+    
+    if(myEvts.length === 0) {
+        resultsContainer.innerHTML = `<p style="text-align:center; color:var(--label-grey); margin-top:20px; width: 100%; grid-column: 1 / -1;">No saved events.</p>`;
+        return;
+    }
+
+    myEvts.forEach(ev => {
+        const venue = (venues||[]).find(v => v.Venue_ID === ev.Venue_ID);
+        const venueName = venue ? venue.Name : 'Unknown Venue';
+        const card = document.createElement('div');
+        card.className = 'card';
+        card.innerHTML = `
+            <div class="card-inner-content">
+                <div class="card-header">
+                    <div><h3 class="card-title display-font">${ev.Event_Name}</h3><div class="card-meta">${ev.Event_Date} | @ ${venueName}</div></div>
+                    <button class="icon-btn active-star" onclick="toggleEventFavorite('${ev.Event_ID}', this); window.location.reload();">☆</button>
+                </div>
+                <div class="card-about">${ev.Event_Description || ''}</div>
+            </div>
+        `;
+        resultsContainer.appendChild(card);
+    });
 }
 
 function renderShortlistView(listName) {
@@ -320,6 +386,31 @@ function renderShortlistView(listName) {
     const ids = userShortlists[listName];
     const shortVenues = (venues||[]).filter(v => ids.includes(v.Venue_ID));
     renderListings(shortVenues, true);
+}
+
+function renderProfileAvatars() {
+    const grid = document.getElementById('avatar-grid');
+    grid.innerHTML = '';
+    avatarCategories.forEach(cat => {
+        const imgName = `${cat}01.jpg`;
+        const item = document.createElement('div');
+        item.className = 'avatar-item';
+        if(userProfile.avatar === imgName) item.classList.add('selected');
+        
+        item.innerHTML = `<img src="Profile_images/${imgName}" onerror="this.src='placeholder_venue.jpg'" alt="${cat}"><span>${cat}</span>`;
+        item.addEventListener('click', () => {
+            document.querySelectorAll('.avatar-item').forEach(el => el.classList.remove('selected'));
+            item.classList.add('selected');
+            userProfile.avatar = imgName;
+        });
+        grid.appendChild(item);
+    });
+}
+
+function openProfileMenu() {
+    document.getElementById('profile-name').value = userProfile.name || '';
+    renderProfileAvatars();
+    profileModal.classList.remove('hidden');
 }
 
 function openShortlistsMenu() {
@@ -384,15 +475,17 @@ function promptAddToShortlist(venue) {
 
 function exportUserData() {
     const data = {
+        profile: userProfile,
         favorites: userFavorites,
         shortlists: userShortlists,
+        events: userEvents,
         location: JSON.parse(localStorage.getItem('br_location') || 'null')
     };
     const blob = new Blob([JSON.stringify(data, null, 2)], {type: 'application/json'});
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url; 
-    a.download = 'backroom_userdata_backup.json'; 
+    a.download = `backroom_userdata_${new Date().toISOString().split('T')[0]}.json`; 
     a.click();
 }
 
@@ -403,17 +496,31 @@ function importUserData(e) {
     reader.onload = (event) => {
         try {
             const data = JSON.parse(event.target.result);
+            if(data.profile) { userProfile = data.profile; localStorage.setItem('br_profile', JSON.stringify(userProfile)); }
             if(data.favorites) { userFavorites = data.favorites; saveUserFavorites(); }
             if(data.shortlists) { userShortlists = data.shortlists; saveUserShortlists(); }
+            if(data.events) { userEvents = data.events; saveUserEvents(); }
             if(data.location) { localStorage.setItem('br_location', JSON.stringify(data.location)); updateLocationDisplay(data.location); }
+            
+            // Save import info
+            importInfo = { date: new Date().toLocaleString(), filename: file.name, userName: userProfile.name || 'Anonymous' };
+            localStorage.setItem('br_import_info', JSON.stringify(importInfo));
+            
             alert("Data imported successfully!");
-            settingsModal.classList.add('hidden');
             window.location.reload();
         } catch(err) {
             alert("Invalid backup file.");
         }
     };
     reader.readAsText(file);
+}
+
+function checkImportPreview() {
+    const previewBox = document.getElementById('import-preview-info');
+    if(importInfo) {
+        previewBox.innerHTML = `<strong>Current Active File:</strong><br>Name: ${importInfo.userName}<br>File: ${importInfo.filename}<br>Loaded: ${importInfo.date}`;
+        previewBox.classList.remove('hidden');
+    }
 }
 
 function handleImageCarousel(imgElement) {
@@ -561,9 +668,21 @@ function openVenueModal(venue) {
             if (isPastA && !isPastB) return 1; if (!isPastA && isPastB) return -1;
             return Math.abs(dateA - today) - Math.abs(dateB - today);
         });
+        
         eventsContainer.innerHTML = venueEvents.map(ev => {
             const isPast = new Date(ev.Event_Date) < today;
-            return `<div class="event-card ${isPast ? 'past' : ''}"><strong>${ev.Event_Name}</strong> ${isPast ? '<small>(Past)</small>' : ''}<br><span class="meta-text">${ev.Event_Date} | ${ev.Event_Start_Time}</span><p style="font-size:0.9rem; margin-top:5px;">${ev.Event_Description}</p></div>`;
+            const isSaved = userEvents.includes(ev.Event_ID);
+            return `
+                <div class="event-card ${isPast ? 'past' : ''}">
+                    <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+                        <div>
+                            <strong>${ev.Event_Name}</strong> ${isPast ? '<small>(Past)</small>' : ''}<br>
+                            <span class="meta-text">${ev.Event_Date} | ${ev.Event_Start_Time}</span>
+                        </div>
+                        <button class="icon-btn ${isSaved ? 'active-star' : ''}" style="font-size: 1.5rem;" onclick="toggleEventFavorite('${ev.Event_ID}', this)">☆</button>
+                    </div>
+                    <p style="font-size:0.9rem; margin-top:5px;">${ev.Event_Description}</p>
+                </div>`;
         }).join('');
         eventsBlock.classList.remove('hidden');
     } else eventsBlock.classList.add('hidden');
