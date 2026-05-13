@@ -13,7 +13,7 @@ let userEvents = JSON.parse(localStorage.getItem('br_events')) || [];
 let userTravel = JSON.parse(localStorage.getItem('br_travel')) || [];
 let importInfo = JSON.parse(localStorage.getItem('br_import_info')) || null;
 
-const APP_VERSION = "v0.25";
+const APP_VERSION = "v0.26";
 const APP_DATE = "May 13, 2026";
 
 const avatarCategories = ["Twink", "Twunk", "Jock", "Muscle", "Geek", "Uncle", "Daddy", "Silver Fox", "Opa", "Bear", "Seal", "Otter", "Cub", "Wolf", "Circuit", "Leather", "Rubber", "Puppy", "Alternative", "Queer", "Femboy", "Slave"];
@@ -108,7 +108,6 @@ async function initApp() {
     checkImportPreview();
 
     try {
-        // Cache buster function to prevent GitHub Pages from serving stale files
         const fetchJson = async (url) => {
             const cacheBuster = '?v=' + new Date().getTime();
             const res = await fetch(url + cacheBuster);
@@ -116,12 +115,10 @@ async function initApp() {
             return res.json();
         };
 
-        // Fetch optional config safely
         try { systemInfo = await fetchJson('system_info.json'); } catch(e) { console.warn("Using default system info."); }
         try { designTheme = await fetchJson('design_theme.json'); } catch(e) { console.warn("Using default theme."); }
         try { events = await fetchJson('events.json'); } catch(e) { events = []; }
 
-        // Fetch mandatory database
         try {
             venues = await fetchJson('listings.json');
         } catch (e) {
@@ -138,7 +135,6 @@ async function initApp() {
     } catch (error) {
         console.error("Data load failed:", error);
         
-        // Print the real error
         document.getElementById('error-text').innerText = `SYSTEM ERROR: ${error.message}. Click bypass below to view a dummy UI.`;
         errorPanel.classList.remove('hidden');
         
@@ -153,7 +149,6 @@ async function initApp() {
             errorPanel.classList.add('hidden');
             if(!systemInfo.labels) systemInfo = { labels: { rated_by_gays: "Rated by gays" } };
             
-            // Injecting a dummy venue so you can still test the UI
             venues = [{ 
                 Venue_ID: "LOCAL-01", 
                 Name: "Dummy GitHub Venue", 
@@ -207,7 +202,9 @@ function handleRouting() {
     contextHeader.classList.add('hidden');
     document.getElementById('event-city-filters').classList.add('hidden');
     document.getElementById('btn-new-shortlist-view').classList.add('hidden');
-    document.getElementById('btn-edit-travel-page').classList.add('hidden');
+    
+    // THE BUG WAS HERE! Removed the phantom 'btn-edit-travel-page' code
+    
     document.getElementById('main-filters').classList.remove('hidden');
     document.getElementById('discounts-container').classList.add('hidden');
     welcomeScreen.classList.add('hidden');
@@ -683,8 +680,7 @@ function renderTravelFullView() {
     document.getElementById('context-title').innerHTML = "🚄 MY TRAVEL PINS";
     document.getElementById('context-desc').innerText = "Cities you plan to visit.";
     
-    // Explicitly hide the Edit Travel button from this view as requested
-    document.getElementById('btn-edit-travel-page').classList.add('hidden');
+    // THE BUG WAS ALSO HERE! Removed phantom code trying to unhide it.
     
     resultsContainer.innerHTML = '';
 
