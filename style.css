@@ -43,7 +43,6 @@ body { background-color: var(--bg-color); color: #fff; font-family: 'Barlow Cond
 .icon-btn { background: none; border: none; color: var(--text-light); font-size: 1.2rem; cursor: pointer; transition: color 0.2s; }
 .icon-btn:hover { color: #fff; }
 
-/* 50% Transparency Logic for Favs/Shortlists/Events */
 .fav-btn { opacity: 0.5; transition: opacity 0.2s, transform 0.2s; }
 .fav-btn.active-star { opacity: 1; color: var(--bright-red-orange) !important; text-shadow: 0 0 5px var(--bright-red-orange); }
 .fav-btn:hover { opacity: 0.8; }
@@ -75,6 +74,18 @@ body { background-color: var(--bg-color); color: #fff; font-family: 'Barlow Cond
 .top-btn:hover { background-color: var(--panel-mid); color: #fff; border-color: var(--primary-blue); }
 .icon-only { padding: 8px 12px; font-size: 1.2rem; }
 
+/* Re-styled profile button and crop */
+.profile-btn-wrap { padding: 4px 8px !important; }
+#top-profile-avatar { 
+    width: 32px; 
+    height: 32px; 
+    object-fit: none; 
+    object-position: center 10%; 
+    border-radius: 4px; 
+    margin-right: 5px; 
+    display: none; 
+}
+
 #workspace { display: flex; min-height: calc(100vh - 70px); }
 #sidebar { width: 220px; background-color: var(--panel-dark); border-right: 1px solid var(--panel-mid); display: flex; flex-direction: column; justify-content: space-between; padding-top: 20px; box-shadow: inset 3px 0 10px rgba(44, 168, 212, 0.2); border-left: 2px solid var(--primary-blue); }
 .sidebar-menu { display: flex; flex-direction: column; gap: 10px; padding: 0 10px; }
@@ -84,10 +95,14 @@ body { background-color: var(--bg-color); color: #fff; font-family: 'Barlow Cond
 .sidebar-text { font-size: 1.1rem; }
 
 .sidebar-submenu { padding-left: 30px; font-size: 1rem; display: flex; flex-direction: column; gap: 8px; margin-bottom: 10px; }
-.submenu-item { cursor: pointer; color: var(--label-grey); transition: color 0.2s; }
-.submenu-item:hover { color: #fff; }
-.travel-fav-box { border: 1px solid var(--primary-blue); border-radius: var(--radius-card); padding: 10px; margin-top: 5px; display: flex; flex-direction: column; gap: 5px; }
+.submenu-item { cursor: pointer; color: var(--label-grey); transition: color 0.2s; padding: 5px 8px; border-radius: var(--radius-btn); }
+.submenu-item:hover { color: #fff; background-color: rgba(255,255,255,0.05); }
+
+/* Travel active highlight */
+.submenu-item.active-travel { background-color: var(--primary-blue) !important; color: #fff !important; font-weight: bold; }
+.travel-fav-box { border: 1px solid var(--primary-blue); border-radius: var(--radius-card); padding: 5px; margin-top: 5px; display: flex; flex-direction: column; gap: 2px; }
 .travel-fav-box .submenu-item { color: var(--primary-blue); }
+.travel-fav-box .submenu-item.active-travel { color: #fff !important; }
 
 .sidebar-footer { padding: 15px; font-size: 0.85rem; color: var(--label-grey); }
 
@@ -106,7 +121,6 @@ body { background-color: var(--bg-color); color: #fff; font-family: 'Barlow Cond
 .chip { background-color: var(--panel-standard); color: var(--text-light); border: 1px solid var(--panel-mid); padding: 6px 14px; cursor: pointer; font-family: 'Barlow Condensed', sans-serif; white-space: nowrap; }
 .chip.active { background-color: var(--primary-blue); color: #fff; border-color: var(--primary-blue); }
 
-/* Restored Status Badge Styling */
 .status-badge { padding: 4px 10px; border-radius: var(--radius-pill); font-size: 0.85rem; font-weight: bold; display: inline-block; }
 .status-badge.live { background-color: var(--primary-blue); color: #fff; }
 .status-badge.closed { background-color: var(--dark-red); color: #fff; }

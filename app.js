@@ -13,7 +13,7 @@ let userEvents = JSON.parse(localStorage.getItem('br_events')) || [];
 let userTravel = JSON.parse(localStorage.getItem('br_travel')) || [];
 let importInfo = JSON.parse(localStorage.getItem('br_import_info')) || null;
 
-const APP_VERSION = "v0.28";
+const APP_VERSION = "v0.29";
 const APP_DATE = "May 13, 2026";
 
 const avatarCategories = ["Twink", "Twunk", "Jock", "Muscle", "Geek", "Uncle", "Daddy", "Silver Fox", "Opa", "Bear", "Seal", "Otter", "Cub", "Wolf", "Circuit", "Leather", "Rubber", "Puppy", "Alternative", "Queer", "Femboy", "Slave"];
@@ -250,6 +250,8 @@ function handleRouting() {
     } else {
         applyFilters();
     }
+    
+    updateTravelSidebarHighlight();
 }
 
 function renderWelcomeScreen() {
@@ -301,6 +303,7 @@ function setupEventListeners() {
     addEvt('btn-back-to-results', 'click', () => {
         if(searchInput) searchInput.value = '';
         window.location.hash = '';
+        updateTravelSidebarHighlight();
     });
 
     addEvt('btn-save-location', 'click', saveLocation);
@@ -395,7 +398,6 @@ function setupEventListeners() {
             addShortlistModal?.classList.add('hidden');
             showToast(`Added to shortlist: ${name}`);
             
-            // Immediately update the shortlist icon on the open modal
             const sBtn = document.getElementById('modal-shortlist');
             if(sBtn) sBtn.classList.add('active-star');
         }
@@ -514,11 +516,28 @@ function renderTravelDropdown() {
     if(!list) return;
     list.classList.remove('hidden');
     list.innerHTML = '';
+    
+    const query = searchInput?.value.trim().toLowerCase() || '';
+
     userTravel.forEach(city => {
         const item = document.createElement('div');
-        item.className = 'submenu-item';
-        item.innerHTML = `<span style="flex-grow:1;" onclick="document.getElementById('search-input').value='${city}'; handleRouting();">${city}</span>`;
+        const isActive = query === city.toLowerCase() ? 'active-travel' : '';
+        item.className = `submenu-item ${isActive}`;
+        item.innerHTML = `<span style="flex-grow:1;" onclick="const s = document.getElementById('search-input'); if(s) s.value='${city}'; window.location.hash=''; handleRouting();">${city}</span>`;
         list.appendChild(item);
+    });
+}
+
+function updateTravelSidebarHighlight() {
+    const query = searchInput?.value.trim().toLowerCase() || '';
+    const items = document.querySelectorAll('#travel-cities-list .submenu-item');
+    items.forEach(item => {
+        const spanText = item.querySelector('span').innerText.toLowerCase();
+        if(spanText === query && window.location.hash === '') {
+            item.classList.add('active-travel');
+        } else {
+            item.classList.remove('active-travel');
+        }
     });
 }
 
@@ -548,6 +567,7 @@ function applyFilters() {
     }
 
     renderListings(filteredVenues);
+    updateTravelSidebarHighlight();
 }
 
 function getLevenshteinDistance(a, b) {
@@ -689,11 +709,13 @@ function renderMyEventsView() {
         const venueName = venue ? venue.Name : 'Unknown Venue';
         const card = document.createElement('div');
         card.className = 'card';
+        // Enforced blue border for Event Cards here
+        card.style.border = '1px solid var(--primary-blue)';
         card.innerHTML = `
             <div class="card-inner-content">
                 <div class="card-header">
                     <div><h3 class="card-title display-font">${ev.Event_Name}</h3><div class="card-meta">${formatDateToDDMMYYYY(ev.Event_Date)} | @ ${venueName}</div></div>
-                    <button class="icon-btn fav-btn active-star" style="font-size:1.5rem;" onclick="toggleEventFavorite('${ev.Event_ID}', this, true)">💖</button>
+                    <button class="icon-btn fav-btn active-star" style="font-size:1.5rem;" onclick="toggleEventFavorite('${ev.Event_ID}', null, true)">❌</button>
                 </div>
                 <div class="card-about">${ev.Event_Description || ''}</div>
             </div>
@@ -877,7 +899,6 @@ function promptAddToShortlist(venue) {
                 addShortlistModal?.classList.add('hidden');
                 showToast(isAdded ? "Removed from Shortlist" : "Added to Shortlist");
                 
-                // Immediately update icon state on modal
                 const sBtn = document.getElementById('modal-shortlist');
                 const isNowShortlisted = Object.values(userShortlists).some(list => list.includes(venue.Venue_ID));
                 if(sBtn) {

@@ -15,30 +15,7 @@ if(localStorage.getItem('br_admin_logged_in') === 'true') {
     loadDraftsFromLocal();
 }
 
-// Draggable Clipboard Logic
-const clipboardFloat = document.getElementById('clipboard-float');
-const clipHeader = document.getElementById('clipboard-header');
-let isDragging = false, initialX, initialY, startX, startY;
-
-clipHeader.addEventListener('mousedown', (e) => {
-    isDragging = true;
-    startX = e.clientX; startY = e.clientY;
-    const rect = clipboardFloat.getBoundingClientRect();
-    initialX = rect.left; initialY = rect.top;
-    clipboardFloat.style.bottom = 'auto'; 
-    clipboardFloat.style.right = 'auto';
-    clipboardFloat.style.left = initialX + 'px';
-    clipboardFloat.style.top = initialY + 'px';
-});
-
-document.addEventListener('mousemove', (e) => {
-    if(isDragging) {
-        clipboardFloat.style.left = (initialX + e.clientX - startX) + 'px';
-        clipboardFloat.style.top = (initialY + e.clientY - startY) + 'px';
-    }
-});
-document.addEventListener('mouseup', () => isDragging = false);
-
+// Clipboard Logic
 const clipboard = document.getElementById('clipboard-text');
 clipboard.value = localStorage.getItem('br_admin_clipboard') || '';
 clipboard.addEventListener('input', (e) => {
