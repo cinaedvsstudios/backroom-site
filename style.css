@@ -1,226 +1,205 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Backroom Phase 2 - v0.13</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Antonio:wght@400;700&family=Barlow+Condensed:wght@400;500;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css">
-</head>
-<body>
+:root {
+    --bg-color: #000000;
+    --primary-blue: #2CA8D4;
+    --near-black: #0B0F19;
+    --navy-grey: #111725;
+    --panel-dark: #1F2535;
+    --panel-standard: #212530;
+    --panel-mid: #313748;
+    --label-grey: #53596B;
+    --text-light: #969CAE;
+    --bright-red-orange: #D55036;
+    --dark-red: #871300;
+    --radius-window: 12px;
+    --radius-card: 8px;
+    --radius-btn: 4px;
+    --radius-pill: 50px; 
+}
 
-    <div id="age-gate" class="fullscreen-overlay">
-        <div class="age-gate-content">
-            <div class="age-gate-logo-area" style="margin-bottom: 25px;">
-                <img src="https://raw.githubusercontent.com/cinaedvsstudios/Backroom-site/refs/heads/main/backdoorlogo.png" alt="Backdoor Logo" style="height: 60px; vertical-align: middle; margin-right: 10px;">
-                <img src="backdoortitle.png" alt="Backroom Title" style="height: 50px; vertical-align: middle;" onerror="this.style.display='none';">
-            </div>
-            <h1 id="ag-title" class="display-font">18+ ENTRY</h1>
-            <p id="ag-text" class="body-font disclaimer-white">Loading...</p>
-            <p id="ag-disclaimer" class="body-font disclaimer">Loading...</p>
-            <div class="ag-controls">
-                <button id="btn-enter" class="btn primary-btn display-font">I AM 18+ - ENTER</button>
-                <div class="translation-placeholder body-font" id="btn-ag-lang">🌍 Translate [Placeholder]</div>
-            </div>
-        </div>
-    </div>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background-color: var(--bg-color); color: #fff; font-family: 'Barlow Condensed', sans-serif; overflow-x: hidden; }
 
-    <div id="error-panel" class="fullscreen-overlay hidden">
-        <div class="age-gate-content">
-            <h1 class="display-font" style="color: var(--bright-red-orange);">SYSTEM ERROR</h1>
-            <p id="error-text" class="body-font disclaimer-white">Failed to load core system files.</p>
-            <button onclick="window.location.reload()" class="btn primary-btn display-font">RETRY</button>
-            <div id="bypass-container" style="margin-top: 15px;"></div>
-        </div>
-    </div>
+.display-font { font-family: 'Antonio', sans-serif; text-transform: uppercase; letter-spacing: 1px; }
+.body-font { font-family: 'Barlow Condensed', sans-serif; font-size: 1.1rem; }
 
-    <div id="app-shell" class="hidden">
-        
-        <header id="top-bar">
-            <div class="top-bar-left-group">
-                <div class="top-bar-logo-area" onclick="window.location.hash='';">
-                    <img src="https://raw.githubusercontent.com/cinaedvsstudios/Backroom-site/refs/heads/main/backdoorlogo.png" alt="Backdoor Logo" class="brand-image" style="cursor:pointer;">
-                    <img src="backdoortitle.png" alt="Backroom Title" class="brand-title-image" onerror="this.style.display='none'; document.getElementById('brand-title-text').style.display='block';" style="cursor:pointer;">
-                    <h1 id="brand-title-text" class="display-font brand-text" style="display:none; cursor:pointer;">BR</h1>
-                </div>
-                
-                <div class="top-bar-search-area">
-                    <input type="text" id="search-input" class="body-font" placeholder="Search name or description" autocomplete="off" autocorrect="off">
-                </div>
-                
-                <div class="top-bar-buttons-area">
-                    <button id="btn-location" class="top-btn" title="Location"><span class="btn-icon">📍</span><span class="btn-text"> Location</span></button>
-                    <button id="btn-favorites" class="top-btn" title="Favorites"><span class="btn-icon" style="font-size: 1.2rem;">☆</span><span class="btn-text"> Favourites</span></button>
-                    <button id="btn-shortlists-menu" class="top-btn" title="Shortlists"><span class="btn-icon">📑</span><span class="btn-text"> Shortlists</span></button>
-                </div>
-            </div>
+/* Buttons & Inputs */
+.btn {
+    width: 100%; padding: 12px; border: none; font-size: 1.1rem; cursor: pointer;
+    transition: background 0.2s; border-radius: var(--radius-btn);
+}
+.pill-btn { border-radius: var(--radius-pill) !important; padding-left: 20px; padding-right: 20px; }
+.pill-input { border-radius: var(--radius-pill) !important; padding-left: 15px; }
 
-            <div class="top-bar-right-group top-bar-mini-actions">
-                <button id="btn-language" class="top-btn icon-only" title="Language">🌍</button>
-                <button id="btn-settings" class="top-btn icon-only" title="Settings">⚙️</button>
-            </div>
-        </header>
+.primary-btn { background-color: var(--primary-blue); color: #fff; font-weight: bold; }
+.primary-btn:hover { background-color: #00547C; }
+.secondary-btn { background-color: var(--panel-mid); color: #fff; }
+.secondary-btn:hover { background-color: var(--label-grey); }
 
-        <div id="workspace">
-            <div id="sidebar-hit-area"></div>
-            <aside id="sidebar">
-                <div class="sidebar-menu">
-                    <div class="sidebar-item tooltip" title="Home" onclick="window.location.hash='';">
-                        <span class="icon">🏠</span><span class="sidebar-text display-font">Home</span>
-                    </div>
-                    <div class="sidebar-item tooltip" title="Pins">
-                        <span class="icon">📌</span><span class="sidebar-text display-font">Pins</span>
-                    </div>
-                    <div class="sidebar-item tooltip" title="Events">
-                        <span class="icon">📅</span><span class="sidebar-text display-font">Events</span>
-                    </div>
-                </div>
-                <div class="sidebar-footer body-font">
-                    <span id="sidebar-version-display"></span>
-                </div>
-            </aside>
+.icon-btn { background: none; border: none; color: var(--text-light); font-size: 1.2rem; cursor: pointer; transition: color 0.2s; }
+.icon-btn:hover { color: #fff; }
+.active-star { color: var(--bright-red-orange) !important; text-shadow: 0 0 5px var(--bright-red-orange); }
 
-            <main id="main-content">
-                <div class="content-wrapper">
-                    <div id="context-header" class="hidden" style="padding: 0 20px 15px;">
-                        <h2 id="context-title" class="display-font" style="color: var(--primary-blue); font-size: 2rem;"></h2>
-                        <p id="context-desc" class="body-font" style="color: var(--text-light); margin-bottom: 15px;"></p>
-                        <button id="btn-back-to-results" class="btn primary-btn" style="width: auto; padding: 8px 16px; font-size: 1rem;">← Back to Results</button>
-                    </div>
+.form-input { width: 100%; padding: 10px; background-color: var(--navy-grey); border: 1px solid var(--panel-mid); color: #fff; font-family: 'Barlow Condensed', sans-serif; margin-bottom: 10px; border-radius: var(--radius-btn); }
+.hidden { display: none !important; }
+.meta-text { color: var(--label-grey); font-size: 0.9rem; }
+.divider { border: 0; height: 1px; background: var(--panel-mid); margin: 15px 0; }
 
-                    <div class="filter-chips-container" id="main-filters">
-                        <div class="filter-chips" id="filter-chips">
-                            <button class="chip active" data-filter="All">All</button>
-                            <button class="chip" data-filter="Open Now">Open Now</button>
-                            <button class="chip" data-filter="Darkroom">Darkroom</button>
-                            <button class="chip" data-filter="Men Only">Men Only</button>
-                        </div>
-                    </div>
+/* Overlays & Age Gate */
+.fullscreen-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: var(--bg-color); z-index: 1000; display: flex; align-items: center; justify-content: center; }
+.age-gate-content { text-align: center; max-width: 400px; padding: 30px; background-color: var(--panel-dark); border-radius: var(--radius-window); box-shadow: 0 0 20px rgba(44, 168, 212, 0.15); border: 1px solid var(--primary-blue); }
+.ag-logo { height: 75px; vertical-align: middle; margin-right: 10px; }
+.ag-title-img { height: 65px; vertical-align: middle; }
+#ag-title { color: var(--primary-blue); font-size: 2.5rem; margin-bottom: 10px; }
+.disclaimer-white { color: #fff; font-size: 1.1rem; margin-bottom: 20px; }
+.disclaimer { color: var(--label-grey); font-size: 0.9rem; margin-bottom: 25px; line-height: 1.4; }
+.translation-placeholder { color: var(--primary-blue); cursor: pointer; margin-top: 15px; }
 
-                    <section id="results-container"></section>
-                </div>
-            </main>
-        </div>
-    </div>
+/* Desktop Top Bar (Left/Right Split) */
+#top-bar {
+    position: sticky; top: 0; background-color: var(--near-black); z-index: 100;
+    padding: 15px 20px; border-bottom: 1px solid var(--panel-mid);
+    display: flex; align-items: center; justify-content: space-between; gap: 15px;
+}
+.top-bar-left { display: flex; align-items: center; flex-wrap: nowrap; gap: 15px; flex-grow: 1; }
+.top-bar-right { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
 
-    <div id="venue-modal" class="modal hidden">
-        <div class="modal-content">
-            <div class="modal-header">
-                <button id="close-modal" class="btn-close" style="position: absolute; top: 15px; right: 15px;">✕</button>
-                <h2 id="modal-title" class="display-font">VENUE NAME</h2>
-                <div class="modal-actions">
-                    <button id="modal-star" class="icon-btn" title="Toggle Favorite" style="font-size: 1.8rem; line-height: 1;">☆</button>
-                    <button id="modal-shortlist" class="icon-btn" title="Add to Shortlist">📑</button>
-                    <button id="modal-share" class="icon-btn" title="Share">🔗</button>
-                </div>
-            </div>
-            
-            <div class="modal-body body-font">
-                <div class="modal-top-split">
-                    <div class="modal-image-container">
-                        <img id="modal-venue-image" class="venue-image" src="placeholder_venue.jpg" alt="Venue" style="width: 100%; height: 250px; object-fit: cover; object-position: center; border-radius: var(--radius-card); cursor: pointer;" title="Tap for next image">
-                    </div>
-                    <div class="modal-info-container">
-                        <div id="modal-status-bar" class="status-bar"></div>
-                        
-                        <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px;">
-                            <button id="btn-map" class="btn secondary-btn" style="padding: 4px 10px; font-size: 0.8rem; width: auto; flex-shrink: 0;">🗺️ Directions</button>
-                            <p id="modal-address" class="meta-text" style="margin:0;"></p>
-                        </div>
-                        
-                        <div id="modal-public-stats" class="public-stats-block"></div>
-                        <div class="feature-chips" id="modal-features"></div>
-                        <div class="ratings-grid" id="modal-ratings"></div>
-                    </div>
-                </div>
-                <div class="description-block">
-                    <h3 class="display-font">ABOUT</h3>
-                    <p id="modal-description"></p>
-                </div>
-                <div id="modal-events" class="events-block hidden">
-                    <h3 class="display-font">UPCOMING EVENTS</h3>
-                    <div id="events-container"></div>
-                </div>
-            </div>
-        </div>
-    </div>
+.top-bar-logo-area { display: flex; align-items: center; gap: 10px; cursor: pointer; flex-shrink: 0; }
+.brand-image { height: 35px; }
+.brand-title-image { height: 28px; }
 
-    <datalist id="city-suggestions">
-        <option value="Berlin">Deutschland / Germany</option>
-        <option value="München">Deutschland / Germany</option>
-        <option value="London">United Kingdom</option>
-        <option value="Paris">France</option>
-        <option value="Madrid">España / Spain</option>
-        <option value="Barcelona">España / Spain</option>
-        <option value="Amsterdam">Nederland / Netherlands</option>
-    </datalist>
-    <div id="location-modal" class="modal hidden">
-        <div class="modal-content small-modal">
-            <button class="btn-close close-modal-btn">✕</button>
-            <div class="modal-header"><h2 class="display-font">SET LOCATION</h2></div>
-            <div class="modal-body body-font">
-                <p class="meta-text">Set your location to find nearby venues and events.</p>
-                <button id="btn-gps" class="btn primary-btn">📍 Use My GPS Location</button>
-                <hr class="divider">
-                <input type="text" id="loc-country" class="form-input" placeholder="Country">
-                <input type="text" id="loc-city" class="form-input" placeholder="City" list="city-suggestions">
-                <input type="text" id="loc-postcode" class="form-input" placeholder="Postcode (Optional)">
-                <div class="modal-actions-row">
-                    <button id="btn-save-location" class="btn primary-btn">Save</button>
-                    <button id="btn-clear-location" class="btn secondary-btn">Clear</button>
-                </div>
-                <p id="current-location-display" class="meta-text" style="text-align:center; margin-top:10px;"></p>
-            </div>
-        </div>
-    </div>
+.top-bar-search-area { flex-grow: 1; max-width: 400px; }
+#search-input { width: 100%; padding: 8px 15px; background-color: var(--panel-dark); border: 1px solid var(--panel-mid); color: #fff; outline: none; }
 
-    <div id="settings-modal" class="modal hidden">
-        <div class="modal-content small-modal">
-            <button class="btn-close close-modal-btn">✕</button>
-            <div class="modal-header"><h2 class="display-font">SETTINGS</h2></div>
-            <div class="modal-body body-font">
-                <h3 style="color: var(--primary-blue); margin-bottom: 5px;">Help & Privacy</h3>
-                <p class="meta-text" style="margin-bottom: 15px; font-size: 0.95rem;">Welcome to Backroom. All your favorites, shortlists, and location settings are strictly saved locally on your current browser. No accounts are required, and no tracking data is sent to a server. To back up your data or move it to a new device, use the Export and Import tools below to save your settings to your hard drive.</p>
-                
-                <button id="btn-export-data" class="btn primary-btn" style="margin-bottom:10px;">💾 Export My Data</button>
-                <label for="import-data-file" class="btn secondary-btn" style="display:block; text-align:center; margin-bottom:10px; cursor:pointer;">📂 Import Data</label>
-                <input type="file" id="import-data-file" class="hidden" accept=".json">
-                <hr class="divider">
-                <button id="btn-reset-age" class="btn secondary-btn" style="margin-bottom:10px;">Reset 18+ Age Gate</button>
-                <button id="btn-clear-data" class="btn" style="background-color: var(--dark-red); color: #fff;">Delete All Local Data</button>
-            </div>
-        </div>
-    </div>
+.top-bar-buttons-area { display: flex; gap: 8px; align-items: center; }
+.top-btn {
+    background-color: var(--panel-standard); color: var(--text-light);
+    border: 1px solid var(--panel-mid); padding: 8px 12px; cursor: pointer;
+    display: flex; align-items: center; gap: 5px; font-family: 'Barlow Condensed', sans-serif; font-size: 1rem;
+}
+.top-btn:hover { background-color: var(--panel-mid); color: #fff; border-color: var(--primary-blue); }
+.icon-only { padding: 8px 12px; font-size: 1.2rem; }
 
-    <div id="shortlists-modal" class="modal hidden">
-        <div class="modal-content small-modal">
-            <button class="btn-close close-modal-btn">✕</button>
-            <div class="modal-header"><h2 class="display-font">MY SHORTLISTS</h2></div>
-            <div class="modal-body body-font">
-                <div id="shortlists-list" style="display:flex; flex-direction:column; gap:10px; margin-bottom:15px;"></div>
-                <hr class="divider">
-                <input type="text" id="new-shortlist-name" class="form-input" placeholder="New Shortlist Name">
-                <button id="btn-create-shortlist" class="btn primary-btn">Create Shortlist</button>
-            </div>
-        </div>
-    </div>
+/* Workspace & Sidebar */
+#workspace { display: flex; min-height: calc(100vh - 70px); }
+#sidebar {
+    width: 220px; background-color: var(--panel-dark); border-right: 1px solid var(--panel-mid);
+    display: flex; flex-direction: column; justify-content: space-between; padding-top: 20px;
+    box-shadow: inset 3px 0 10px rgba(44, 168, 212, 0.2); border-left: 2px solid var(--primary-blue);
+}
+.sidebar-menu { display: flex; flex-direction: column; gap: 10px; padding: 0 10px; }
+.sidebar-item { padding: 12px; color: var(--text-light); cursor: pointer; display: flex; align-items: center; gap: 10px; border-radius: var(--radius-btn); }
+.sidebar-item:hover { background-color: var(--panel-mid); color: #fff; }
+.sidebar-item .icon { font-size: 1.3rem; }
+.sidebar-text { font-size: 1.1rem; }
+.sidebar-footer { padding: 15px; font-size: 0.85rem; color: var(--label-grey); }
 
-    <div id="add-to-shortlist-modal" class="modal hidden">
-        <div class="modal-content small-modal">
-            <button class="btn-close close-modal-btn">✕</button>
-            <div class="modal-header"><h2 class="display-font">ADD TO SHORTLIST</h2></div>
-            <div class="modal-body body-font">
-                <p id="add-shortlist-target-name" class="meta-text" style="margin-bottom:15px; font-weight:bold;"></p>
-                <div id="add-shortlist-options" style="display:flex; flex-direction:column; gap:10px; margin-bottom:15px;"></div>
-                <hr class="divider">
-                <input type="text" id="add-new-shortlist-name" class="form-input" placeholder="Create new shortlist...">
-                <button id="btn-add-create-shortlist" class="btn primary-btn">Create & Add</button>
-            </div>
-        </div>
-    </div>
+/* Main Content & Cards */
+#main-content { flex-grow: 1; padding: 25px; background-color: var(--bg-color); display: flex; justify-content: center; }
+.content-wrapper { max-width: 1200px; width: 100%; }
 
-    <script src="app.js"></script>
-</body>
-</html>
+.filter-chips-container { margin-bottom: 25px; padding-bottom: 10px; }
+.filter-chips { display: flex; gap: 10px; overflow-x: auto; scrollbar-width: none; }
+.filter-chips::-webkit-scrollbar { display: none; }
+.chip { background-color: var(--panel-standard); color: var(--text-light); border: 1px solid var(--panel-mid); padding: 6px 14px; cursor: pointer; font-family: 'Barlow Condensed', sans-serif; white-space: nowrap; }
+.chip.active { background-color: var(--primary-blue); color: #fff; border-color: var(--primary-blue); }
+
+#results-container { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; }
+.card { background-color: var(--panel-standard); border-radius: var(--radius-card); overflow: hidden; border: 1px solid var(--panel-mid); cursor: pointer; transition: transform 0.2s, box-shadow 0.2s; display: flex; flex-direction: column; }
+.card:hover { border-color: var(--label-grey); }
+.card.selected { transform: scale(1.02); box-shadow: 0 0 15px rgba(44, 168, 212, 0.4); border-color: var(--primary-blue); }
+
+.card-image-wrapper { width: 100%; height: 180px; background-color: #000; overflow: hidden; }
+.card-image-wrapper img { width: 100%; height: 100%; object-fit: cover; object-position: center; }
+
+.card-inner-content { padding: 15px; display: flex; flex-direction: column; flex-grow: 1; }
+.card-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; }
+.card-title { font-size: 1.5rem; color: #fff; margin: 0; }
+.card-meta { color: var(--label-grey); font-size: 0.9rem; margin-top: 2px; }
+.status-badge { font-family: 'Antonio', sans-serif; font-size: 0.8rem; padding: 2px 6px; border-radius: 3px; font-weight: bold; }
+.status-badge.live { background-color: var(--primary-blue); color: #fff; }
+.status-badge.closed { background-color: var(--bright-red-orange); color: #fff; }
+
+.card-about { font-size: 1rem; color: var(--text-light); margin-bottom: 15px; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.card-next-event { background-color: var(--panel-dark); padding: 8px; border-left: 3px solid var(--primary-blue); border-radius: 0 var(--radius-btn) var(--radius-btn) 0; font-size: 0.9rem; color: #fff; margin-bottom: 15px; }
+
+.card-stats { display: flex; align-items: center; gap: 15px; font-size: 0.95rem; color: var(--text-light); margin-top: auto; padding-top: 10px; border-top: 1px solid var(--panel-mid); }
+
+/* Modals */
+.modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 2000; display: flex; align-items: center; justify-content: center; padding: 20px; }
+.modal-content {
+    background-color: var(--panel-standard); width: 100%; max-width: 800px; max-height: 90vh;
+    border-radius: var(--radius-window); border: 1px solid var(--panel-mid); box-shadow: 0 0 25px rgba(44, 168, 212, 0.2);
+    display: flex; flex-direction: column; position: relative; overflow: hidden;
+}
+.small-modal { max-width: 400px; }
+.modal-header {
+    position: sticky; top: 0; background-color: var(--panel-standard); z-index: 10;
+    padding: 20px 20px 10px 20px; border-bottom: 1px solid var(--panel-mid);
+    display: flex; align-items: center; gap: 15px;
+}
+.modal-header h2 { flex-grow: 1; margin: 0; font-size: 2rem; color: #fff; }
+.modal-actions { display: flex; gap: 10px; align-items: center; margin-right: 30px; }
+.btn-close { position: absolute; top: 20px; right: 20px; background: none; border: none; color: var(--text-light); font-size: 1.5rem; cursor: pointer; z-index: 20; }
+.btn-close:hover { color: var(--bright-red-orange); }
+
+.modal-body { padding: 20px; overflow-y: auto; flex-grow: 1; }
+.modal-top-split { display: flex; gap: 20px; margin-bottom: 25px; }
+.modal-image-container { flex: 1; min-width: 0; }
+.centered-image { object-position: center !important; }
+.modal-info-container { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+
+.public-stats-block { display: flex; gap: 15px; margin-bottom: 15px; color: #fff; font-size: 1.1rem; }
+.feature-chips { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 15px; }
+
+.ratings-grid { display: grid; grid-template-columns: 1fr; gap: 5px; background-color: var(--panel-dark); padding: 10px; border-radius: var(--radius-card); }
+.rating-item { display: flex; justify-content: space-between; font-size: 1rem; color: var(--text-light); }
+.description-block { background-color: var(--panel-dark); padding: 15px; border-radius: var(--radius-card); margin-bottom: 20px; }
+.description-block h3 { margin-bottom: 10px; color: var(--primary-blue); }
+.description-block p { line-height: 1.5; color: #fff; }
+
+.events-block { margin-top: 20px; }
+.events-block h3 { margin-bottom: 10px; color: var(--primary-blue); }
+.event-card { background-color: var(--panel-dark); padding: 12px; border-left: 3px solid var(--primary-blue); border-radius: 0 var(--radius-card) var(--radius-card) 0; margin-bottom: 10px; }
+.event-card.past { opacity: 0.6; border-left-color: var(--label-grey); }
+
+/* Desktop scaling enhancements */
+@media (min-width: 1024px) {
+    .body-font { font-size: 1.25rem; letter-spacing: 0.5px; }
+    .display-font { letter-spacing: 2px; }
+    #search-input { font-size: 1.1rem; }
+    .card-title { font-size: 1.7rem; }
+}
+
+/* Mobile Layout Overrides */
+@media (max-width: 768px) {
+    /* 2-Row Mobile Header */
+    #top-bar { display: flex; flex-direction: column; gap: 10px; padding: 10px; }
+    .top-bar-left { display: contents; } /* Break out of left wrapper to use grid/flex rows */
+    .top-bar-right { display: contents; }
+    
+    .row-main { display: flex; justify-content: space-between; align-items: center; width: 100%; order: 1; }
+    .row-search { display: flex; gap: 10px; width: 100%; order: 2; align-items: center; }
+    
+    .top-bar-logo-area { display: flex; align-items: center; }
+    .top-bar-spacer { flex-grow: 1; }
+    .top-bar-utility { display: flex; gap: 5px; }
+    
+    .search-container { flex: 1; min-width: 100px; } /* Half-ish size */
+    .top-bar-nav-group { display: flex; gap: 5px; }
+    
+    /* Hide text labels on mobile header buttons to fit */
+    .top-btn .btn-text { display: none; }
+    .top-btn { padding: 8px 12px; }
+    
+    /* Hidden Sidebar Logic */
+    #sidebar { position: fixed; left: -220px; top: 0; height: 100vh; z-index: 500; transition: left 0.3s ease; }
+    #sidebar.visible { left: 0; }
+    #sidebar-hit-area { position: fixed; left: 0; top: 0; width: 15px; height: 100vh; z-index: 499; }
+    .sidebar-text { display: none; } /* Icon only on mobile */
+    .sidebar-footer { display: none; }
+
+    /* Modal Stacking */
+    .modal-content { height: 100%; max-height: 100%; border-radius: 0; border: none; }
+    .modal-top-split { flex-direction: column; }
+    .modal-image-container img { height: 200px; }
+}

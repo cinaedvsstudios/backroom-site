@@ -7,7 +7,7 @@ let currentTargetVenue = null;
 let userFavorites = JSON.parse(localStorage.getItem('br_favorites')) || [];
 let userShortlists = JSON.parse(localStorage.getItem('br_shortlists')) || {};
 
-const APP_VERSION = "v0.13";
+const APP_VERSION = "v0.14";
 const APP_DATE = "May 13, 2026";
 
 // --- DOM Elements ---
@@ -75,18 +75,21 @@ async function initApp() {
         
     } catch (error) {
         console.error("Local JSON fetch failed.", error);
-        const errorText = document.getElementById('error-text');
-        errorText.innerText = "Data error: " + error.message + ". If you are testing this locally on a mobile phone file manager, standard browsers will block local file loading. Please upload to GitHub Pages or click bypass below to view the empty UI shell.";
+        document.getElementById('error-text').innerText = "Data error: " + error.message + ". Browsers block local file loading via standard managers. Click bypass below to view the UI shell.";
         errorPanel.classList.remove('hidden');
         
         const bypassContainer = document.getElementById('bypass-container');
         bypassContainer.innerHTML = '';
         const btn = document.createElement('button');
         btn.innerText = "Continue Without Data";
-        btn.className = "btn secondary-btn display-font";
+        btn.className = "btn secondary-btn pill-btn display-font";
         btn.onclick = () => {
             errorPanel.classList.add('hidden');
-            applyTheme(); populateSystemText(); setupEventListeners(); handleRouting();
+            // Provide minimal mock data to prevent crashes
+            systemInfo = { labels: { rated_by_gays: "Rated by gays" } };
+            designTheme = {}; venues = []; events = [];
+            applyTheme(); populateSystemText(); setupEventListeners(); loadSavedLocation(); 
+            if(localStorage.getItem('br_age_verified') === 'true') handleRouting();
         };
         bypassContainer.appendChild(btn);
     }
@@ -224,7 +227,7 @@ function setupEventListeners() {
 
 function applyFilters() {
     const query = searchInput.value;
-    let filteredVenues = venues;
+    let filteredVenues = venues || [];
     selectedCardId = null;
 
     if(activeFilter !== 'All') {
@@ -288,11 +291,9 @@ function toggleFavorite(id, btnElement) {
     const index = userFavorites.indexOf(id);
     if(index > -1) {
         userFavorites.splice(index, 1);
-        btnElement.innerText = '☆';
         btnElement.classList.remove('active-star');
     } else {
         userFavorites.push(id);
-        btnElement.innerText = '★';
         btnElement.classList.add('active-star');
     }
     saveUserFavorites();
@@ -305,7 +306,7 @@ function renderFavoritesView() {
     document.getElementById('context-title').innerText = "MY FAVOURITES";
     document.getElementById('context-desc').innerText = "Venues you have starred locally.";
     
-    const favVenues = venues.filter(v => userFavorites.includes(v.Venue_ID));
+    const favVenues = (venues||[]).filter(v => userFavorites.includes(v.Venue_ID));
     renderListings(favVenues, true);
 }
 
@@ -317,7 +318,7 @@ function renderShortlistView(listName) {
     document.getElementById('context-desc').innerText = "Saved Shortlist";
     
     const ids = userShortlists[listName];
-    const shortVenues = venues.filter(v => ids.includes(v.Venue_ID));
+    const shortVenues = (venues||[]).filter(v => ids.includes(v.Venue_ID));
     renderListings(shortVenues, true);
 }
 
@@ -332,9 +333,9 @@ function openShortlistsMenu() {
         lists.forEach(name => {
             const row = document.createElement('div');
             row.className = 'shortlist-row';
-            row.innerHTML = `<span style="flex-grow:1; color:#fff;" onclick="window.location.hash='#shortlist=${encodeURIComponent(name)}'; document.getElementById('shortlists-modal').classList.add('hidden');">${name} (${userShortlists[name].length})</span>
+            row.innerHTML = `<span style="flex-grow:1; color:#fff; cursor:pointer;" onclick="window.location.hash='#shortlist=${encodeURIComponent(name)}'; document.getElementById('shortlists-modal').classList.add('hidden');">${name} (${userShortlists[name].length})</span>
                              <button class="icon-btn" onclick="shareShortlist('${name}')" title="Share">🔗</button>
-                             <button class="del-btn" title="Delete">✕</button>`;
+                             <button class="del-btn icon-btn" title="Delete" style="color:var(--bright-red-orange);">✕</button>`;
             
             row.querySelector('.del-btn').addEventListener('click', (e) => {
                 e.stopPropagation();
@@ -364,7 +365,7 @@ function promptAddToShortlist(venue) {
         lists.forEach(name => {
             const isAdded = userShortlists[name].includes(venue.Venue_ID);
             const btn = document.createElement('button');
-            btn.className = `btn ${isAdded ? 'secondary-btn' : 'primary-btn'}`;
+            btn.className = `btn pill-btn ${isAdded ? 'secondary-btn' : 'primary-btn'}`;
             btn.innerText = isAdded ? `Remove from ${name}` : `Add to ${name}`;
             btn.addEventListener('click', () => {
                 if(isAdded) {
@@ -440,14 +441,14 @@ function renderListings(data, isContextView = false) {
     resultsContainer.innerHTML = '';
     const today = new Date(); today.setHours(0,0,0,0);
 
-    if(data.length === 0) {
+    if(!data || data.length === 0) {
         resultsContainer.innerHTML = `<p style="text-align:center; color:var(--label-grey); margin-top:20px; width: 100%; grid-column: 1 / -1;">No venues found.</p>`;
         return;
     }
 
     data.forEach(venue => {
         let nextEventHtml = '';
-        let venueEvents = events.filter(e => e.Venue_ID === venue.Venue_ID && new Date(e.Event_Date) >= today);
+        let venueEvents = (events||[]).filter(e => e.Venue_ID === venue.Venue_ID && new Date(e.Event_Date) >= today);
         if(venueEvents.length > 0) {
             venueEvents.sort((a, b) => new Date(a.Event_Date) - new Date(b.Event_Date));
             const nextE = venueEvents[0];
@@ -463,7 +464,7 @@ function renderListings(data, isContextView = false) {
         
         card.innerHTML = `
             <div class="card-image-wrapper">
-                <img class="venue-image" src="${baseImageSrc}" onerror="this.src='placeholder_venue.jpg'" data-id="${venue.Venue_ID}" data-index="1" title="Tap to see next photo">
+                <img class="venue-image centered-image" src="${baseImageSrc}" onerror="this.src='placeholder_venue.jpg'" data-id="${venue.Venue_ID}" data-index="1" title="Tap to see next photo">
             </div>
             <div class="card-inner-content">
                 <div class="card-header">
@@ -474,7 +475,7 @@ function renderListings(data, isContextView = false) {
                 ${nextEventHtml}
                 <div class="card-stats">
                     <span>🌈 ${systemInfo.labels?.rated_by_gays || 'Rated by gays'}</span><span>👁️ ${venue.Views || 0}</span>
-                    <span class="star-btn icon-btn ${isFav ? 'active-star' : ''}" style="margin-left:auto; font-size:1.8rem; line-height:1;">${isFav ? '★' : '☆'}</span>
+                    <span class="star-btn icon-btn ${isFav ? 'active-star' : ''}" style="margin-left:auto; font-size:1.8rem; line-height:1;">☆</span>
                 </div>
             </div>
         `;
@@ -516,7 +517,6 @@ function openVenueModal(venue) {
 
     const starBtn = document.getElementById('modal-star');
     const isFav = userFavorites.includes(venue.Venue_ID);
-    starBtn.innerText = isFav ? '★' : '☆';
     starBtn.className = `icon-btn ${isFav ? 'active-star' : ''}`;
     starBtn.onclick = () => toggleFavorite(venue.Venue_ID, starBtn);
 
@@ -547,9 +547,9 @@ function openVenueModal(venue) {
     if(venue.Feature_Men_Only) features.push('Men Only');
     if(venue.Feature_Dancefloor) features.push('Dancefloor');
     if(venue.Feature_Sauna) features.push('Sauna');
-    document.getElementById('modal-features').innerHTML = features.map(f => `<span class="chip" style="font-size:0.85rem;">${f}</span>`).join('');
+    document.getElementById('modal-features').innerHTML = features.map(f => `<span class="chip pill-btn" style="font-size:0.85rem; padding: 4px 10px;">${f}</span>`).join('');
 
-    let venueEvents = events.filter(e => e.Venue_ID === venue.Venue_ID);
+    let venueEvents = (events||[]).filter(e => e.Venue_ID === venue.Venue_ID);
     const eventsBlock = document.getElementById('modal-events');
     const eventsContainer = document.getElementById('events-container');
     
