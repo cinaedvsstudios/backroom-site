@@ -56,7 +56,6 @@ function showToast(message) {
     }, 2500);
 }
 
-// Format dates globally as DD-MM-YYYY
 function formatDateToDDMMYYYY(ymdDate) {
     if(!ymdDate) return '';
     const parts = ymdDate.split('-');
@@ -174,7 +173,6 @@ function handleRouting() {
     document.getElementById('discounts-container').classList.add('hidden');
     welcomeScreen.classList.add('hidden');
 
-    // Remove profile wipe toast explicitly during navigation to keep UI clean
     const wipeToast = document.getElementById('profile-wipe-toast');
     if (wipeToast) wipeToast.classList.add('hidden');
 
@@ -308,6 +306,8 @@ function setupEventListeners() {
             localStorage.setItem('br_travel', JSON.stringify(userTravel));
             showToast(`Saved to Travel 🚄: ${city}`);
             document.getElementById('loc-city').value = '';
+            if(window.location.hash === '#mytravel') renderTravelFullView();
+            else renderTravelDropdown();
         }
     });
 
@@ -349,7 +349,6 @@ function setupEventListeners() {
         if(window.location.hash === '' && searchInput.value === '') renderWelcomeScreen();
     });
 
-    // Custom Profile Wipe Toast Logic (v0.21 update)
     const btnNewProfile = document.getElementById('btn-new-profile');
     if (btnNewProfile) {
         btnNewProfile.addEventListener('click', () => {
@@ -449,6 +448,7 @@ function updateProfileDisplay() {
 
 function renderTravelDropdown() {
     const list = document.getElementById('travel-cities-list');
+    list.classList.remove('hidden');
     list.innerHTML = '';
     userTravel.forEach(city => {
         const item = document.createElement('div');
@@ -845,12 +845,12 @@ function handleImageCarousel(imgElement) {
         tempImg.onload = () => {
             imgElement.src = newSrc;
             imgElement.setAttribute('data-index', index);
-            showToast("Double tap the image area to open venue details");
+            showToast("Double tap the venue name to open");
         };
         tempImg.onerror = () => {
             imgElement.src = `Venue_images/${id}-01.jpg`;
             imgElement.setAttribute('data-index', 1);
-            showToast("Double tap the image area to open venue details");
+            showToast("Double tap the venue name to open");
         };
         tempImg.src = newSrc;
     });
@@ -912,7 +912,7 @@ function renderListings(data, isContextView = false) {
                     document.querySelectorAll('.card.selected').forEach(c => c.classList.remove('selected'));
                     card.classList.add('selected');
                     selectedCardId = venue.Venue_ID;
-                    showToast("Double tap the card background to open");
+                    showToast("Double tap the venue name to open");
                 }
             } 
         });
@@ -922,38 +922,10 @@ function renderListings(data, isContextView = false) {
 
 function openVenueModal(venue) {
     document.getElementById('modal-title').innerText = venue.Name;
-    document.getElementById('modal-address').innerText = `${venue.Address}`;
-    document.getElementById('modal-description').innerText = venue.Description;
-    document.getElementById('modal-public-stats').innerHTML = `<span>🌈 ${systemInfo.labels?.rated_by_gays || 'Rated'}</span> <span>👁️ ${venue.Views || 0}</span>`;
     
-    const modalImage = document.getElementById('modal-venue-image');
-    modalImage.setAttribute('data-id', venue.Venue_ID);
-    modalImage.setAttribute('data-index', 1);
-    modalImage.src = `Venue_images/${venue.Venue_ID}-01.jpg`;
-    modalImage.onerror = () => modalImage.src = 'placeholder_venue.jpg';
-
-    const newModalImage = modalImage.cloneNode(true);
-    modalImage.parentNode.replaceChild(newModalImage, modalImage);
-    handleImageCarousel(newModalImage);
-
-    const starBtn = document.getElementById('modal-star');
-    const isFav = userFavorites.includes(venue.Venue_ID);
-    starBtn.className = `icon-btn ${isFav ? 'active-star' : ''}`;
-    starBtn.onclick = () => toggleFavorite(venue.Venue_ID, starBtn);
-
-    document.getElementById('modal-shortlist').onclick = () => promptAddToShortlist(venue);
-    document.getElementById('modal-share').onclick = () => shareURL(`${window.location.origin}${window.location.pathname}?venue=${venue.Venue_ID}#venue=${venue.Venue_ID}`, venue.Name);
+    // Dynamic Layout build for Desktop Split
+    const dynamicLayout = document.getElementById('modal-dynamic-layout');
     
-    document.getElementById('btn-map').onclick = () => {
-        const query = encodeURIComponent(venue.Address || venue.City || venue.Name);
-        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
-        if (isIOS) {
-            window.open(`http://maps.apple.com/?q=${query}`, '_blank');
-        } else {
-            window.open(`google.com/maps/search/?api=1&query=...{query}`, '_blank');
-        }
-    };
-
     const ageEmojis = ['🧒🏼', '🧑🏻', '🧔🏻‍♂️', '👨🏻‍🦳', '👴🏼'];
     const sizeEmojis = ['🤏', '👍', '✌️', '🖐️', '🤲'];
     const popEmojis = ['💀', '🍹', '🕺', '👯‍♀️', '🎉'];
@@ -962,42 +934,50 @@ function openVenueModal(venue) {
     const sizeScale = sizeEmojis.slice(0, venue.Rating_Size || 0).join('');
     const popScale = popEmojis.slice(0, venue.Rating_Busyness || 0).join('');
 
-    document.getElementById('modal-ratings').innerHTML = `
-        <div class="rating-item"><span>General</span><span>${'🍆'.repeat(venue.Rating_General || 0)}</span></div>
-        <div class="rating-item"><span>Darkroom</span><span>${'💦'.repeat(venue.Rating_Darkroom || 0)}</span></div>
-        <div class="rating-item"><span>Cost</span><span>${'💰'.repeat(venue.Rating_Cost || 0)}</span></div>
-        <div class="rating-item"><span>Location</span><span>${'🍑'.repeat(venue.Rating_Location || 0)}</span></div>
-        <div class="rating-item"><span>Popularity</span><span>${popScale}</span></div>
-        <div class="rating-item"><span>Age Range</span><span>${ageScale}</span></div>
-        <div class="rating-item"><span>Size</span><span>${sizeScale}</span></div>
-    `;
-
     const features = [];
     if(venue.Feature_Darkroom) features.push('Darkroom');
     if(venue.Feature_Men_Only) features.push('Men Only');
     if(venue.Feature_Dancefloor) features.push('Dancefloor');
     if(venue.Feature_Sauna) features.push('Sauna');
-    document.getElementById('modal-features').innerHTML = features.map(f => `<span class="chip pill-btn" style="font-size:0.85rem; padding: 4px 10px;">${f}</span>`).join('');
+    const featureHtml = features.map(f => `<span class="chip pill-btn" style="font-size:0.85rem; padding: 4px 10px;">${f}</span>`).join('');
+
+    const statsHtml = `
+        <div class="public-stats-block">
+            <span>🌈 ${systemInfo.labels?.rated_by_gays || 'Rated'}</span> 
+            <span>👁️ ${venue.Views || 0}</span>
+        </div>
+        <div class="feature-chips">${featureHtml}</div>
+    `;
+    
+    const ratingsHtml = `
+        <div class="ratings-grid" id="modal-ratings">
+            <div class="rating-item"><span>General</span><span>${'🍆'.repeat(venue.Rating_General || 0)}</span></div>
+            <div class="rating-item"><span>Darkroom</span><span>${'💦'.repeat(venue.Rating_Darkroom || 0)}</span></div>
+            <div class="rating-item"><span>Cost</span><span>${'💰'.repeat(venue.Rating_Cost || 0)}</span></div>
+            <div class="rating-item"><span>Location</span><span>${'🍑'.repeat(venue.Rating_Location || 0)}</span></div>
+            <div class="rating-item"><span>Popularity</span><span>${popScale}</span></div>
+            <div class="rating-item"><span>Age Range</span><span>${ageScale}</span></div>
+            <div class="rating-item"><span>Size</span><span>${sizeScale}</span></div>
+        </div>
+    `;
 
     let venueEvents = (events||[]).filter(e => e.Venue_ID === venue.Venue_ID);
-    const eventsBlock = document.getElementById('modal-events');
-    const eventsContainer = document.getElementById('events-container');
-    
+    const today = new Date(); today.setHours(0,0,0,0);
+    venueEvents.sort((a, b) => {
+        const dateA = new Date(a.Event_Date); const dateB = new Date(b.Event_Date);
+        const isPastA = dateA < today; const isPastB = dateB < today;
+        if (isPastA && !isPastB) return 1; if (!isPastA && isPastB) return -1;
+        return Math.abs(dateA - today) - Math.abs(dateB - today);
+    });
+
+    let eventsHtml = '';
     if(venueEvents.length > 0) {
-        const today = new Date(); today.setHours(0,0,0,0);
-        venueEvents.sort((a, b) => {
-            const dateA = new Date(a.Event_Date); const dateB = new Date(b.Event_Date);
-            const isPastA = dateA < today; const isPastB = dateB < today;
-            if (isPastA && !isPastB) return 1; if (!isPastA && isPastB) return -1;
-            return Math.abs(dateA - today) - Math.abs(dateB - today);
-        });
-        
-        eventsContainer.innerHTML = venueEvents.map(ev => {
+        eventsHtml = `<div class="events-block"><h3 class="display-font">UPCOMING EVENTS</h3>`;
+        venueEvents.forEach(ev => {
             const isPast = new Date(ev.Event_Date) < today;
             const isSaved = userEvents.includes(ev.Event_ID);
             const badgeData = getBadgeDateParts(ev.Event_Date);
-            
-            return `
+            eventsHtml += `
                 <div class="event-card ${isPast ? 'past' : ''}">
                     <div class="event-card-inner">
                         <div class="event-date-badge">
@@ -1016,9 +996,69 @@ function openVenueModal(venue) {
                         </div>
                     </div>
                 </div>`;
-        }).join('');
-        eventsBlock.classList.remove('hidden');
-    } else eventsBlock.classList.add('hidden');
+        });
+        eventsHtml += `</div>`;
+    }
+
+    dynamicLayout.innerHTML = `
+        <div class="modal-left-col">
+            <div class="modal-image-container">
+                <img id="modal-venue-image" class="venue-image centered-image" src="Venue_images/${venue.Venue_ID}-01.jpg" onerror="this.src='placeholder_venue.jpg'" data-id="${venue.Venue_ID}" data-index="1" title="Tap for next image">
+            </div>
+            
+            <div class="desktop-stats">
+                ${statsHtml}
+                <hr style="border: 0; height: 2px; background: var(--bright-red-orange); margin: 15px 0;">
+                <div class="description-block">
+                    <h3 class="display-font">ABOUT</h3>
+                    <p>${venue.Description}</p>
+                </div>
+                ${eventsHtml}
+            </div>
+        </div>
+
+        <div class="modal-right-col">
+            <div style="display:flex; align-items:center; gap:8px; margin-bottom:10px;">
+                <button id="btn-map" class="btn secondary-btn pill-btn" style="padding: 2px 8px; font-size: 0.75rem; width: auto; flex-shrink: 0;">🗺️ Directions</button>
+                <p class="meta-text" style="margin:0;">${venue.Address}</p>
+            </div>
+            
+            <div class="mobile-stats">
+                ${statsHtml}
+            </div>
+            
+            ${ratingsHtml}
+
+            <div class="mobile-stats">
+                <div class="description-block">
+                    <h3 class="display-font">ABOUT</h3>
+                    <p>${venue.Description}</p>
+                </div>
+                ${eventsHtml}
+            </div>
+        </div>
+    `;
+
+    const img = document.getElementById('modal-venue-image');
+    handleImageCarousel(img);
+
+    const starBtn = document.getElementById('modal-star');
+    const isFav = userFavorites.includes(venue.Venue_ID);
+    starBtn.className = `icon-btn ${isFav ? 'active-star' : ''}`;
+    starBtn.onclick = () => toggleFavorite(venue.Venue_ID, starBtn);
+
+    document.getElementById('modal-shortlist').onclick = () => promptAddToShortlist(venue);
+    document.getElementById('modal-share').onclick = () => shareURL(`${window.location.origin}${window.location.pathname}?venue=${venue.Venue_ID}#venue=${venue.Venue_ID}`, venue.Name);
+    
+    document.getElementById('btn-map').onclick = () => {
+        const query = encodeURIComponent(venue.Address || venue.City || venue.Name);
+        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+        if (isIOS) {
+            window.open(`http://maps.apple.com/?q=${query}`, '_blank');
+        } else {
+            window.open(`http://googleusercontent.com/maps.google.com/maps?q=${query}`, '_blank');
+        }
+    };
 
     venueModal.classList.remove('hidden');
 }

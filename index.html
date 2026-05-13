@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Backroom - v0.20</title>
+    <title>Backroom - v0.21</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Antonio:wght@400;700&family=Barlow+Condensed:wght@400;500;700&display=swap" rel="stylesheet">
@@ -13,6 +13,18 @@
 <body>
 
     <div id="toast-container" class="toast-container hidden"></div>
+
+    <div id="profile-wipe-toast" class="modal hidden" style="z-index: 3000;">
+        <div class="toast show" style="background-color: var(--bright-red-orange); position:relative; transform:none; bottom:auto; left:auto; margin: auto; max-width: 400px; display:flex; flex-direction:column; gap:15px; padding: 25px; border: 2px solid #fff;">
+            <h3 class="display-font" style="font-size:2rem; margin:0;">CLEAR EVERYTHING?</h3>
+            <p class="body-font" style="font-size:1.2rem; margin:0;">Do you want to clear EVERYTHING (including Favorites and Shortlists) to start fresh?</p>
+            <div style="display:flex; flex-direction:column; gap:10px; margin-top:10px;">
+                <button id="btn-wipe-all" class="btn pill-btn" style="background:#fff; color:var(--dark-red); font-weight:bold;">Clear Everything</button>
+                <button id="btn-wipe-profile-only" class="btn secondary-btn pill-btn" style="background:var(--panel-dark); border:1px solid #fff;">Keep Data (Reset Profile Only)</button>
+                <button onclick="document.getElementById('profile-wipe-toast').classList.add('hidden')" class="btn pill-btn" style="background:transparent; border:1px solid rgba(255,255,255,0.5);">Cancel</button>
+            </div>
+        </div>
+    </div>
 
     <div id="age-gate" class="fullscreen-overlay">
         <div class="age-gate-content">
@@ -79,9 +91,9 @@
                         <span class="icon">🚄</span><span class="sidebar-text display-font">Travel</span>
                     </div>
                     <div id="travel-dropdown" class="sidebar-submenu hidden">
-                        <div id="travel-cities-list"></div>
                         <div class="submenu-item" onclick="window.location.hash='#discounts'"><span class="icon" style="font-size:1rem;">💰</span> Discounts</div>
                         <div class="submenu-item" onclick="window.location.hash='#mytravel'"><span class="icon" style="font-size:1rem;">✏️</span> Edit</div>
+                        <div id="travel-cities-list" class="travel-fav-box hidden"></div>
                     </div>
                     <div class="sidebar-item tooltip" title="Events" onclick="window.location.hash='#myevents';">
                         <span class="icon">💖</span><span class="sidebar-text display-font">Events</span>
@@ -154,29 +166,8 @@
             </div>
             
             <div class="modal-body body-font">
-                <div class="modal-top-split">
-                    <div class="modal-image-container">
-                        <img id="modal-venue-image" class="venue-image centered-image" src="placeholder_venue.jpg" alt="Venue" title="Tap for next image">
+                <div id="modal-dynamic-layout" class="modal-top-split">
                     </div>
-                    <div class="modal-info-container">
-                        <div id="modal-status-bar" class="status-bar"></div>
-                        <div style="display:flex; align-items:center; gap:8px; margin-bottom:10px;">
-                            <button id="btn-map" class="btn secondary-btn pill-btn" style="padding: 2px 8px; font-size: 0.75rem; width: auto; flex-shrink: 0;">🗺️ Directions</button>
-                            <p id="modal-address" class="meta-text" style="margin:0;"></p>
-                        </div>
-                        <div id="modal-public-stats" class="public-stats-block"></div>
-                        <div class="feature-chips" id="modal-features"></div>
-                        <div class="ratings-grid" id="modal-ratings"></div>
-                    </div>
-                </div>
-                <div class="description-block">
-                    <h3 class="display-font">ABOUT</h3>
-                    <p id="modal-description"></p>
-                </div>
-                <div id="modal-events" class="events-block hidden">
-                    <h3 class="display-font">UPCOMING EVENTS</h3>
-                    <div id="events-container"></div>
-                </div>
             </div>
         </div>
     </div>
@@ -210,7 +201,10 @@
 
                 <div style="display:flex; flex-direction:column; gap:10px;">
                     <button id="btn-save-location" class="btn primary-btn pill-btn">Load Location</button>
-                    <button id="btn-save-travel" class="btn secondary-btn pill-btn" style="border:1px solid var(--primary-blue);">Save to Travel 🚄</button>
+                    <div style="display:flex; gap:10px;">
+                        <button id="btn-save-travel" class="btn secondary-btn pill-btn" style="flex:1; border:1px solid var(--primary-blue);">Save 🚄</button>
+                        <button id="btn-edit-travel-loc" class="btn secondary-btn pill-btn" style="flex:1;" onclick="document.getElementById('location-modal').classList.add('hidden'); window.location.hash='#mytravel';">Edit Travel</button>
+                    </div>
                     <button id="btn-clear-location" class="btn pill-btn" style="background:var(--dark-red); color:#fff;">Clear</button>
                 </div>
                 <p id="current-location-display" class="meta-text" style="text-align:center; margin-top:10px;"></p>
@@ -224,12 +218,12 @@
             <div class="modal-header"><h2 class="display-font">MY PROFILE</h2></div>
             <div class="modal-body body-font">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 15px; flex-wrap: wrap; gap:10px;">
-                    <button id="btn-new-profile" class="btn secondary-btn pill-btn" style="width:auto; padding: 4px 10px; font-size:0.85rem;">New Profile</button>
+                    <button id="btn-new-profile" class="btn secondary-btn pill-btn" style="width:auto; padding: 4px 10px; font-size:0.85rem; color:var(--bright-red-orange);">New Profile</button>
                     <select id="profile-switcher" class="form-input pill-input" style="width:auto; padding: 4px 10px; font-size:0.85rem; margin:0; flex-grow:1;">
                         <option value="">Switch Profile...</option>
                     </select>
                 </div>
-                <input type="text" id="profile-name" class="form-input pill-input" placeholder="Enter your name">
+                <input type="text" id="profile-name" class="form-input pill-input" placeholder="Enter your name" style="color:var(--primary-blue); font-weight:bold;">
                 <p class="meta-text" style="margin-top:10px; margin-bottom:5px;">Select an Avatar:</p>
                 <div class="avatar-grid" id="avatar-grid"></div>
                 <hr class="divider">
@@ -288,20 +282,6 @@
     </div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
-
-<div id="profile-wipe-toast" class="modal hidden" style="z-index: 3000;">
-        <div class="toast show" style="background-color: var(--bright-red-orange); position:relative; transform:none; bottom:auto; left:auto; margin: auto; max-width: 400px; display:flex; flex-direction:column; gap:15px; padding: 25px; border: 2px solid #fff;">
-            <h3 class="display-font" style="font-size:2rem;">CLEAR EVERYTHING?</h3>
-            <p class="body-font" style="font-size:1.2rem;">Do you want to clear EVERYTHING (including Favorites and Shortlists) to start fresh?</p>
-            <div style="display:flex; flex-direction:column; gap:10px;">
-                <button id="btn-wipe-all" class="btn pill-btn" style="background:#fff; color:var(--dark-red); font-weight:bold;">Clear Everything</button>
-                <button id="btn-wipe-profile-only" class="btn secondary-btn pill-btn" style="background:var(--panel-dark); border:1px solid #fff;">Keep Data (Reset Profile Only)</button>
-                <button onclick="document.getElementById('profile-wipe-toast').classList.add('hidden')" class="btn pill-btn" style="background:transparent; border:1px solid rgba(255,255,255,0.5);">Cancel</button>
-            </div>
-        </div>
-    </div>
-  
-  <script src="app.js"></script>
-
+    <script src="app.js"></script>
 </body>
 </html>

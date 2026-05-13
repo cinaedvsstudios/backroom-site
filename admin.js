@@ -10,6 +10,13 @@ const adminShell = document.getElementById('admin-shell');
 const tableContainer = document.getElementById('admin-table-container');
 const pinInput = document.getElementById('admin-pin');
 
+// Clipboard Logic
+const clipboard = document.getElementById('clipboard-text');
+clipboard.value = localStorage.getItem('br_admin_clipboard') || '';
+clipboard.addEventListener('input', (e) => {
+    localStorage.setItem('br_admin_clipboard', e.target.value);
+});
+
 // Keypad Logic
 window.addPin = (num) => pinInput.value += num;
 window.delPin = () => pinInput.value = pinInput.value.slice(0, -1);
@@ -30,28 +37,45 @@ window.switchView = function(view) {
     currentMode = view;
     document.getElementById('summary-title').innerText = view === 'venues' ? 'VENUE DATA' : 'EVENT DATA';
     activeTableFilters = {};
-    renderFilters();
-    renderTable();
+    
+    // Switch live/draft data based on mode
+    loadDraftsFromLocal();
 }
 
 // Data Handling
 function loadDraftsFromLocal() {
-    const vDraft = localStorage.getItem('br_admin_venues_draft');
-    if(vDraft) draftData = JSON.parse(vDraft);
+    const draftKey = currentMode === 'venues' ? 'br_admin_venues_draft' : 'br_admin_events_draft';
+    const draft = localStorage.getItem(draftKey);
+    if(draft) draftData = JSON.parse(draft);
+    else draftData = [];
+    
+    // Also try to fetch live for mismatch matching if available
+    fetchLiveSilently();
+    
     document.getElementById('summary-timestamp').innerText = `Showing Data From: ${lastSavedDate}`;
+    renderFilters();
     renderTable();
 }
 
 function saveDraftsToLocal() {
     lastSavedDate = new Date().toLocaleString();
     localStorage.setItem('br_admin_timestamp', lastSavedDate);
-    if(currentMode === 'venues') localStorage.setItem('br_admin_venues_draft', JSON.stringify(draftData));
-    else localStorage.setItem('br_admin_events_draft', JSON.stringify(draftData));
+    const draftKey = currentMode === 'venues' ? 'br_admin_venues_draft' : 'br_admin_events_draft';
+    localStorage.setItem(draftKey, JSON.stringify(draftData));
     document.getElementById('summary-timestamp').innerText = `Showing Data From: ${lastSavedDate}`;
     updateMismatchCount();
 }
 
 // Fetch Live
+async function fetchLiveSilently() {
+    try {
+        const url = currentMode === 'venues' ? 'listings.json' : 'events.json';
+        const res = await fetch(url);
+        if(res.ok) liveData = await res.json();
+        updateMismatchCount();
+    } catch(e) {}
+}
+
 document.getElementById('btn-fetch-live').addEventListener('click', async () => {
     try {
         const url = currentMode === 'venues' ? 'listings.json' : 'events.json';
@@ -61,7 +85,7 @@ document.getElementById('btn-fetch-live').addEventListener('click', async () => 
         draftData = JSON.parse(JSON.stringify(liveData)); // clone to draft
         saveDraftsToLocal();
         renderTable();
-        alert("Live data loaded and saved to local draft!");
+        alert(`Live ${currentMode} data loaded and saved to local draft!`);
     } catch(err) {
         alert(err.message + " Try Manual Upload.");
     }
@@ -84,10 +108,11 @@ document.getElementById('file-upload').addEventListener('change', (e) => {
 
 // Download All
 document.getElementById('btn-download-all').addEventListener('click', () => {
-    const vDraft = localStorage.getItem('br_admin_venues_draft') || '[]';
-    const eDraft = localStorage.getItem('br_admin_events_draft') || '[]';
+    const vDraft = localStorage.getItem('br_admin_venues_draft');
+    const eDraft = localStorage.getItem('br_admin_events_draft');
     
     const download = (dataStr, name) => {
+        if(!dataStr) return;
         const blob = new Blob([dataStr], {type: 'application/json'});
         const a = document.createElement('a');
         a.href = URL.createObjectURL(blob);
@@ -95,8 +120,8 @@ document.getElementById('btn-download-all').addEventListener('click', () => {
         a.click();
     };
     
-    download(vDraft, 'listings.json');
-    setTimeout(() => download(eDraft, 'events.json'), 500);
+    if(vDraft) download(vDraft, 'listings.json');
+    if(eDraft) setTimeout(() => download(eDraft, 'events.json'), 500);
 });
 
 // Table Rendering & Filtering
@@ -125,6 +150,15 @@ function renderFilters() {
     });
 }
 
+window.toggleColumn = function(idx) {
+    const cells = document.querySelectorAll(`.col-idx-${idx}`);
+    cells.forEach(c => c.classList.toggle('hidden-col'));
+}
+
+window.unhideAllColumns = function() {
+    document.querySelectorAll('.hidden-col').forEach(c => c.classList.remove('hidden-col'));
+}
+
 function renderTable() {
     if (!draftData || draftData.length === 0) {
         tableContainer.innerHTML = "<p style='padding:20px;'>No data. Load a file first.</p>";
@@ -136,26 +170,36 @@ function renderTable() {
     const columns = Object.keys(draftData[0] || {});
 
     let html = `<table><thead><tr>
-        <th>Edit</th>
-        <th>Select</th>`;
+        <th style="min-width:60px;">Edit</th>`;
         
-    columns.forEach(col => {
-        html += `<th>
-            ${col}
+    columns.forEach((col, idx) => {
+        html += `<th class="col-idx-${idx}">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+                <span class="eye-btn" onclick="toggleColumn(${idx})" title="Hide Column">👁️</span>
+                <span style="flex-grow:1;">${col}</span>
+            </div>
             <input type="text" class="filter-header-input" placeholder="Filter..." data-col="${col}">
         </th>`;
     });
     
     html += `</tr></thead><tbody id="admin-tbody">`;
     
-    filteredData.forEach((row, index) => {
-        const id = row.Venue_ID || row.Event_ID || index;
+    filteredData.forEach((row, rowIndex) => {
+        const id = row.Venue_ID || row.Event_ID || rowIndex;
         html += `<tr data-id="${id}">
-            <td><button class="btn primary-btn pill-btn" style="padding:4px 8px; font-size:0.8rem;" onclick="alert('Editor modal for ${id} opening...')">Edit Entry</button></td>
-            <td style="text-align:center;"><input type="checkbox" style="transform:scale(1.5);"></td>`;
+            <td style="text-align:center; font-size:1.5rem;" onclick="alert('WYSIWYG Editor modal for ${id} coming in next phase update!')">✏️</td>`;
         
-        columns.forEach(col => {
-            html += `<td>${String(row[col] || '')}</td>`;
+        columns.forEach((col, idx) => {
+            // Check if cell is edited compared to live
+            const idField = currentMode === 'venues' ? 'Venue_ID' : 'Event_ID';
+            let isEdited = false;
+            if (liveData.length > 0) {
+                const lRow = liveData.find(l => l[idField] === row[idField]);
+                if (lRow && String(lRow[col]) !== String(row[col])) isEdited = true;
+            }
+            
+            const editedClass = isEdited ? 'edited-cell' : '';
+            html += `<td class="col-idx-${idx} ${editedClass}" onclick="editCell(this, ${rowIndex}, '${col}')">${String(row[col] || '')}</td>`;
         });
         html += `</tr>`;
     });
@@ -178,7 +222,53 @@ function renderTable() {
     updateMismatchCount();
 }
 
+// Cell Editing
+window.editCell = function(td, rowIndex, col) {
+    if(col === 'Venue_ID' || col === 'Event_ID') return; // Locked IDs
+    if(td.querySelector('select')) return; // Already editing
+    
+    const currentVal = td.innerText;
+    
+    // Dropdown logic for specific known columns
+    if(col === 'Status' || col.startsWith('Feature_') || col.startsWith('Rating_')) {
+        let options = '';
+        if(col === 'Status') options = '<option value="Live">Live</option><option value="Closed">Closed</option><option value="Hold">Hold</option><option value="Flag">Flag</option>';
+        else if(col.startsWith('Feature_')) options = '<option value="true">true</option><option value="false">false</option>';
+        else if(col.startsWith('Rating_')) options = '<option value="0">0</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option>';
+        
+        td.innerHTML = `<select class="cell-edit" onblur="saveCell(this, ${rowIndex}, '${col}')" onchange="saveCell(this, ${rowIndex}, '${col}')">${options}</select>`;
+        td.querySelector('select').value = currentVal;
+        td.querySelector('select').focus();
+    } else {
+        // Normal text edit (we will upgrade this to a better UI in the WYSIWYG phase, but for now simple prompt)
+        const newVal = prompt(`Edit ${col}:`, currentVal);
+        if(newVal !== null && newVal !== currentVal) {
+            draftData[rowIndex][col] = newVal;
+            td.innerText = newVal;
+            td.classList.add('edited-cell');
+            saveDraftsToLocal();
+        }
+    }
+}
+
+window.saveCell = function(selectEl, rowIndex, col) {
+    const newVal = selectEl.value;
+    // Convert string booleans back to actual booleans for JSON
+    let finalVal = newVal;
+    if(newVal === 'true') finalVal = true;
+    if(newVal === 'false') finalVal = false;
+    if(col.startsWith('Rating_')) finalVal = parseInt(newVal);
+
+    draftData[rowIndex][col] = finalVal;
+    selectEl.parentElement.innerText = newVal;
+    selectEl.parentElement.classList.add('edited-cell');
+    saveDraftsToLocal();
+    renderTable(); // Re-render to clear inputs and update formats
+}
+
 // Mismatch Logic
+let currentMismatchIds = [];
+
 function updateMismatchCount() {
     if(liveData.length === 0) {
         document.getElementById('summary-mismatch').innerText = "Live data not loaded for comparison.";
@@ -186,22 +276,34 @@ function updateMismatchCount() {
         return;
     }
     
-    let mismatchCount = 0;
+    currentMismatchIds = [];
     draftData.forEach(dRow => {
         const idField = currentMode === 'venues' ? 'Venue_ID' : 'Event_ID';
         const lRow = liveData.find(l => l[idField] === dRow[idField]);
-        if(!lRow || JSON.stringify(lRow) !== JSON.stringify(dRow)) mismatchCount++;
+        if(!lRow || JSON.stringify(lRow) !== JSON.stringify(dRow)) {
+            currentMismatchIds.push(dRow[idField]);
+        }
     });
     
     const txt = document.getElementById('summary-mismatch');
-    if(mismatchCount === 0) {
+    if(currentMismatchIds.length === 0) {
         txt.innerText = "All records match live data.";
         txt.style.color = "var(--primary-blue)";
     } else {
-        txt.innerText = `${mismatchCount} / ${draftData.length} records do not match.`;
+        txt.innerText = `${currentMismatchIds.length} / ${draftData.length} records do not match.`;
         txt.style.color = "var(--bright-red-orange)";
     }
 }
+
+document.getElementById('summary-mismatch').addEventListener('click', () => {
+    if(currentMismatchIds.length === 0) return;
+    const list = document.getElementById('mismatch-list');
+    list.innerHTML = '';
+    currentMismatchIds.forEach(id => {
+        list.innerHTML += `<li style="color:var(--bright-red-orange); font-weight:bold;">${id}</li>`;
+    });
+    document.getElementById('mismatch-modal').classList.remove('hidden');
+});
 
 document.getElementById('btn-highlight-changes').addEventListener('click', () => {
     if(liveData.length === 0) return alert("Load live data first to compare!");
@@ -210,14 +312,15 @@ document.getElementById('btn-highlight-changes').addEventListener('click', () =>
     
     Array.from(tbody.children).forEach(tr => {
         const id = tr.dataset.id;
-        const idField = currentMode === 'venues' ? 'Venue_ID' : 'Event_ID';
-        const dRow = draftData.find(d => d[idField] === id);
-        const lRow = liveData.find(l => l[idField] === id);
-        
-        if(!lRow || JSON.stringify(lRow) !== JSON.stringify(dRow)) {
+        if(currentMismatchIds.includes(id)) {
             tr.classList.add('row-mismatch');
         } else {
             tr.classList.remove('row-mismatch');
         }
     });
+});
+
+// Close Modals
+document.querySelectorAll('.close-modal-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => e.target.closest('.modal').classList.add('hidden'));
 });
