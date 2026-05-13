@@ -42,7 +42,11 @@ body { background-color: var(--bg-color); color: #fff; font-family: 'Barlow Cond
 
 .icon-btn { background: none; border: none; color: var(--text-light); font-size: 1.2rem; cursor: pointer; transition: color 0.2s; }
 .icon-btn:hover { color: #fff; }
-.active-star { color: var(--bright-red-orange) !important; text-shadow: 0 0 5px var(--bright-red-orange); }
+
+/* 50% Transparency Logic for Favs/Shortlists/Events */
+.fav-btn { opacity: 0.5; transition: opacity 0.2s, transform 0.2s; }
+.fav-btn.active-star { opacity: 1; color: var(--bright-red-orange) !important; text-shadow: 0 0 5px var(--bright-red-orange); }
+.fav-btn:hover { opacity: 0.8; }
 
 .form-input { width: 100%; padding: 10px; background-color: var(--navy-grey); border: 1px solid var(--panel-mid); color: #fff; font-family: 'Barlow Condensed', sans-serif; margin-bottom: 10px; border-radius: var(--radius-btn); }
 .hidden { display: none !important; }
@@ -90,7 +94,6 @@ body { background-color: var(--bg-color); color: #fff; font-family: 'Barlow Cond
 #main-content { flex-grow: 1; padding: 25px; background-color: var(--bg-color); display: flex; justify-content: center; }
 .content-wrapper { max-width: 1200px; width: 100%; }
 
-/* Welcome Card Layout Fix */
 .welcome-card { background: var(--panel-dark); border: 1px solid var(--panel-mid); border-radius: var(--radius-window); padding: 40px; max-width: 700px; margin: 0 auto 30px auto; box-shadow: 0 0 20px rgba(44, 168, 212, 0.1); display: flex; gap: 25px; align-items: flex-start; text-align: left; }
 .welcome-avatar-container { flex-shrink: 0; }
 .welcome-content-container { flex-grow: 1; }
@@ -102,6 +105,13 @@ body { background-color: var(--bg-color); color: #fff; font-family: 'Barlow Cond
 .filter-chips { display: flex; gap: 10px; overflow-x: auto; scrollbar-width: none; }
 .chip { background-color: var(--panel-standard); color: var(--text-light); border: 1px solid var(--panel-mid); padding: 6px 14px; cursor: pointer; font-family: 'Barlow Condensed', sans-serif; white-space: nowrap; }
 .chip.active { background-color: var(--primary-blue); color: #fff; border-color: var(--primary-blue); }
+
+/* Restored Status Badge Styling */
+.status-badge { padding: 4px 10px; border-radius: var(--radius-pill); font-size: 0.85rem; font-weight: bold; display: inline-block; }
+.status-badge.live { background-color: var(--primary-blue); color: #fff; }
+.status-badge.closed { background-color: var(--dark-red); color: #fff; }
+.status-badge.hold { background-color: var(--label-grey); color: #fff; }
+.status-badge.flag { background-color: var(--bright-red-orange); color: #fff; }
 
 #results-container { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; }
 .card { background-color: var(--panel-standard); border-radius: var(--radius-card); overflow: hidden; border: 1px solid var(--panel-mid); cursor: pointer; transition: transform 0.2s, box-shadow 0.2s; display: flex; flex-direction: column; }
@@ -138,17 +148,14 @@ body { background-color: var(--bg-color); color: #fff; font-family: 'Barlow Cond
 .modal-image-container img { width: 100%; max-height: 350px; object-fit: cover; border-radius: var(--radius-card); }
 .centered-image { object-position: center !important; }
 
-/* Profile Avatars - Fixed Expansion and Centering */
 .avatar-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(70px, 1fr)); gap: 15px; max-height: 250px; overflow-y: auto; padding: 15px; background: var(--bg-color); border-radius: var(--radius-card); }
 .avatar-item { text-align: center; cursor: pointer; transition: all 0.2s; }
 .avatar-item.hidden { display: none !important; }
 
-/* The Selected State now takes the full width and actually alters its physical dimensions */
 .avatar-item.selected { grid-column: 1 / -1; display: flex; flex-direction: column; align-items: center; justify-content: center; margin: 10px 0; z-index: 10; }
 .avatar-item.selected img { width: 105px; height: 210px; border-radius: 12px; object-fit: cover; border: 3px solid var(--primary-blue); margin-bottom: 10px; transition: border-color 0.2s; }
 .avatar-item.selected span { color: #fff; font-weight: bold; font-size: 1.1rem; }
 
-/* Standard Unselected State */
 .avatar-item:not(.selected) img { width: 70px; height: 140px; border-radius: 8px; object-fit: cover; border: 2px solid transparent; margin-bottom: 5px; transition: border-color 0.2s; }
 .avatar-item:not(.selected) span { display: block; font-size: 0.8rem; color: var(--text-light); }
 
@@ -213,7 +220,7 @@ body { background-color: var(--bg-color); color: #fff; font-family: 'Barlow Cond
     .welcome-card { flex-direction: column; align-items: center; text-align: center; }
 }
 
-/* Admin Specific - Fixed Column Shrinking */
+/* Admin Specific */
 .admin-main table { font-family: sans-serif; font-size: 0.95rem; }
 th { resize: horizontal; overflow: hidden; min-width: 100px; max-width: 400px; }
 .hidden-col { max-width: 40px !important; min-width: 40px !important; width: 40px !important; }

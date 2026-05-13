@@ -13,7 +13,7 @@ let userEvents = JSON.parse(localStorage.getItem('br_events')) || [];
 let userTravel = JSON.parse(localStorage.getItem('br_travel')) || [];
 let importInfo = JSON.parse(localStorage.getItem('br_import_info')) || null;
 
-const APP_VERSION = "v0.27";
+const APP_VERSION = "v0.28";
 const APP_DATE = "May 13, 2026";
 
 const avatarCategories = ["Twink", "Twunk", "Jock", "Muscle", "Geek", "Uncle", "Daddy", "Silver Fox", "Opa", "Bear", "Seal", "Otter", "Cub", "Wolf", "Circuit", "Leather", "Rubber", "Puppy", "Alternative", "Queer", "Femboy", "Slave"];
@@ -21,7 +21,6 @@ const avatarCategories = ["Twink", "Twunk", "Jock", "Muscle", "Geek", "Uncle", "
 let leafletMap = null;
 let leafletMarker = null;
 
-// Defensive DOM grabs
 const ageGate = document.getElementById('age-gate');
 const appShell = document.getElementById('app-shell');
 const errorPanel = document.getElementById('error-panel');
@@ -206,7 +205,6 @@ function handleRouting() {
     const hash = window.location.hash;
     const query = searchInput?.value.trim() || '';
     
-    // Safely hide structural elements
     document.querySelectorAll('.modal').forEach(m => m.classList.add('hidden'));
     contextHeader?.classList.add('hidden');
     document.getElementById('event-city-filters')?.classList.add('hidden');
@@ -269,7 +267,6 @@ function renderDiscountsView() {
 }
 
 function setupEventListeners() {
-    // Safe event listener wrapper
     const addEvt = (id, evt, func) => {
         const el = document.getElementById(id);
         if(el) el.addEventListener(evt, func);
@@ -397,6 +394,10 @@ function setupEventListeners() {
             saveUserShortlists(); 
             addShortlistModal?.classList.add('hidden');
             showToast(`Added to shortlist: ${name}`);
+            
+            // Immediately update the shortlist icon on the open modal
+            const sBtn = document.getElementById('modal-shortlist');
+            if(sBtn) sBtn.classList.add('active-star');
         }
     });
     
@@ -596,10 +597,11 @@ function toggleFavorite(id, btnElement) {
     if(index > -1) {
         userFavorites.splice(index, 1);
         btnElement?.classList.remove('active-star');
+        showToast("Removed from Favourites");
     } else {
         userFavorites.push(id);
         btnElement?.classList.add('active-star');
-        showToast("Saved to Favourite Venues ⚜️");
+        showToast("Added to Favourites ⚜️");
     }
     saveUserFavorites();
     if(window.location.hash === '#favorites') renderFavoritesView();
@@ -611,6 +613,7 @@ window.toggleEventFavorite = function(eventId, btnElement, isRemovalView = false
         if(isRemovalView && !confirm("Remove this event from your list?")) return;
         userEvents.splice(index, 1);
         btnElement?.classList.remove('active-star');
+        if(!isRemovalView) showToast("Removed from Events");
     } else {
         userEvents.push(eventId);
         btnElement?.classList.add('active-star');
@@ -690,7 +693,7 @@ function renderMyEventsView() {
             <div class="card-inner-content">
                 <div class="card-header">
                     <div><h3 class="card-title display-font">${ev.Event_Name}</h3><div class="card-meta">${formatDateToDDMMYYYY(ev.Event_Date)} | @ ${venueName}</div></div>
-                    <button class="icon-btn" style="color:var(--bright-red-orange); font-size:1.5rem;" onclick="toggleEventFavorite('${ev.Event_ID}', null, true)">❌</button>
+                    <button class="icon-btn fav-btn active-star" style="font-size:1.5rem;" onclick="toggleEventFavorite('${ev.Event_ID}', this, true)">💖</button>
                 </div>
                 <div class="card-about">${ev.Event_Description || ''}</div>
             </div>
@@ -873,6 +876,14 @@ function promptAddToShortlist(venue) {
                 saveUserShortlists();
                 addShortlistModal?.classList.add('hidden');
                 showToast(isAdded ? "Removed from Shortlist" : "Added to Shortlist");
+                
+                // Immediately update icon state on modal
+                const sBtn = document.getElementById('modal-shortlist');
+                const isNowShortlisted = Object.values(userShortlists).some(list => list.includes(venue.Venue_ID));
+                if(sBtn) {
+                    if(isNowShortlisted) sBtn.classList.add('active-star');
+                    else sBtn.classList.remove('active-star');
+                }
             });
             container.appendChild(btn);
         });
@@ -1018,7 +1029,7 @@ function renderListings(data, isContextView = false) {
                 ${nextEventHtml}
                 <div class="card-stats">
                     <span>🌈 ${systemInfo.labels?.rated_by_gays || 'Rated by gays'}</span><span>👁️ ${venue.Views || 0}</span>
-                    <span class="star-btn icon-btn ${isFav ? 'active-star' : ''}" style="margin-left:auto; font-size:1.8rem; line-height:1;">⚜️</span>
+                    <span class="star-btn icon-btn fav-btn ${isFav ? 'active-star' : ''}" style="margin-left:auto; font-size:1.8rem; line-height:1;">⚜️</span>
                 </div>
             </div>
         `;
@@ -1071,7 +1082,7 @@ function openVenueModal(venue) {
             <span>🌈 ${systemInfo.labels?.rated_by_gays || 'Rated'}</span> 
             <span>👁️ ${venue.Views || 0}</span>
         </div>
-        <div class="feature-chips">${featureHtml}</div>
+        <div class="feature-chips" style="margin-top: 15px;">${featureHtml}</div>
     `;
     
     const ratingsHtml = `
@@ -1115,7 +1126,7 @@ function openVenueModal(venue) {
                                     <strong>${ev.Event_Name}</strong> ${isPast ? '<small>(Past)</small>' : ''}<br>
                                     <span class="meta-text">${formatDateToDDMMYYYY(ev.Event_Date)} | ${ev.Event_Start_Time}</span>
                                 </div>
-                                <button class="icon-btn ${isSaved ? 'active-star' : ''}" style="font-size: 1.5rem;" onclick="toggleEventFavorite('${ev.Event_ID}', this)">💖</button>
+                                <button class="icon-btn fav-btn ${isSaved ? 'active-star' : ''}" style="font-size: 1.5rem;" onclick="toggleEventFavorite('${ev.Event_ID}', this)">💖</button>
                             </div>
                             <p style="font-size:0.9rem; margin-top:5px;">${ev.Event_Description}</p>
                         </div>
@@ -1170,12 +1181,16 @@ function openVenueModal(venue) {
     const starBtn = document.getElementById('modal-star');
     if(starBtn) {
         const isFav = userFavorites.includes(venue.Venue_ID);
-        starBtn.className = `icon-btn ${isFav ? 'active-star' : ''}`;
+        starBtn.className = `icon-btn fav-btn ${isFav ? 'active-star' : ''}`;
         starBtn.onclick = () => toggleFavorite(venue.Venue_ID, starBtn);
     }
 
     const shortBtn = document.getElementById('modal-shortlist');
-    if(shortBtn) shortBtn.onclick = () => promptAddToShortlist(venue);
+    if(shortBtn) {
+        const isShortlisted = Object.values(userShortlists).some(list => list.includes(venue.Venue_ID));
+        shortBtn.className = `icon-btn fav-btn ${isShortlisted ? 'active-star' : ''}`;
+        shortBtn.onclick = () => promptAddToShortlist(venue);
+    }
     
     const shareBtn = document.getElementById('modal-share');
     if(shareBtn) shareBtn.onclick = () => shareURL(`${window.location.origin}${window.location.pathname}?venue=${venue.Venue_ID}#venue=${venue.Venue_ID}`, venue.Name);

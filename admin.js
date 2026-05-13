@@ -110,7 +110,7 @@ function saveDraftsToLocal() {
 async function fetchLiveSilently() {
     try {
         const url = currentMode === 'venues' ? 'listings.json' : 'events.json';
-        const res = await fetch(url);
+        const res = await fetch(url + '?v=' + new Date().getTime());
         if(res.ok) liveData = await res.json();
         updateMismatchCount();
     } catch(e) {}
@@ -119,7 +119,7 @@ async function fetchLiveSilently() {
 document.getElementById('btn-fetch-live').addEventListener('click', async () => {
     try {
         const url = currentMode === 'venues' ? 'listings.json' : 'events.json';
-        const res = await fetch(url);
+        const res = await fetch(url + '?v=' + new Date().getTime());
         if(!res.ok) throw new Error("Could not find file.");
         liveData = await res.json();
         draftData = JSON.parse(JSON.stringify(liveData)); 
@@ -131,7 +131,8 @@ document.getElementById('btn-fetch-live').addEventListener('click', async () => 
     }
 });
 
-document.getElementById('file-upload').addEventListener('change', (e) => {
+// JSON Replace Upload
+document.getElementById('file-upload-replace').addEventListener('change', (e) => {
     const file = e.target.files[0];
     if (!file) return;
     const reader = new FileReader();
@@ -140,10 +141,67 @@ document.getElementById('file-upload').addEventListener('change', (e) => {
             draftData = JSON.parse(event.target.result);
             saveDraftsToLocal();
             renderTable();
-        } catch (err) { alert("Error parsing JSON."); }
+        } catch (err) { alert("Error parsing JSON. File may be corrupted."); }
     };
     reader.readAsText(file);
 });
+
+// JSON Merge Upload
+document.getElementById('file-upload-merge').addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (event) => {
+        try {
+            const uploadedData = JSON.parse(event.target.result);
+            if(!Array.isArray(uploadedData)) throw new Error("File is not an array");
+            
+            const idField = currentMode === 'venues' ? 'Venue_ID' : 'Event_ID';
+            let mergedCount = 0;
+            let addedCount = 0;
+            
+            uploadedData.forEach(newRow => {
+                const existingIdx = draftData.findIndex(d => d[idField] === newRow[idField]);
+                if(existingIdx >= 0) {
+                    draftData[existingIdx] = { ...draftData[existingIdx], ...newRow };
+                    mergedCount++;
+                } else {
+                    draftData.push(newRow);
+                    addedCount++;
+                }
+            });
+            
+            saveDraftsToLocal();
+            renderTable();
+            alert(`Merge Complete: ${mergedCount} updated, ${addedCount} new entries added.`);
+        } catch (err) { alert("Error merging JSON. Ensure the structure matches."); }
+    };
+    reader.readAsText(file);
+});
+
+// CSV Export
+document.getElementById('btn-export-csv').addEventListener('click', () => {
+    if(!draftData || draftData.length === 0) return alert('No data available to export.');
+    
+    const cols = Object.keys(draftData[0]);
+    let csvString = cols.join(',') + '\n';
+    
+    draftData.forEach(row => {
+        csvString += cols.map(c => {
+            let val = row[c] === null || row[c] === undefined ? '' : String(row[c]);
+            // Escape quotes by doubling them, wrap field in quotes for safe parsing
+            val = val.replace(/"/g, '""'); 
+            return `"${val}"`; 
+        }).join(',') + '\n';
+    });
+    
+    const blob = new Blob([csvString], {type: 'text/csv'});
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `backroom_${currentMode}_${new Date().toISOString().split('T')[0]}.csv`;
+    a.click();
+});
+
 
 document.getElementById('btn-download-all').addEventListener('click', () => {
     const vDraft = localStorage.getItem('br_admin_venues_draft');
@@ -224,7 +282,7 @@ function renderTable() {
     filteredData.forEach((row, rowIndex) => {
         const id = row.Venue_ID || row.Event_ID || rowIndex;
         html += `<tr data-id="${id}">
-            <td style="text-align:center; font-size:1.5rem;" onclick="alert('WYSIWYG Editor modal coming in Phase 2!')">✏️</td>`;
+            <td style="text-align:center; font-size:1.5rem;" onclick="alert('Phase 3 WYSIWYG Editor modal coming soon!')">✏️</td>`;
         
         columns.forEach((col, idx) => {
             const idField = currentMode === 'venues' ? 'Venue_ID' : 'Event_ID';
@@ -261,7 +319,7 @@ window.editCell = function(td, rowIndex, col) {
     if(col === 'Venue_ID' || col === 'Event_ID') return; 
     if(td.querySelector('select')) return; 
     
-    const currentVal = td.innerText;
+    const currentVal = td.innerText.trim();
     
     if(col === 'Status' || col.startsWith('Feature_') || col.startsWith('Rating_')) {
         let options = '';
@@ -273,12 +331,30 @@ window.editCell = function(td, rowIndex, col) {
         td.querySelector('select').value = currentVal;
         td.querySelector('select').focus();
     } else {
-        const newVal = prompt(`Edit ${col}:`, currentVal);
-        if(newVal !== null && newVal !== currentVal) {
-            draftData[rowIndex][col] = newVal;
-            td.innerText = newVal;
-            td.classList.add('edited-cell');
-            saveDraftsToLocal();
+        // Direct ContentEditable Inline Editing
+        if (td.isContentEditable) return; 
+        
+        td.contentEditable = "true";
+        td.focus();
+        
+        if(!td.dataset.listening) {
+            td.addEventListener('blur', function() {
+                td.contentEditable = "false";
+                const newVal = td.innerText.trim();
+                if(String(draftData[rowIndex][col]) !== newVal) {
+                    draftData[rowIndex][col] = newVal;
+                    td.classList.add('edited-cell');
+                    saveDraftsToLocal();
+                    updateMismatchCount();
+                }
+            });
+            td.addEventListener('keydown', function(e) {
+                if(e.key === 'Enter') {
+                    e.preventDefault();
+                    td.blur(); 
+                }
+            });
+            td.dataset.listening = "true";
         }
     }
 }
@@ -294,7 +370,7 @@ window.saveCell = function(selectEl, rowIndex, col) {
     selectEl.parentElement.innerText = newVal;
     selectEl.parentElement.classList.add('edited-cell');
     saveDraftsToLocal();
-    renderTable(); 
+    updateMismatchCount();
 }
 
 let currentMismatchIds = [];
