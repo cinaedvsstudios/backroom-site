@@ -1,6 +1,6 @@
 let systemInfo = {}, designTheme = {}, venues = [], events = [];
 let activeFilter = 'All';
-let selectedCardId = null; // Track selected card for double-click logic
+let selectedCardId = null;
 
 const ageGate = document.getElementById('age-gate');
 const appShell = document.getElementById('app-shell');
@@ -16,7 +16,27 @@ const sidebar = document.getElementById('sidebar');
 const hitArea = document.getElementById('sidebar-hit-area');
 let sidebarTimeout;
 
+// Setup critical event listeners BEFORE fetching to ensure age gate always works
+function setupCriticalListeners() {
+    const handleEnter = (e) => {
+        if(e.cancelable) e.preventDefault();
+        localStorage.setItem('br_age_verified', 'true');
+        ageGate.classList.add('hidden');
+        appShell.classList.remove('hidden');
+    };
+    
+    btnEnter.addEventListener('click', handleEnter);
+    btnEnter.addEventListener('touchstart', handleEnter, {passive: false});
+
+    if(localStorage.getItem('br_age_verified') === 'true') {
+        ageGate.classList.add('hidden');
+        appShell.classList.remove('hidden');
+    }
+}
+
 async function initApp() {
+    setupCriticalListeners();
+    
     try {
         const [sysRes, themeRes, venuesRes, eventsRes] = await Promise.all([
             fetch('system_info.json'), fetch('design_theme.json'),
@@ -27,15 +47,12 @@ async function initApp() {
         venues = await venuesRes.json();
         events = await eventsRes.json();
 
-        applyTheme(); populateSystemText(); setupEventListeners(); loadSavedLocation(); 
-        
-        // Age Gate LocalStorage Check
-        if(localStorage.getItem('br_age_verified') === 'true') {
-            ageGate.classList.add('hidden');
-            appShell.classList.remove('hidden');
-        }
-
+        applyTheme(); 
+        populateSystemText(); 
+        setupSecondaryListeners(); 
+        loadSavedLocation(); 
         applyFilters(); 
+        
     } catch (error) {
         console.error("Local JSON fetch failed. Run via local web server.", error);
         document.getElementById('ag-text').innerText = "Data error. Run via local server.";
@@ -56,14 +73,7 @@ function populateSystemText() {
     document.getElementById('ag-disclaimer').innerText = systemInfo.disclaimer_text;
 }
 
-function setupEventListeners() {
-    // Save Age Gate to localStorage
-    btnEnter.addEventListener('click', () => { 
-        localStorage.setItem('br_age_verified', 'true');
-        ageGate.classList.add('hidden'); 
-        appShell.classList.remove('hidden'); 
-    });
-    
+function setupSecondaryListeners() {
     btnCloseModal.addEventListener('click', () => modal.classList.add('hidden'));
     modal.addEventListener('click', (e) => { if (e.target === modal) modal.classList.add('hidden'); });
     
@@ -102,7 +112,7 @@ function setupEventListeners() {
 function applyFilters() {
     const query = searchInput.value;
     let filteredVenues = venues;
-    selectedCardId = null; // Reset selection on filter change
+    selectedCardId = null;
 
     if(activeFilter !== 'All') {
         filteredVenues = filteredVenues.filter(v => {
@@ -226,14 +236,11 @@ function renderListings(data) {
             </div>
         `;
         
-        // Two-click interaction logic
         card.addEventListener('click', (e) => { 
             if(!e.target.classList.contains('star-btn')) {
                 if(selectedCardId === venue.Venue_ID) {
-                    // Second click: open the modal
                     openModal(venue);
                 } else {
-                    // First click: select the card (glow)
                     document.querySelectorAll('.card.selected').forEach(c => c.classList.remove('selected'));
                     card.classList.add('selected');
                     selectedCardId = venue.Venue_ID;

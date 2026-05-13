@@ -44,16 +44,15 @@ body { background-color: var(--bg-color); color: var(--text-light); font-family:
 /* Layout Structure */
 #app-shell { display: flex; flex-direction: column; width: 100vw; height: 100vh; overflow: hidden; }
 
-/* Top Bar - Updated Layout and Padding */
-#top-bar { width: 100%; background-color: var(--navy-grey); display: flex; align-items: center; justify-content: space-between; padding: 20px 30px; border-bottom: 2px solid var(--panel-dark); flex-shrink: 0; gap: 30px; }
-.top-bar-left { display: flex; align-items: center; gap: 30px; flex-grow: 1; }
+/* Top Bar - Left Aligned */
+#top-bar { width: 100%; background-color: var(--navy-grey); display: flex; align-items: center; justify-content: flex-start; padding: 20px 30px; border-bottom: 2px solid var(--panel-dark); flex-shrink: 0; gap: 30px; }
 .top-bar-logo-area { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
 .brand-image { height: 35px; width: auto; object-fit: contain; }
-.brand-title-image { height: 25px; width: auto; object-fit: contain; }
+.brand-title-image { height: 33px; width: auto; object-fit: contain; } /* Increased by 30% */
 .brand-text { color: var(--primary-blue); font-size: 1.8rem; margin: 0; }
 
 .top-bar-search-area { flex-shrink: 0; }
-.top-bar-buttons-area { display: flex; align-items: center; gap: 10px; justify-content: flex-end; overflow-x: auto; white-space: nowrap; padding-bottom: 4px; }
+.top-bar-buttons-area { display: flex; align-items: center; gap: 10px; justify-content: flex-start; overflow-x: auto; white-space: nowrap; padding-bottom: 4px; }
 .top-btn { background: var(--panel-mid); border: none; color: var(--text-light); border-radius: var(--radius-btn); padding: 8px 12px; font-family: var(--font-body); font-size: 1rem; cursor: pointer; display: flex; align-items: center; gap: 5px; flex-shrink: 0; transition: all 0.2s; }
 .top-btn:hover { background: var(--primary-blue); color: #fff; }
 #search-input { min-width: 300px; padding: 10px 15px; border-radius: var(--radius-btn); border: 1px solid var(--panel-mid); background-color: var(--near-black); color: #fff; font-size: 1.05rem; }
@@ -61,8 +60,8 @@ body { background-color: var(--bg-color); color: var(--text-light); font-family:
 /* Workspace (Sidebar + Main) */
 #workspace { display: flex; flex-grow: 1; overflow: hidden; position: relative; }
 
-/* Sidebar - Wider on Desktop */
-#sidebar { width: 220px; background-color: var(--navy-grey); display: flex; flex-direction: column; align-items: flex-start; padding: 30px 20px; border-right: 2px solid var(--panel-dark); flex-shrink: 0; gap: 25px; z-index: 500; transition: transform 0.3s ease; }
+/* Sidebar - Wider on Desktop + Blue Glow Line */
+#sidebar { width: 220px; background-color: var(--navy-grey); display: flex; flex-direction: column; align-items: flex-start; padding: 30px 20px; border-right: 2px solid var(--panel-dark); border-left: 3px solid var(--primary-blue); box-shadow: 2px 0 20px rgba(44, 168, 212, 0.4); flex-shrink: 0; gap: 25px; z-index: 500; transition: transform 0.3s ease; }
 .sidebar-item { display: flex; align-items: center; gap: 15px; width: 100%; cursor: pointer; color: var(--label-grey); transition: color 0.2s; }
 .sidebar-item .icon { font-size: 1.5rem; }
 .sidebar-text { font-size: 1.2rem; letter-spacing: 1px; color: var(--label-grey); }
@@ -73,7 +72,7 @@ body { background-color: var(--bg-color); color: var(--text-light); font-family:
 #main-content { flex-grow: 1; display: flex; flex-direction: column; overflow-y: auto; position: relative; background-color: var(--near-black); }
 .content-wrapper { width: 100%; max-width: 1200px; margin: 0 auto; padding-top: 30px; padding-bottom: 40px; }
 
-.filter-chips-container { padding: 0 20px 25px; } /* Increased bottom padding */
+.filter-chips-container { padding: 0 20px 25px; } 
 .filter-chips { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 10px; }
 .chip { background-color: var(--panel-mid); color: var(--text-light); border: none; padding: 8px 16px; border-radius: 20px; white-space: nowrap; font-size: 1.05rem; cursor: pointer; transition: all 0.2s; }
 .chip.active { background-color: var(--primary-blue); color: #fff; }
@@ -83,7 +82,6 @@ body { background-color: var(--bg-color); color: var(--text-light); font-family:
 @media (max-width: 768px) { #results-container { display: flex; flex-direction: column; gap: 20px; } }
 
 .card { background-color: var(--panel-standard); border-radius: var(--radius-card); border: 1px solid var(--panel-mid); cursor: pointer; display: flex; flex-direction: column; overflow: hidden; transition: all 0.2s ease; }
-/* Select/Glow state for first click */
 .card.selected { box-shadow: 0 0 20px rgba(44, 168, 212, 0.4); border-color: var(--primary-blue); transform: scale(1.02); z-index: 10; }
 
 .card-image-wrapper { width: 100%; height: 180px; display: flex; align-items: center; justify-content: center; color: var(--label-grey); font-weight: bold; border-bottom: 1px solid var(--panel-dark); background-color: var(--panel-dark); }
@@ -127,15 +125,13 @@ body { background-color: var(--bg-color); color: var(--text-light); font-family:
 /* Mobile Adjustments */
 @media (max-width: 768px) {
     #top-bar { flex-direction: column; align-items: stretch; padding: 15px; gap: 15px; }
-    .top-bar-left { flex-direction: column; align-items: stretch; gap: 15px; width: 100%; }
     .top-bar-logo-area { justify-content: center; margin-bottom: 5px; }
     .top-bar-search-area { width: 100%; }
     #search-input { width: 100%; min-width: auto; }
-    
     .top-bar-buttons-area { overflow-x: auto; padding-bottom: 5px; justify-content: flex-start; }
     
     /* Shrink sidebar and hide text on mobile */
-    #sidebar { width: 60px; padding: 20px 0; align-items: center; position: absolute; top: 0; left: 0; height: 100%; transform: translateX(-100%); z-index: 600; box-shadow: 5px 0 15px rgba(0,0,0,0.5); }
+    #sidebar { width: 60px; padding: 20px 0; align-items: center; position: absolute; top: 0; left: 0; height: 100%; transform: translateX(-100%); z-index: 600; box-shadow: 5px 0 15px rgba(0,0,0,0.5); border-left: none; }
     .sidebar-text { display: none; }
     .sidebar-item { justify-content: center; }
     #sidebar.visible { transform: translateX(0); }
