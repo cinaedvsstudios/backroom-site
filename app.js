@@ -8,14 +8,15 @@ let currentEventCityFilter = 'All';
 let userFavorites = JSON.parse(localStorage.getItem('br_favorites')) || [];
 let userShortlists = JSON.parse(localStorage.getItem('br_shortlists')) || {};
 let userProfile = JSON.parse(localStorage.getItem('br_profile')) || { name: '', avatar: '' };
+let savedProfiles = JSON.parse(localStorage.getItem('br_saved_profiles')) || {};
 let userEvents = JSON.parse(localStorage.getItem('br_events')) || [];
 let userTravel = JSON.parse(localStorage.getItem('br_travel')) || [];
 let importInfo = JSON.parse(localStorage.getItem('br_import_info')) || null;
 
-const APP_VERSION = "v0.17";
+const APP_VERSION = "v0.18";
 const APP_DATE = "May 13, 2026";
 
-// Avatar Categories (Updated to .png)
+// Avatar Categories (forced lowercase mapping for files)
 const avatarCategories = ["Twink", "Twunk", "Jock", "Muscle", "Geek", "Uncle", "Daddy", "Silver Fox", "Opa", "Bear", "Seal", "Otter", "Cub", "Wolf", "Circuit", "Leather", "Rubber", "Puppy", "Alternative", "Queer", "Femboy", "Slave"];
 
 // Leaflet Map State
@@ -56,6 +57,10 @@ function showToast(message) {
         toast.classList.remove('show');
         setTimeout(() => toast.remove(), 300);
     }, 2500);
+}
+
+function recordUserInteraction() {
+    sessionStorage.setItem('br_welcome_dismissed', 'true');
 }
 
 function setupCriticalListeners() {
@@ -158,7 +163,7 @@ function handleRouting() {
     document.getElementById('main-filters').classList.remove('hidden');
     welcomeScreen.classList.add('hidden');
 
-    if (hash === '' && query === '' && activeFilter === 'All') {
+    if (hash === '' && query === '' && activeFilter === 'All' && sessionStorage.getItem('br_welcome_dismissed') !== 'true') {
         document.getElementById('main-filters').classList.add('hidden');
         resultsContainer.innerHTML = '';
         renderWelcomeScreen();
@@ -171,12 +176,19 @@ function handleRouting() {
         if (venue) { openVenueModal(venue); applyFilters(); } 
         else window.location.hash = ''; 
     } else if (hash === '#favorites') {
+        recordUserInteraction();
         renderFavoritesView();
     } else if (hash === '#myevents') {
+        recordUserInteraction();
         renderMyEventsView();
     } else if (hash === '#myshortlists') {
+        recordUserInteraction();
         renderShortlistsFullView();
+    } else if (hash === '#mytravel') {
+        recordUserInteraction();
+        renderTravelFullView();
     } else if (hash.startsWith('#shortlist=')) {
+        recordUserInteraction();
         const name = decodeURIComponent(hash.replace('#shortlist=', ''));
         renderSingleShortlist(name);
     } else {
@@ -218,18 +230,6 @@ function setupEventListeners() {
         drop.classList.toggle('hidden');
         renderTravelDropdown();
     });
-    document.getElementById('btn-edit-travel').addEventListener('click', () => {
-        locModal.classList.remove('hidden');
-    });
-    document.getElementById('btn-save-travel').addEventListener('click', () => {
-        const city = document.getElementById('loc-city').value.trim();
-        if(city && city !== 'My Location' && !userTravel.includes(city)) {
-            userTravel.push(city);
-            localStorage.setItem('br_travel', JSON.stringify(userTravel));
-            showToast(`Saved to Travel 🚄: ${city}`);
-            document.getElementById('loc-city').value = '';
-        }
-    });
 
     document.getElementById('btn-language').addEventListener('click', () => alert("Translation widget placeholder"));
     document.getElementById('btn-ag-lang').addEventListener('click', () => alert("Translation widget placeholder"));
@@ -242,7 +242,6 @@ function setupEventListeners() {
     document.getElementById('btn-save-location').addEventListener('click', saveLocation);
     document.getElementById('btn-clear-location').addEventListener('click', clearLocation);
     
-    // Leaflet GPS & Search
     document.getElementById('btn-gps').addEventListener('click', () => {
         if(navigator.geolocation) {
             navigator.geolocation.getCurrentPosition(
@@ -281,6 +280,16 @@ function setupEventListeners() {
         }
     });
 
+    document.getElementById('btn-save-travel').addEventListener('click', () => {
+        const city = document.getElementById('loc-city').value.trim();
+        if(city && city !== 'My Location' && !userTravel.includes(city)) {
+            userTravel.push(city);
+            localStorage.setItem('br_travel', JSON.stringify(userTravel));
+            showToast(`Saved to Travel 🚄: ${city}`);
+            document.getElementById('loc-city').value = '';
+        }
+    });
+
     document.getElementById('btn-reset-age').addEventListener('click', () => {
         localStorage.removeItem('br_age_verified');
         window.location.reload();
@@ -307,6 +316,10 @@ function setupEventListeners() {
     
     document.getElementById('btn-save-profile').addEventListener('click', () => {
         userProfile.name = document.getElementById('profile-name').value.trim();
+        if(userProfile.name) {
+            savedProfiles[userProfile.name] = { ...userProfile };
+            localStorage.setItem('br_saved_profiles', JSON.stringify(savedProfiles));
+        }
         localStorage.setItem('br_profile', JSON.stringify(userProfile));
         profileModal.classList.add('hidden');
         updateProfileDisplay();
@@ -327,6 +340,15 @@ function setupEventListeners() {
         }
     });
 
+    document.getElementById('profile-switcher').addEventListener('change', (e) => {
+        const pName = e.target.value;
+        if(pName && savedProfiles[pName]) {
+            userProfile = { ...savedProfiles[pName] };
+            document.getElementById('profile-name').value = userProfile.name;
+            renderProfileAvatars();
+        }
+    });
+
     if(hitArea && sidebar) {
         const showSidebar = () => {
             sidebar.classList.add('visible');
@@ -337,9 +359,10 @@ function setupEventListeners() {
         sidebar.addEventListener('click', showSidebar);
     }
 
-    searchInput.addEventListener('input', () => { window.location.hash=''; handleRouting(); });
+    searchInput.addEventListener('input', () => { recordUserInteraction(); window.location.hash=''; handleRouting(); });
     filterChips.forEach(chip => {
         chip.addEventListener('click', (e) => {
+            recordUserInteraction();
             filterChips.forEach(c => c.classList.remove('active'));
             e.target.classList.add('active');
             activeFilter = e.target.getAttribute('data-filter');
@@ -365,8 +388,6 @@ function initLeafletMap(lat, lng) {
         leafletMap.setView([lat, lng], 13);
         leafletMarker.setLatLng([lat, lng]);
     }
-    
-    // Invalidate size after modal rendering logic completes to avoid visual tear
     setTimeout(() => leafletMap.invalidateSize(), 150);
 }
 
@@ -392,8 +413,7 @@ function renderTravelDropdown() {
     userTravel.forEach(city => {
         const item = document.createElement('div');
         item.className = 'submenu-item';
-        item.innerHTML = `<span style="flex-grow:1;" onclick="document.getElementById('search-input').value='${city}'; handleRouting();">${city}</span> <button class="icon-btn" style="color:var(--bright-red-orange); font-size:1rem;" onclick="removeTravel('${city}')">✕</button>`;
-        item.style.display = 'flex';
+        item.innerHTML = `<span style="flex-grow:1;" onclick="document.getElementById('search-input').value='${city}'; handleRouting();">${city}</span>`;
         list.appendChild(item);
     });
 }
@@ -401,7 +421,8 @@ function renderTravelDropdown() {
 window.removeTravel = function(city) {
     userTravel = userTravel.filter(c => c !== city);
     localStorage.setItem('br_travel', JSON.stringify(userTravel));
-    renderTravelDropdown();
+    if(window.location.hash === '#mytravel') renderTravelFullView();
+    else renderTravelDropdown();
 }
 
 function applyFilters() {
@@ -558,9 +579,38 @@ function renderMyEventsView() {
             <div class="card-inner-content">
                 <div class="card-header">
                     <div><h3 class="card-title display-font">${ev.Event_Name}</h3><div class="card-meta">${ev.Event_Date} | @ ${venueName}</div></div>
-                    <button class="icon-btn" style="color:var(--bright-red-orange); font-size:1.5rem;" onclick="toggleEventFavorite('${ev.Event_ID}', null, true)">✕ 💖</button>
+                    <button class="icon-btn" style="color:var(--bright-red-orange); font-size:1.5rem;" onclick="toggleEventFavorite('${ev.Event_ID}', null, true)">❌</button>
                 </div>
                 <div class="card-about">${ev.Event_Description || ''}</div>
+            </div>
+        `;
+        resultsContainer.appendChild(card);
+    });
+}
+
+function renderTravelFullView() {
+    document.getElementById('main-filters').classList.add('hidden');
+    contextHeader.classList.remove('hidden');
+    document.getElementById('context-title').innerHTML = "🚄 MY TRAVEL PINS";
+    document.getElementById('context-desc').innerText = "Cities you plan to visit.";
+    
+    resultsContainer.innerHTML = '';
+
+    if(userTravel.length === 0) {
+        resultsContainer.innerHTML = `<p style="text-align:center; color:var(--label-grey); margin-top:20px; width: 100%; grid-column: 1 / -1;">No travel pins saved yet.</p>`;
+        return;
+    }
+
+    userTravel.forEach(city => {
+        const card = document.createElement('div');
+        card.className = 'card';
+        card.style.cursor = 'pointer';
+        card.innerHTML = `
+            <div class="card-inner-content" style="flex-direction:row; justify-content:space-between; align-items:center;">
+                <div onclick="document.getElementById('search-input').value='${city}'; window.location.hash=''; handleRouting();" style="flex-grow:1;">
+                    <h3 class="card-title display-font" style="color:var(--primary-blue);">${city}</h3>
+                </div>
+                <button class="icon-btn" style="color:var(--bright-red-orange);" onclick="event.stopPropagation(); if(confirm('Delete ${city}?')){ removeTravel('${city}'); }">❌</button>
             </div>
         `;
         resultsContainer.appendChild(card);
@@ -605,7 +655,7 @@ function renderShortlistsFullView() {
                 </div>
                 <div style="display:flex; gap:10px;">
                     <button class="icon-btn" onclick="shareShortlist('${name}')" title="Share">🔗</button>
-                    <button class="icon-btn" style="color:var(--bright-red-orange);" onclick="event.stopPropagation(); if(confirm('Delete shortlist ${name}?')){ delete userShortlists['${name}']; saveUserShortlists(); renderShortlistsFullView(); }">✕</button>
+                    <button class="icon-btn" style="color:var(--bright-red-orange);" onclick="event.stopPropagation(); if(confirm('Delete shortlist ${name}?')){ delete userShortlists['${name}']; saveUserShortlists(); renderShortlistsFullView(); }">❌</button>
                 </div>
             </div>
         `;
@@ -628,8 +678,16 @@ function renderSingleShortlist(listName) {
 function renderProfileAvatars() {
     const grid = document.getElementById('avatar-grid');
     grid.innerHTML = '';
+    
+    // Switcher Populator
+    const switcher = document.getElementById('profile-switcher');
+    switcher.innerHTML = '<option value="">Switch Profile...</option>';
+    Object.keys(savedProfiles).forEach(pName => {
+        switcher.innerHTML += `<option value="${pName}">${pName}</option>`;
+    });
+
     avatarCategories.forEach(cat => {
-        const imgName = `${cat}01.png`; // Updated to .png based on feedback
+        const imgName = `${cat.toLowerCase()}01.png`; 
         const item = document.createElement('div');
         item.className = 'avatar-item';
         if(userProfile.avatar === imgName) item.classList.add('selected');
@@ -684,6 +742,7 @@ function promptAddToShortlist(venue) {
 function exportUserData() {
     const data = {
         profile: userProfile,
+        saved_profiles: savedProfiles,
         favorites: userFavorites,
         shortlists: userShortlists,
         events: userEvents,
@@ -706,6 +765,7 @@ function importUserData(e) {
         try {
             const data = JSON.parse(event.target.result);
             if(data.profile) { userProfile = data.profile; localStorage.setItem('br_profile', JSON.stringify(userProfile)); }
+            if(data.saved_profiles) { savedProfiles = data.saved_profiles; localStorage.setItem('br_saved_profiles', JSON.stringify(savedProfiles)); }
             if(data.favorites) { userFavorites = data.favorites; saveUserFavorites(); }
             if(data.shortlists) { userShortlists = data.shortlists; saveUserShortlists(); }
             if(data.events) { userEvents = data.events; saveUserEvents(); }
@@ -803,6 +863,7 @@ function renderListings(data, isContextView = false) {
                 toggleFavorite(venue.Venue_ID, e.target);
             } else if (!e.target.classList.contains('venue-image')) {
                 if(selectedCardId === venue.Venue_ID) {
+                    recordUserInteraction();
                     window.location.hash = `#venue=${venue.Venue_ID}`; 
                 } else {
                     document.querySelectorAll('.card.selected').forEach(c => c.classList.remove('selected'));
@@ -838,7 +899,16 @@ function openVenueModal(venue) {
 
     document.getElementById('modal-shortlist').onclick = () => promptAddToShortlist(venue);
     document.getElementById('modal-share').onclick = () => shareURL(`${window.location.origin}${window.location.pathname}?venue=${venue.Venue_ID}#venue=${venue.Venue_ID}`, venue.Name);
-    document.getElementById('btn-map').onclick = () => alert("Native Maps intent placeholder");
+    
+    document.getElementById('btn-map').onclick = () => {
+        const query = encodeURIComponent(venue.Address || venue.City || venue.Name);
+        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+        if (isIOS) {
+            window.open(`http://maps.apple.com/?q=${query}`, '_blank');
+        } else {
+            window.open(`https://www.google.com/maps/search/?api=1&query=${query}`, '_blank');
+        }
+    };
 
     const ageEmojis = ['🧒🏼', '🧑🏻', '🧔🏻‍♂️', '👨🏻‍🦳', '👴🏼'];
     const sizeEmojis = ['🤏', '👍', '✌️', '🖐️', '🤲'];
@@ -914,6 +984,7 @@ function shareShortlist(name) {
 }
 
 function saveLocation() {
+    recordUserInteraction();
     const cityInp = document.getElementById('loc-city');
     const loc = { 
         country: document.getElementById('loc-country').value, 
@@ -921,7 +992,6 @@ function saveLocation() {
         postcode: document.getElementById('loc-postcode').value 
     };
     
-    // Fuzzy search routing connection
     if(loc.city && loc.city !== 'My Location') {
         searchInput.value = loc.city;
         window.location.hash = '';

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Backroom - v0.17</title>
+    <title>Backroom - v0.18</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Antonio:wght@400;700&family=Barlow+Condensed:wght@400;500;700&display=swap" rel="stylesheet">
@@ -84,7 +84,7 @@
                     <div id="travel-dropdown" class="sidebar-submenu hidden">
                         <div id="travel-cities-list"></div>
                         <div class="submenu-item" onclick="alert('Travel Discounts Page Placeholder')"><span class="icon" style="font-size:1rem;">💰</span> Discounts</div>
-                        <div class="submenu-item" id="btn-edit-travel"><span class="icon" style="font-size:1rem;">✏️</span> Edit</div>
+                        <div class="submenu-item" onclick="window.location.hash='#mytravel'"><span class="icon" style="font-size:1rem;">✏️</span> Edit</div>
                     </div>
 
                     <div class="sidebar-item tooltip" title="Events" onclick="window.location.hash='#myevents';">
@@ -143,7 +143,7 @@
     <div id="venue-modal" class="modal hidden">
         <div class="modal-content">
             <div class="modal-header">
-                <button id="close-modal" class="btn-close">✕</button>
+                <button id="close-modal" class="btn-close">❌</button>
                 <h2 id="modal-title" class="display-font">VENUE NAME</h2>
                 <div class="modal-actions">
                     <button id="modal-star" class="icon-btn" title="Toggle Favorite" style="font-size: 1.8rem;">⚜️</button>
@@ -191,7 +191,7 @@
     </datalist>
     <div id="location-modal" class="modal hidden">
         <div class="modal-content small-modal">
-            <button class="btn-close close-modal-btn">✕</button>
+            <button class="btn-close close-modal-btn">❌</button>
             <div class="modal-header"><h2 class="display-font">SET LOCATION</h2></div>
             <div class="modal-body body-font">
                 <p class="meta-text" style="margin-bottom:15px;">Set your location to find nearby venues and events.</p>
@@ -223,12 +223,14 @@
 
     <div id="profile-modal" class="modal hidden">
         <div class="modal-content small-modal">
-            <button class="btn-close close-modal-btn">✕</button>
+            <button class="btn-close close-modal-btn">❌</button>
             <div class="modal-header"><h2 class="display-font">MY PROFILE</h2></div>
             <div class="modal-body body-font">
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 15px;">
-                    <p class="meta-text" style="margin:0;">Settings saved locally.</p>
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 15px; flex-wrap: wrap; gap:10px;">
                     <button id="btn-new-profile" class="btn secondary-btn pill-btn" style="width:auto; padding: 4px 10px; font-size:0.85rem;">New Profile</button>
+                    <select id="profile-switcher" class="form-input pill-input" style="width:auto; padding: 4px 10px; font-size:0.85rem; margin:0; flex-grow:1;">
+                        <option value="">Switch Profile...</option>
+                    </select>
                 </div>
                 
                 <input type="text" id="profile-name" class="form-input pill-input" placeholder="Enter your name">
@@ -243,7 +245,7 @@
 
     <div id="settings-modal" class="modal hidden">
         <div class="modal-content small-modal">
-            <button class="btn-close close-modal-btn">✕</button>
+            <button class="btn-close close-modal-btn">❌</button>
             <div class="modal-header"><h2 class="display-font">SETTINGS</h2></div>
             <div class="modal-body body-font">
                 <h3 style="color: var(--primary-blue); margin-bottom: 5px;">Help & Privacy</h3>
@@ -251,7 +253,7 @@
                 
                 <h3 style="color: var(--primary-blue); margin-bottom: 5px;">Quick Edit</h3>
                 <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-bottom:15px;">
-                    <button class="btn secondary-btn pill-btn" style="font-size:0.9rem;" onclick="document.getElementById('settings-modal').classList.add('hidden'); document.getElementById('location-modal').classList.remove('hidden');">🚄 Edit Travel</button>
+                    <button class="btn secondary-btn pill-btn" style="font-size:0.9rem;" onclick="document.getElementById('settings-modal').classList.add('hidden'); window.location.hash='#mytravel';">🚄 Edit Travel</button>
                     <button class="btn secondary-btn pill-btn" style="font-size:0.9rem;" onclick="document.getElementById('settings-modal').classList.add('hidden'); window.location.hash='#favorites';">⚜️ Edit Favourites</button>
                     <button class="btn secondary-btn pill-btn" style="font-size:0.9rem;" onclick="document.getElementById('settings-modal').classList.add('hidden'); document.getElementById('btn-profile-menu').click();">👤 Edit Profile</button>
                     <button class="btn secondary-btn pill-btn" style="font-size:0.9rem;" onclick="document.getElementById('settings-modal').classList.add('hidden'); window.location.hash='#myshortlists';">📑 Edit Shortlists</button>
@@ -272,7 +274,7 @@
 
     <div id="add-to-shortlist-modal" class="modal hidden">
         <div class="modal-content small-modal">
-            <button class="btn-close close-modal-btn">✕</button>
+            <button class="btn-close close-modal-btn">❌</button>
             <div class="modal-header"><h2 class="display-font">ADD TO SHORTLIST</h2></div>
             <div class="modal-body body-font">
                 <p id="add-shortlist-target-name" class="meta-text" style="margin-bottom:15px; font-weight:bold;"></p>
