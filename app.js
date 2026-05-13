@@ -2,6 +2,9 @@ let systemInfo = {}, designTheme = {}, venues = [], events = [];
 let activeFilter = 'All';
 let selectedCardId = null;
 
+const APP_VERSION = "v0.8";
+const APP_DATE = "May 13, 2026";
+
 const ageGate = document.getElementById('age-gate');
 const appShell = document.getElementById('app-shell');
 const btnEnter = document.getElementById('btn-enter');
@@ -11,12 +14,12 @@ const btnCloseModal = document.getElementById('close-modal');
 const locModal = document.getElementById('location-modal');
 const searchInput = document.getElementById('search-input');
 const filterChips = document.querySelectorAll('.chip');
+const sidebarVersionDisplay = document.getElementById('sidebar-version-display');
 
 const sidebar = document.getElementById('sidebar');
 const hitArea = document.getElementById('sidebar-hit-area');
 let sidebarTimeout;
 
-// Setup critical event listeners BEFORE fetching to ensure age gate always works
 function setupCriticalListeners() {
     const handleEnter = (e) => {
         if(e.cancelable) e.preventDefault();
@@ -37,6 +40,11 @@ function setupCriticalListeners() {
 async function initApp() {
     setupCriticalListeners();
     
+    // Set Version Display
+    if(sidebarVersionDisplay) {
+        sidebarVersionDisplay.innerHTML = `${APP_VERSION}<br>${APP_DATE}`;
+    }
+
     try {
         const [sysRes, themeRes, venuesRes, eventsRes] = await Promise.all([
             fetch('system_info.json'), fetch('design_theme.json'),

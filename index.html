@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Backroom Prototype v0.7</title>
+    <title>Backroom Phase 2 - v0.8</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Antonio:wght@400;700&family=Barlow+Condensed:wght@400;500;700&display=swap" rel="stylesheet">
@@ -32,6 +32,11 @@
                 <h1 id="brand-title-text" class="display-font brand-text" style="display:none;">BR</h1>
             </div>
             
+            <div class="top-bar-mini-actions">
+                <button id="btn-language" class="top-btn icon-only" title="Language">🌍</button>
+                <button id="btn-settings" class="top-btn icon-only" title="Settings">⚙️</button>
+            </div>
+
             <div class="top-bar-search-area">
                 <input type="text" id="search-input" class="body-font" placeholder="Search name or description" autocomplete="off">
             </div>
@@ -40,8 +45,6 @@
                 <button id="btn-location" class="top-btn" title="Location">📍 Location</button>
                 <button id="btn-favorites" class="top-btn" title="Favorites">☆ Favourites</button>
                 <button id="btn-shortlist" class="top-btn" title="Shortlist">📑 Shortlist</button>
-                <button id="btn-language" class="top-btn" title="Language">🌍 Language</button>
-                <button id="btn-settings" class="top-btn" title="Settings">⚙️ Settings</button>
             </div>
         </header>
 
@@ -49,14 +52,19 @@
             <div id="sidebar-hit-area"></div>
 
             <aside id="sidebar">
-                <div class="sidebar-item tooltip" title="Pins">
-                    <span class="icon">📌</span><span class="sidebar-text display-font">Pins</span>
+                <div class="sidebar-menu">
+                    <div class="sidebar-item tooltip" title="Pins">
+                        <span class="icon">📌</span><span class="sidebar-text display-font">Pins</span>
+                    </div>
+                    <div class="sidebar-item tooltip" title="Trending">
+                        <span class="icon">🔥</span><span class="sidebar-text display-font">Trending</span>
+                    </div>
+                    <div class="sidebar-item tooltip" title="Events">
+                        <span class="icon">📅</span><span class="sidebar-text display-font">Events</span>
+                    </div>
                 </div>
-                <div class="sidebar-item tooltip" title="Trending">
-                    <span class="icon">🔥</span><span class="sidebar-text display-font">Trending</span>
-                </div>
-                <div class="sidebar-item tooltip" title="Events">
-                    <span class="icon">📅</span><span class="sidebar-text display-font">Events</span>
+                <div class="sidebar-footer body-font">
+                    <span id="sidebar-version-display">v0.8<br>May 13, 2026</span>
                 </div>
             </aside>
 
