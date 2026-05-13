@@ -288,6 +288,20 @@
     </div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
-    <script src="app.js"></script>
+
+<div id="profile-wipe-toast" class="modal hidden" style="z-index: 3000;">
+        <div class="toast show" style="background-color: var(--bright-red-orange); position:relative; transform:none; bottom:auto; left:auto; margin: auto; max-width: 400px; display:flex; flex-direction:column; gap:15px; padding: 25px; border: 2px solid #fff;">
+            <h3 class="display-font" style="font-size:2rem;">CLEAR EVERYTHING?</h3>
+            <p class="body-font" style="font-size:1.2rem;">Do you want to clear EVERYTHING (including Favorites and Shortlists) to start fresh?</p>
+            <div style="display:flex; flex-direction:column; gap:10px;">
+                <button id="btn-wipe-all" class="btn pill-btn" style="background:#fff; color:var(--dark-red); font-weight:bold;">Clear Everything</button>
+                <button id="btn-wipe-profile-only" class="btn secondary-btn pill-btn" style="background:var(--panel-dark); border:1px solid #fff;">Keep Data (Reset Profile Only)</button>
+                <button onclick="document.getElementById('profile-wipe-toast').classList.add('hidden')" class="btn pill-btn" style="background:transparent; border:1px solid rgba(255,255,255,0.5);">Cancel</button>
+            </div>
+        </div>
+    </div>
+  
+  <script src="app.js"></script>
+
 </body>
 </html>

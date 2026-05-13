@@ -13,7 +13,7 @@ let userEvents = JSON.parse(localStorage.getItem('br_events')) || [];
 let userTravel = JSON.parse(localStorage.getItem('br_travel')) || [];
 let importInfo = JSON.parse(localStorage.getItem('br_import_info')) || null;
 
-const APP_VERSION = "v0.20";
+const APP_VERSION = "v0.21";
 const APP_DATE = "May 13, 2026";
 
 const avatarCategories = ["Twink", "Twunk", "Jock", "Muscle", "Geek", "Uncle", "Daddy", "Silver Fox", "Opa", "Bear", "Seal", "Otter", "Cub", "Wolf", "Circuit", "Leather", "Rubber", "Puppy", "Alternative", "Queer", "Femboy", "Slave"];
@@ -56,14 +56,12 @@ function showToast(message) {
     }, 2500);
 }
 
-// ----------------------------------------------------
-// Updated to render dates globally as DD-MM-YYYY
-// ----------------------------------------------------
+// Format dates globally as DD-MM-YYYY
 function formatDateToDDMMYYYY(ymdDate) {
     if(!ymdDate) return '';
     const parts = ymdDate.split('-');
     if(parts.length !== 3) return ymdDate;
-    return `${parts[2]}-${parts[1]}-${parts[0]}`; // DD-MM-YYYY
+    return `${parts[2]}-${parts[1]}-${parts[0]}`; 
 }
 
 function getBadgeDateParts(ymdDate) {
@@ -175,6 +173,10 @@ function handleRouting() {
     document.getElementById('main-filters').classList.remove('hidden');
     document.getElementById('discounts-container').classList.add('hidden');
     welcomeScreen.classList.add('hidden');
+
+    // Remove profile wipe toast explicitly during navigation to keep UI clean
+    const wipeToast = document.getElementById('profile-wipe-toast');
+    if (wipeToast) wipeToast.classList.add('hidden');
 
     if (hash === '' && query === '' && activeFilter === 'All' && sessionStorage.getItem('br_welcome_dismissed') !== 'true') {
         document.getElementById('main-filters').classList.add('hidden');
@@ -313,6 +315,7 @@ function setupEventListeners() {
         localStorage.removeItem('br_age_verified');
         window.location.reload();
     });
+    
     document.getElementById('btn-clear-data').addEventListener('click', () => {
         if(confirm("Delete all favorites, shortlists, events, and settings? This cannot be undone.")) {
             localStorage.clear();
@@ -346,18 +349,36 @@ function setupEventListeners() {
         if(window.location.hash === '' && searchInput.value === '') renderWelcomeScreen();
     });
 
-    document.getElementById('btn-new-profile').addEventListener('click', () => {
-        if(confirm("Do you want to clear EVERYTHING (including Favorites and Shortlists) to start fresh?\n\nClick OK to clear everything.\nClick Cancel to keep data but clear profile info.")) {
+    // Custom Profile Wipe Toast Logic (v0.21 update)
+    const btnNewProfile = document.getElementById('btn-new-profile');
+    if (btnNewProfile) {
+        btnNewProfile.addEventListener('click', () => {
+            const wipeToast = document.getElementById('profile-wipe-toast');
+            if(wipeToast) wipeToast.classList.remove('hidden');
+        });
+    }
+
+    const btnWipeAll = document.getElementById('btn-wipe-all');
+    if (btnWipeAll) {
+        btnWipeAll.addEventListener('click', () => {
             localStorage.clear();
             window.location.reload();
-        } else {
+        });
+    }
+
+    const btnWipeProfileOnly = document.getElementById('btn-wipe-profile-only');
+    if (btnWipeProfileOnly) {
+        btnWipeProfileOnly.addEventListener('click', () => {
             userProfile = { name: '', avatar: '' };
             localStorage.setItem('br_profile', JSON.stringify(userProfile));
             document.getElementById('profile-name').value = '';
             renderProfileAvatars();
             updateProfileDisplay();
-        }
-    });
+            const wipeToast = document.getElementById('profile-wipe-toast');
+            if(wipeToast) wipeToast.classList.add('hidden');
+            showToast("Profile reset. Data kept.");
+        });
+    }
 
     document.getElementById('profile-switcher').addEventListener('change', (e) => {
         const pName = e.target.value;
@@ -699,10 +720,12 @@ function renderProfileAvatars() {
     grid.innerHTML = '';
     
     const switcher = document.getElementById('profile-switcher');
-    switcher.innerHTML = '<option value="">Switch Profile...</option>';
-    Object.keys(savedProfiles).forEach(pName => {
-        switcher.innerHTML += `<option value="${pName}">${pName}</option>`;
-    });
+    if (switcher) {
+        switcher.innerHTML = '<option value="">Switch Profile...</option>';
+        Object.keys(savedProfiles).forEach(pName => {
+            switcher.innerHTML += `<option value="${pName}">${pName}</option>`;
+        });
+    }
 
     avatarCategories.forEach(cat => {
         const imgName = `${cat.toLowerCase()}01.png`; 
@@ -804,7 +827,7 @@ function importUserData(e) {
 
 function checkImportPreview() {
     const previewBox = document.getElementById('import-preview-info');
-    if(importInfo) {
+    if(importInfo && previewBox) {
         previewBox.innerHTML = `<strong>Current Active File:</strong><br>Name: ${importInfo.userName}<br>File: ${importInfo.filename}<br>Loaded: ${importInfo.date}`;
         previewBox.classList.remove('hidden');
     }
