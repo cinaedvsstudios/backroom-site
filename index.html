@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Backroom Phase 2 - v0.10</title>
+    <title>Backroom Phase 2 - v0.12</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Antonio:wght@400;700&family=Barlow+Condensed:wght@400;500;700&display=swap" rel="stylesheet">
@@ -31,34 +31,35 @@
         <div class="age-gate-content">
             <h1 class="display-font" style="color: var(--bright-red-orange);">SYSTEM ERROR</h1>
             <p id="error-text" class="body-font disclaimer-white">Failed to load core system files.</p>
-            <button onclick="window.location.reload()" class="btn secondary-btn display-font">RETRY</button>
+            <button onclick="window.location.reload()" class="btn primary-btn display-font">RETRY</button>
+            <div id="bypass-container" style="margin-top: 15px;"></div>
         </div>
     </div>
 
     <div id="app-shell" class="hidden">
         
         <header id="top-bar">
-            <div class="top-bar-row top-bar-row-1">
+            <div class="top-bar-left-group">
                 <div class="top-bar-logo-area" onclick="window.location.hash='';">
                     <img src="https://raw.githubusercontent.com/cinaedvsstudios/Backroom-site/refs/heads/main/backdoorlogo.png" alt="Backdoor Logo" class="brand-image" style="cursor:pointer;">
                     <img src="backdoortitle.png" alt="Backroom Title" class="brand-title-image" onerror="this.style.display='none'; document.getElementById('brand-title-text').style.display='block';" style="cursor:pointer;">
                     <h1 id="brand-title-text" class="display-font brand-text" style="display:none; cursor:pointer;">BR</h1>
                 </div>
-                <div class="top-bar-mini-actions">
-                    <button id="btn-language" class="top-btn icon-only" title="Language">🌍</button>
-                    <button id="btn-settings" class="top-btn icon-only" title="Settings">⚙️</button>
-                </div>
-            </div>
-            
-            <div class="top-bar-row top-bar-row-2">
+                
                 <div class="top-bar-search-area">
                     <input type="text" id="search-input" class="body-font" placeholder="Search name or description" autocomplete="off" autocorrect="off">
                 </div>
+                
                 <div class="top-bar-buttons-area">
                     <button id="btn-location" class="top-btn" title="Location"><span class="btn-icon">📍</span><span class="btn-text"> Location</span></button>
                     <button id="btn-favorites" class="top-btn" title="Favorites"><span class="btn-icon">☆</span><span class="btn-text"> Favourites</span></button>
                     <button id="btn-shortlists-menu" class="top-btn" title="Shortlists"><span class="btn-icon">📑</span><span class="btn-text"> Shortlists</span></button>
                 </div>
+            </div>
+
+            <div class="top-bar-right-group top-bar-mini-actions">
+                <button id="btn-language" class="top-btn icon-only" title="Language">🌍</button>
+                <button id="btn-settings" class="top-btn icon-only" title="Settings">⚙️</button>
             </div>
         </header>
 
@@ -123,8 +124,12 @@
                     </div>
                     <div class="modal-info-container">
                         <div id="modal-status-bar" class="status-bar"></div>
-                        <p id="modal-address" class="meta-text"></p>
-                        <button id="btn-map" class="btn secondary-btn">🗺️ Directions</button>
+                        
+                        <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px;">
+                            <button id="btn-map" class="btn secondary-btn" style="padding: 4px 10px; font-size: 0.8rem; width: auto; flex-shrink: 0;">🗺️ Directions</button>
+                            <p id="modal-address" class="meta-text" style="margin:0;"></p>
+                        </div>
+                        
                         <div id="modal-public-stats" class="public-stats-block"></div>
                         <div class="feature-chips" id="modal-features"></div>
                         <div class="ratings-grid" id="modal-ratings"></div>
