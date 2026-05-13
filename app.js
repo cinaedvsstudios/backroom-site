@@ -13,17 +13,14 @@ let userEvents = JSON.parse(localStorage.getItem('br_events')) || [];
 let userTravel = JSON.parse(localStorage.getItem('br_travel')) || [];
 let importInfo = JSON.parse(localStorage.getItem('br_import_info')) || null;
 
-const APP_VERSION = "v0.18";
+const APP_VERSION = "v0.19";
 const APP_DATE = "May 13, 2026";
 
-// Avatar Categories (forced lowercase mapping for files)
 const avatarCategories = ["Twink", "Twunk", "Jock", "Muscle", "Geek", "Uncle", "Daddy", "Silver Fox", "Opa", "Bear", "Seal", "Otter", "Cub", "Wolf", "Circuit", "Leather", "Rubber", "Puppy", "Alternative", "Queer", "Femboy", "Slave"];
 
-// Leaflet Map State
 let leafletMap = null;
 let leafletMarker = null;
 
-// --- DOM Elements ---
 const ageGate = document.getElementById('age-gate');
 const appShell = document.getElementById('app-shell');
 const errorPanel = document.getElementById('error-panel');
@@ -61,6 +58,7 @@ function showToast(message) {
 
 function recordUserInteraction() {
     sessionStorage.setItem('br_welcome_dismissed', 'true');
+    welcomeScreen.classList.add('hidden');
 }
 
 function setupCriticalListeners() {
@@ -104,9 +102,7 @@ async function initApp() {
         setupEventListeners(); 
         loadSavedLocation(); 
         
-        if(localStorage.getItem('br_age_verified') === 'true') {
-            handleRouting();
-        }
+        if(localStorage.getItem('br_age_verified') === 'true') handleRouting();
         
     } catch (error) {
         console.error("Local JSON fetch failed.", error);
@@ -149,7 +145,6 @@ function populateSystemText() {
     document.getElementById('ag-disclaimer').innerText = systemInfo.disclaimer_text || '';
 }
 
-// --- Routing ---
 window.addEventListener('hashchange', handleRouting);
 
 function handleRouting() {
@@ -204,7 +199,6 @@ function renderWelcomeScreen() {
     welcomeScreen.classList.remove('hidden');
 }
 
-// --- Event Listeners ---
 function setupEventListeners() {
     document.querySelectorAll('.close-modal-btn').forEach(btn => {
         btn.addEventListener('click', (e) => e.target.closest('.modal').classList.add('hidden'));
@@ -232,8 +226,6 @@ function setupEventListeners() {
     });
 
     document.getElementById('btn-language').addEventListener('click', () => alert("Translation widget placeholder"));
-    document.getElementById('btn-ag-lang').addEventListener('click', () => alert("Translation widget placeholder"));
-
     document.getElementById('btn-back-to-results').addEventListener('click', () => {
         searchInput.value = '';
         window.location.hash = '';
@@ -381,7 +373,7 @@ function initLeafletMap(lat, lng) {
         leafletMap = L.map('loc-map').setView([lat, lng], 13);
         L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
             maxZoom: 19,
-            attribution: '&copy; OpenStreetMap contributors'
+            attribution: '© OpenStreetMap contributors'
         }).addTo(leafletMap);
         leafletMarker = L.marker([lat, lng]).addTo(leafletMap);
     } else {
@@ -679,7 +671,6 @@ function renderProfileAvatars() {
     const grid = document.getElementById('avatar-grid');
     grid.innerHTML = '';
     
-    // Switcher Populator
     const switcher = document.getElementById('profile-switcher');
     switcher.innerHTML = '<option value="">Switch Profile...</option>';
     Object.keys(savedProfiles).forEach(pName => {
@@ -869,6 +860,7 @@ function renderListings(data, isContextView = false) {
                     document.querySelectorAll('.card.selected').forEach(c => c.classList.remove('selected'));
                     card.classList.add('selected');
                     selectedCardId = venue.Venue_ID;
+                    showToast("Double tap to open card");
                 }
             } 
         });
@@ -906,7 +898,7 @@ function openVenueModal(venue) {
         if (isIOS) {
             window.open(`http://maps.apple.com/?q=${query}`, '_blank');
         } else {
-            window.open(`https://www.google.com/maps/search/?api=1&query=${query}`, '_blank');
+            window.open(`https://www.google.com/maps/search/?api=1&query=$${query}`, '_blank');
         }
     };
 
