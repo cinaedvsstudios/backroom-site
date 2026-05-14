@@ -1,5 +1,5 @@
 // --- Application State ---
-const APP_VERSION = "v0.33";
+const APP_VERSION = "v0.34";
 const APP_DATE = "May 14, 2026";
 
 let systemInfo = {}, designTheme = {}, venues = [], events = [];
@@ -1112,36 +1112,25 @@ function renderListings(data, isContextView = false) {
     });
 }
 
-function getRatingHtml(val, type) {
-    let html = '<div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 2px; align-items: center; justify-items: center; border: none;">';
-    
-    if (type === 'Size') {
-        const hands = ['🤏', '👍', '✌️', '🖐️', '🤲'];
-        for(let i=1; i<=5; i++) {
-            const op = i <= val ? '1' : '0.25';
-            html += `<span style="opacity:${op}; font-size: 26.4px; line-height: 1; text-align: center;">${hands[i-1]}</span>`;
+function getRatingCells(val, type) {
+    let html = '';
+    for(let i=1; i<=5; i++) {
+        const op = i <= val ? '1' : '0.25';
+        let asset = '';
+        
+        if (type === 'Size') {
+            const hands = ['🤏', '👍', '✌️', '🖐️', '🤲'];
+            asset = `<span style="font-size: 26px; line-height:1;">${hands[i-1]}</span>`;
+        } else if (type === 'Age') {
+            asset = `<img src="Emoji/age0${i}.png" style="width:26px; height:26px; vertical-align:middle; object-fit:contain;">`;
+        } else {
+            const map = { 'General': 'eggplant', 'Darkroom': 'water', 'Cost': 'money', 'Location': 'peach', 'Popularity': 'busy' };
+            const prefix = map[type] || 'eggplant';
+            asset = `<img src="Emoji/${prefix}0${i}.png" style="width:26px; height:26px; vertical-align:middle; object-fit:contain;">`;
         }
-    } else if (type === 'Age') {
-        for(let i=1; i<=5; i++) {
-            const op = i <= val ? '1' : '0.25';
-            html += `<img src="Emoji/age0${i}.png" class="rating-png" style="opacity:${op}; width:31.2px; height:31.2px; vertical-align:middle; text-align: center;">`;
-        }
-    } else {
-        const map = {
-            'General': 'eggplant',
-            'Darkroom': 'water',
-            'Cost': 'money',
-            'Location': 'peach',
-            'Popularity': 'busy'
-        };
-        const prefix = map[type] || 'eggplant';
-        for(let i=1; i<=5; i++) {
-            const op = i <= val ? '1' : '0.25';
-            html += `<img src="Emoji/${prefix}0${i}.png" class="rating-png" style="opacity:${op}; width:31.2px; height:31.2px; vertical-align:middle; text-align: center;">`;
-        }
+        
+        html += `<div style="opacity:${op}; display:flex; align-items:center; justify-content:center;">${asset}</div>`;
     }
-    
-    html += '</div>';
     return html;
 }
 
@@ -1167,17 +1156,27 @@ function openVenueModal(venue) {
         <div class="feature-chips" style="margin-top: 15px;">${featureHtml}</div>
     `;
     
-    const ratingsHtml = `
-        <div class="ratings-grid" id="modal-ratings">
-            <div class="rating-item"><span>Age Range</span><span>${getRatingHtml(venue.Rating_Age_Range || 0, 'Age')}</span></div>
-            <div class="rating-item"><span>Size</span><span>${getRatingHtml(venue.Rating_Size || 0, 'Size')}</span></div>
-            <div class="rating-item"><span>General</span><span>${getRatingHtml(venue.Rating_General || 0, 'General')}</span></div>
-            <div class="rating-item"><span>Darkroom</span><span>${getRatingHtml(venue.Rating_Darkroom || 0, 'Darkroom')}</span></div>
-            <div class="rating-item"><span>Cost</span><span>${getRatingHtml(venue.Rating_Cost || 0, 'Cost')}</span></div>
-            <div class="rating-item"><span>Location</span><span>${getRatingHtml(venue.Rating_Location || 0, 'Location')}</span></div>
-            <div class="rating-item"><span>Popularity</span><span>${getRatingHtml(venue.Rating_Busyness || 0, 'Popularity')}</span></div>
-        </div>
-    `;
+    const ratingTypes = [
+        { label: 'Age Range', key: 'Rating_Age_Range', type: 'Age' },
+        { label: 'Size', key: 'Rating_Size', type: 'Size' },
+        { label: 'General', key: 'Rating_General', type: 'General' },
+        { label: 'Darkroom', key: 'Rating_Darkroom', type: 'Darkroom' },
+        { label: 'Cost', key: 'Rating_Cost', type: 'Cost' },
+        { label: 'Location', key: 'Rating_Location', type: 'Location' },
+        { label: 'Popularity', key: 'Rating_Busyness', type: 'Popularity' }
+    ];
+
+    let ratingsTableHtml = `<div style="display: grid; grid-template-columns: 1fr repeat(5, 30px); gap: 8px 2px; align-items: center; background-color: var(--near-black); padding: 15px; border-radius: var(--radius-card); border: 1px solid var(--panel-mid);">`;
+    
+    ratingTypes.forEach(r => {
+        const val = venue[r.key] || 0;
+        ratingsTableHtml += `
+            <div style="font-size: 1rem; color: var(--text-light); text-transform: uppercase; letter-spacing: 0.5px; text-align: left; padding-right: 10px;">${r.label}</div>
+            ${getRatingCells(val, r.type)}
+        `;
+    });
+    
+    ratingsTableHtml += `</div>`;
 
     let venueEvents = (events||[]).filter(e => e.Venue_ID === venue.Venue_ID);
     const today = new Date(); today.setHours(0,0,0,0);
@@ -1242,7 +1241,7 @@ function openVenueModal(venue) {
                     ${statsHtml}
                 </div>
                 
-                ${ratingsHtml}
+                ${ratingsTableHtml}
             </div>
         </div>
         

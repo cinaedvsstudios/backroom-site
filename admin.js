@@ -20,7 +20,7 @@ function showToast(message) {
     }, 2500);
 }
 
-// Global functions required for inline HTML calls (like dynamically generated table cells)
+// Global functions required for inline HTML calls
 window.addPin = function(num) {
     const pinInput = document.getElementById('admin-pin');
     if(pinInput && pinInput.value.length < 4) pinInput.value += num;
@@ -317,14 +317,12 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // Sidebar explicitly bound 
     const navVenues = document.getElementById('nav-venues');
     if (navVenues) navVenues.addEventListener('click', () => switchView('venues'));
 
     const navEvents = document.getElementById('nav-events');
     if (navEvents) navEvents.addEventListener('click', () => switchView('events'));
 
-    // Clipboard Logic explicitly bound
     const clipboardFloat = document.getElementById('clipboard-float');
     const clipHeader = document.getElementById('clipboard-header');
     const clipboard = document.getElementById('clipboard-text');
@@ -357,7 +355,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Explicitly binding main dashboard buttons
     const btnFetchLive = document.getElementById('btn-fetch-live');
     if(btnFetchLive) {
         btnFetchLive.addEventListener('click', async () => {
@@ -449,6 +446,22 @@ document.addEventListener('DOMContentLoaded', () => {
             a.href = URL.createObjectURL(blob);
             a.download = `backroom_${currentMode}_${new Date().toISOString().split('T')[0]}.csv`;
             a.click();
+        });
+    }
+
+    // FIXED: Dedicated Export JSON Button logic added
+    const btnExportJSON = document.getElementById('btn-export-json');
+    if(btnExportJSON) {
+        btnExportJSON.addEventListener('click', () => {
+            if(!draftData || draftData.length === 0) return alert('No data available to export.');
+            const dataStr = JSON.stringify(draftData, null, 2);
+            const blob = new Blob([dataStr], {type: 'application/json'});
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = `backroom_${currentMode}_${new Date().toISOString().split('T')[0]}.json`;
+            a.click();
+            URL.revokeObjectURL(a.href);
+            showToast("JSON downloaded.");
         });
     }
 

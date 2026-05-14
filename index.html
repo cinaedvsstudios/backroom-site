@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Backroom - v0.33</title>
+    <title>Backroom - v0.34</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Antonio:wght@400;700&family=Barlow+Condensed:wght@400;500;700&display=swap" rel="stylesheet">
@@ -21,8 +21,8 @@
                 You are creating a new profile. This will not erase your previous profile data. How would you like to start?
             </p>
             <div style="display:flex; flex-direction:column; gap:10px; margin-top:10px;">
-                <button id="btn-wipe-all" class="btn pill-btn primary-btn" style="background:var(--panel-mid); color:#fff; font-weight:bold;">Start with a blank profile</button>
-                <button id="btn-wipe-profile-only" class="btn secondary-btn pill-btn" style="background:var(--primary-blue); color:#fff; border:1px solid #fff;">Make a copy of your current profile</button>
+                <button id="btn-wipe-all" class="btn pill-btn secondary-btn" style="font-weight:bold;">Start with a blank profile</button>
+                <button id="btn-wipe-profile-only" class="btn primary-btn pill-btn" style="border:1px solid #fff;">Make a copy of your current profile</button>
                 <button onclick="document.getElementById('profile-wipe-toast').classList.add('hidden')" class="btn pill-btn" style="background:transparent; border:1px solid rgba(255,255,255,0.5); color:#fff;">Cancel</button>
             </div>
         </div>
@@ -74,7 +74,9 @@
 
             <div class="top-bar-right">
                 <button id="btn-profile-menu" class="top-btn pill-btn profile-btn-wrap" title="Profile">
-                    <img id="top-profile-avatar" src="" style="display:none;">
+                    <div id="top-profile-container" class="avatar-crop-container">
+                        <img id="top-profile-avatar" src="">
+                    </div>
                     <span id="top-profile-name" style="font-weight:bold;">👤</span>
                 </button>
                 <button id="btn-language" class="top-btn icon-only pill-btn" title="Language">🌍</button>
@@ -277,16 +279,16 @@
             <button class="btn-close close-modal-btn">❌</button>
             <div class="modal-header"><h2 class="display-font">ADD TO SHORTLIST</h2></div>
             <div class="modal-body body-font">
-                <p id="add-shortlist-target-name" class="meta-text" style="margin-bottom:15px; font-weight:bold;"></p>
-                <div id="add-shortlist-options" style="display:flex; flex-direction:column; gap:10px; margin-bottom:15px;"></div>
-                <hr class="divider">
-                <input type="text" id="add-new-shortlist-name" class="form-input pill-input" placeholder="Create new shortlist...">
-                <button id="btn-add-create-shortlist" class="btn primary-btn pill-btn">Create & Add</button>
+                <p id="add-shortlist-target-name" class="meta-text" style="margin-bottom:15px; font-weight:bold;\"></p>
+                <div id=\"add-shortlist-options\" style=\"display:flex; flex-direction:column; gap:10px; margin-bottom:15px;\"></div>
+                <hr class=\"divider\">
+                <input type=\"text\" id=\"add-new-shortlist-name\" class=\"form-input pill-input\" placeholder=\"Create new shortlist...\">
+                <button id=\"btn-add-create-shortlist\" class=\"btn primary-btn pill-btn\">Create & Add</button>
             </div>
         </div>
     </div>
 
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
-    <script src="app.js"></script>
+    <script src=\"https://unpkg.com/leaflet@1.9.4/dist/leaflet.js\" integrity=\"sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=\" crossorigin=\"\"></script>
+    <script src=\"app.js\"></script>
 </body>
 </html>
