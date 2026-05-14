@@ -1,6 +1,6 @@
 // --- Application State ---
-const APP_VERSION = "v0.37";
-const APP_DATE = "May 14, 2026";
+const APP_VERSION = "v0.38";
+const APP_DATE = "May 15, 2026";
 
 let systemInfo = {}, designTheme = {}, venues = [], events = [];
 let activeFilter = 'All';
@@ -143,7 +143,7 @@ function buildSocialBar(venue) {
     html += buildIcon(venue.Facebook_URL, 'facebook_url.png');
     html += buildIcon(venue.Website_URL, 'website_url.png');
     html += buildIcon(venue.Emoji_Override, 'xicon.png'); 
-    html += buildIcon(venue.Other_URL, 'other_url.png'); 
+    html += buildIcon(venue.Other_URL, 'link.png');
     html += '</div>';
     return html;
 }

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Backroom Admin Dashboard - v0.37</title>
+    <title>Backroom Admin Dashboard - v0.38</title>
     <link href="https://fonts.googleapis.com/css2?family=Antonio:wght@400;700&family=Barlow+Condensed:wght@400;500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
     <style>
@@ -23,7 +23,7 @@
         
         select.cell-edit { width: 100%; background: var(--panel-dark); color: #fff; border: 1px solid var(--primary-blue); font-size:0.9rem; padding:4px; outline:none; }
         
-        /* v0.37 Row Highlight Animation */
+        /* v0.37/v0.38 Highlight Animations */
         @keyframes flashRow {
             0% { background-color: var(--bright-red-orange); }
             50% { background-color: var(--primary-blue); }
@@ -31,6 +31,12 @@
         }
         .flash-row { animation: flashRow 2s ease-out; }
         
+        /* v0.38 New Entry Workflow CSS */
+        .new-entry-row td { border-top: 2px solid #00FF00; border-bottom: 2px solid #00FF00; }
+        .new-entry-row td:first-child { border-left: 2px solid #00FF00; }
+        .new-entry-row td:last-child { border-right: 2px solid #00FF00; }
+        .new-badge { background: #00FF00; color: #000; font-size: 0.75rem; font-weight: bold; padding: 2px 6px; border-radius: 4px; display: inline-block; margin-top: 5px; text-shadow: none; }
+
         /* Review Sidebar List */
         .sidebar-review-list { padding: 0 20px 10px 35px; font-size: 0.85rem; display: flex; flex-direction: column; gap: 5px; }
         .sidebar-review-list div { cursor: pointer; color: var(--label-grey); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -131,7 +137,7 @@
 
     <div id="admin-shell" class="admin-layout hidden">
         <aside class="admin-sidebar">
-            <h2 class="display-font" style="color:var(--primary-blue); padding: 0 20px 20px; text-align:center;">BR ADMIN <span style="font-size: 0.9rem; color: var(--label-grey); margin-left: 5px;">v0.37</span></h2>
+            <h2 class="display-font" style="color:var(--primary-blue); padding: 0 20px 20px; text-align:center;">BR ADMIN <span style="font-size: 0.9rem; color: var(--label-grey); margin-left: 5px;">v0.38</span></h2>
             <div class="sidebar-menu" style="flex-grow:1;">
                 
                 <div class="sidebar-item" id="nav-venues"><span class="icon">📍</span> <span class="sidebar-text">Venues</span></div>
@@ -175,7 +181,7 @@
                 </div>
 
                 <div style="display:flex; gap:10px; margin-bottom: 15px; flex-wrap:wrap;">
-                    <button id="btn-fetch-live" class="btn primary-btn pill-btn" style="width:auto;">☁️ Load Live Site Data</button>
+                    <button id="btn-fetch-live" class="btn primary-btn pill-btn" style="width:auto;">☁️ Load Live / Clear Changes</button>
                     
                     <label class="btn secondary-btn pill-btn" style="width:auto; cursor:pointer;" title="Opens in Preview Window first">
                         🔄 Merge JSON
@@ -194,7 +200,7 @@
                 <div id="active-filters" class="active-filters-area"></div>
 
                 <div class="table-wrapper" id="admin-table-container">
-                    <p style="padding:20px;">Click "Load Live Site Data" or upload a JSON file to begin.</p>
+                    <p style="padding:20px;">Click "Load Live / Clear Changes" or upload a JSON file to begin.</p>
                 </div>
             </div>
 

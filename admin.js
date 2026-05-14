@@ -1,8 +1,14 @@
 let liveData = [];
 let draftData = [];
-let currentMode = 'venues'; // 'venues', 'events', or 'editor'
+let currentMode = 'venues'; // 'venues', 'events', 'editor', 'avatars'
 let lastSavedDate = localStorage.getItem('br_admin_timestamp') || 'Never';
 let activeTableFilters = {}; 
+
+let avatarAdminData = [];
+let tempMergeData = []; 
+
+let editorHistory = [];
+let historyIndex = -1;
 
 function showToast(message) {
     const container = document.getElementById('toast-container');
@@ -20,7 +26,6 @@ function showToast(message) {
     }, 2500);
 }
 
-// Advanced JSON Error Handling (v0.36)
 let lastJsonErrorText = "";
 function handleJSONError(err, fileText) {
     const modal = document.getElementById('json-error-modal');
@@ -28,19 +33,17 @@ function handleJSONError(err, fileText) {
     if(!modal || !details) return alert("JSON Error: " + err.message);
     
     let report = `Error: ${err.message}\n\n`;
-    
     const match = err.message.match(/at position (\d+)/);
     if(match && fileText) {
         const pos = parseInt(match[1]);
         const start = Math.max(0, pos - 30);
         const end = Math.min(fileText.length, pos + 30);
-        
         let snippet = fileText.substring(start, end);
         report += `--- Context Snippet (Near character ${pos}) ---\n`;
         report += `...${snippet}...\n`;
         report += `   ${' '.repeat(pos - start)}^ (Error roughly here)\n`;
     } else {
-        report += `Could not extract character position for a snippet.\n`;
+        report += `Could not extract character position.\n`;
     }
     
     lastJsonErrorText = report;
@@ -48,7 +51,6 @@ function handleJSONError(err, fileText) {
     modal.classList.remove('hidden');
 }
 
-// Global UI Functions
 window.addPin = function(num) {
     const pinInput = document.getElementById('admin-pin');
     if(pinInput && pinInput.value.length < 4) pinInput.value += num;
@@ -80,17 +82,30 @@ window.checkPin = function() {
 
 window.switchView = function(view) {
     currentMode = view;
-    const viewTables = document.getElementById('view-tables');
-    const viewEditor = document.getElementById('view-editor');
+    const views = {
+        'tables': document.getElementById('view-tables'),
+        'editor': document.getElementById('view-editor'),
+        'avatars': document.getElementById('view-avatars')
+    };
     
+    Object.keys(views).forEach(k => {
+        if(views[k]) {
+            views[k].style.display = 'none';
+            views[k].classList.add('hidden');
+        }
+    });
+
     if(view === 'editor') {
-        viewTables.style.display = 'none';
-        viewEditor.style.display = 'flex';
-        viewEditor.classList.remove('hidden');
+        views['editor'].style.display = 'flex';
+        views['editor'].classList.remove('hidden');
+        saveEditorState(); 
+    } else if (view === 'avatars') {
+        views['avatars'].style.display = 'flex';
+        views['avatars'].classList.remove('hidden');
+        loadAdminAvatars();
     } else {
-        viewTables.style.display = 'flex';
-        viewEditor.style.display = 'none';
-        viewEditor.classList.add('hidden');
+        views['tables'].style.display = 'flex';
+        views['tables'].classList.remove('hidden');
         const title = document.getElementById('summary-title');
         if(title) title.innerText = view === 'venues' ? 'VENUE DATA' : 'EVENT DATA';
         activeTableFilters = {};
@@ -98,23 +113,8 @@ window.switchView = function(view) {
     }
 };
 
-window.downloadEditorHTML = function() {
-    const content = document.getElementById('wysiwyg-content');
-    const select = document.getElementById('editor-page-select');
-    if(!content || !select) return;
-    
-    const htmlStr = content.innerHTML;
-    const blob = new Blob([htmlStr], {type: 'text/html'});
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = `backroom_${select.value}_${new Date().toISOString().split('T')[0]}.html`;
-    a.click();
-    URL.revokeObjectURL(a.href);
-    showToast("HTML downloaded successfully!");
-};
-
 function loadDraftsFromLocal() {
-    if(currentMode === 'editor') return;
+    if(currentMode !== 'venues' && currentMode !== 'events') return;
     const draftKey = currentMode === 'venues' ? 'br_admin_venues_draft' : 'br_admin_events_draft';
     const draft = localStorage.getItem(draftKey);
     if(draft) draftData = JSON.parse(draft);
@@ -125,6 +125,7 @@ function loadDraftsFromLocal() {
     if(timeDisplay) timeDisplay.innerText = `Showing Data From: ${lastSavedDate}`;
     renderFilters();
     renderTable();
+    generateReviewLists();
 }
 
 function saveDraftsToLocal() {
@@ -135,6 +136,7 @@ function saveDraftsToLocal() {
     const timeDisplay = document.getElementById('summary-timestamp');
     if(timeDisplay) timeDisplay.innerText = `Showing Data From: ${lastSavedDate}`;
     updateMismatchCount();
+    generateReviewLists();
 }
 
 async function fetchLiveSilently() {
@@ -143,7 +145,74 @@ async function fetchLiveSilently() {
         const res = await fetch(url + '?v=' + new Date().getTime());
         if(res.ok) liveData = await res.json();
         updateMismatchCount();
+        renderTable(); 
     } catch(e) {}
+}
+
+function generateReviewLists() {
+    if(currentMode !== 'venues') {
+        document.getElementById('sidebar-pending-list').innerHTML = '';
+        document.getElementById('sidebar-old-list').innerHTML = '';
+        return;
+    }
+    
+    const pendingList = document.getElementById('sidebar-pending-list');
+    const oldList = document.getElementById('sidebar-old-list');
+    pendingList.innerHTML = ''; oldList.innerHTML = '';
+    
+    const now = new Date();
+    
+    draftData.forEach(row => {
+        const name = row.Name || 'Unknown';
+        const id = row.Venue_ID;
+        
+        if(!row.Share_URL || String(row.Share_URL).toLowerCase() === 'false' || String(row.Share_URL) === 'PENDING') {
+            const div = document.createElement('div');
+            div.innerText = `• ${name}`;
+            div.onclick = () => jumpToRow(id);
+            pendingList.appendChild(div);
+        }
+        
+        if(row.Last_Updated) {
+            const parts = row.Last_Updated.split('-'); 
+            if(parts.length === 3) {
+                const updatedDate = new Date(`${parts[2]}-${parts[1]}-${parts[0]}`);
+                const diffDays = Math.floor((now - updatedDate) / (1000 * 60 * 60 * 24));
+                if(diffDays > 30) {
+                    const div = document.createElement('div');
+                    div.innerText = `• ${name} (${diffDays}d)`;
+                    div.onclick = () => jumpToRow(id);
+                    oldList.appendChild(div);
+                }
+            }
+        }
+    });
+}
+
+window.jumpToRow = function(id) {
+    const tr = document.querySelector(`tr[data-id="${id}"]`);
+    if(tr) {
+        tr.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        tr.classList.remove('flash-row');
+        void tr.offsetWidth; 
+        tr.classList.add('flash-row');
+    }
+}
+
+window.markReviewed = function(id) {
+    const rowIndex = draftData.findIndex(d => d.Venue_ID === id || d.Event_ID === id);
+    if(rowIndex >= 0) {
+        draftData[rowIndex].Share_URL = true;
+        const now = new Date();
+        const dd = String(now.getDate()).padStart(2, '0');
+        const mm = String(now.getMonth() + 1).padStart(2, '0');
+        const yyyy = now.getFullYear();
+        draftData[rowIndex].Last_Updated = `${dd}-${mm}-${yyyy}`;
+        
+        saveDraftsToLocal();
+        renderTable();
+        showToast("Marked as Reviewed!");
+    }
 }
 
 window.removeFilter = function(col) {
@@ -162,16 +231,8 @@ window.unhideAllColumns = function() {
 };
 
 const headerMapping = {
-    "Event_Start_Time": "Start Time",
-    "Event_End_Time": "End Time",
-    "Venue_ID": "ID",
-    "Event_ID": "ID",
-    "Description": "Desc",
-    "Event_Description": "Desc",
-    "Rating_General": "Gen",
-    "Rating_Darkroom": "Dark",
-    "Feature_Men_Only": "Men Only",
-    "Feature_Darkroom": "Darkroom"
+    "Event_Start_Time": "Start Time", "Event_End_Time": "End Time", "Venue_ID": "ID", "Event_ID": "ID",
+    "Description": "Desc", "Event_Description": "Desc", "Rating_General": "Gen", "Rating_Darkroom": "Dark"
 };
 
 function renderFilters() {
@@ -183,13 +244,14 @@ function renderFilters() {
     });
 }
 
-function generateTableHTML(dataObj, showEditControls) {
+function generateTableHTML(dataObj, isMainTable) {
     if (!dataObj || dataObj.length === 0) return "<p style='padding:20px;'>No data available.</p>";
 
     const columns = Object.keys(dataObj[0] || {});
     let html = `<table><thead><tr>`;
     
-    if(showEditControls) html += `<th style="min-width:60px;">Edit</th>`;
+    if(!isMainTable) html += `<th style="min-width:40px;">🗑️</th>`; 
+    if(isMainTable) html += `<th style="min-width:70px;">Review</th>`; 
         
     columns.forEach((col, idx) => {
         const displayName = headerMapping[col] || col;
@@ -198,35 +260,58 @@ function generateTableHTML(dataObj, showEditControls) {
                 <span class="eye-btn" onclick="toggleColumn(${idx})" title="Toggle Hide">👁️</span>
                 <span class="col-title" style="flex-grow:1;">${displayName}</span>
             </div>`;
-        if(showEditControls) {
-            html += `<input type="text" class="filter-header-input" placeholder="Filter..." data-col="${col}">`;
+        
+        if(isMainTable) {
+            // v0.38 - Dropdowns for specific filter fields
+            if (col === 'Status') {
+                html += `<select class="filter-header-select filter-dropdown" data-col="${col}"><option value="">Filter...</option><option value="Live">Live</option><option value="Closed">Closed</option><option value="Hold">Hold</option><option value="Flag">Flag</option></select>`;
+            } else if (col.startsWith('Feature_')) {
+                html += `<select class="filter-header-select filter-dropdown" data-col="${col}"><option value="">Filter...</option><option value="true">True</option><option value="false">False</option></select>`;
+            } else if (col.startsWith('Rating_')) {
+                html += `<select class="filter-header-select filter-dropdown" data-col="${col}"><option value="">Filter...</option><option value="0">0</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option></select>`;
+            } else {
+                html += `<input type="text" class="filter-header-input" placeholder="Filter..." data-col="${col}">`;
+            }
         }
         html += `</th>`;
     });
     
-    html += `</tr></thead><tbody ${showEditControls ? 'id="admin-tbody"' : ''}>`;
+    html += `</tr></thead><tbody ${isMainTable ? 'id="admin-tbody"' : ''}>`;
     
     dataObj.forEach((row, rowIndex) => {
-        const id = row.Venue_ID || row.Event_ID || rowIndex;
-        html += `<tr data-id="${id}">`;
+        const idField = currentMode === 'venues' ? 'Venue_ID' : 'Event_ID';
+        const id = row[idField] || rowIndex;
         
-        if(showEditControls) {
-            html += `<td style="text-align:center; font-size:1.5rem;" onclick="alert('Phase 3 WYSIWYG Editor modal coming soon!')">✏️</td>`;
+        let isNew = false;
+        if(isMainTable && liveData.length > 0) {
+            isNew = !liveData.some(l => l[idField] === id);
+        }
+
+        html += `<tr data-id="${id}" class="${isNew ? 'new-entry-row' : ''}" ${!isMainTable ? `id="preview-row-${rowIndex}"` : ''}>`;
+        
+        if(!isMainTable) {
+            html += `<td style="text-align:center; cursor:pointer;" onclick="removePreviewRow(${rowIndex})">🗑️</td>`;
+        }
+        if(isMainTable) {
+            const needsReview = (!row.Share_URL || String(row.Share_URL) === 'false' || String(row.Share_URL) === 'PENDING');
+            html += `<td style="text-align:center;">
+                ${needsReview ? `<button onclick="markReviewed('${id}')" style="background:var(--primary-blue); border:none; color:#fff; border-radius:4px; cursor:pointer; padding:2px 5px;" title="Mark Reviewed">✔️</button>` : ''}
+                ${isNew ? `<br><span class="new-badge">NEW</span>` : ''}
+            </td>`;
         }
         
         columns.forEach((col, idx) => {
-            const idField = currentMode === 'venues' ? 'Venue_ID' : 'Event_ID';
             let isEdited = false;
-            if (showEditControls && liveData.length > 0) {
+            if (isMainTable && liveData.length > 0 && !isNew) {
                 const lRow = liveData.find(l => l[idField] === row[idField]);
                 if (lRow && String(lRow[col]) !== String(row[col])) isEdited = true;
             }
             
             const editedClass = isEdited ? 'edited-cell' : '';
-            if(showEditControls) {
+            if(isMainTable) {
                 html += `<td class="col-idx-${idx} ${editedClass}" onclick="editCell(this, ${rowIndex}, '${col}')">${String(row[col] || '')}</td>`;
             } else {
-                html += `<td class="col-idx-${idx} ${editedClass}">${String(row[col] || '')}</td>`;
+                html += `<td class="col-idx-${idx} preview-editable-cell" contenteditable="true" onblur="updatePreviewData(${rowIndex}, '${col}', this)">${String(row[col] || '')}</td>`;
             }
         });
         html += `</tr>`;
@@ -239,7 +324,6 @@ function generateTableHTML(dataObj, showEditControls) {
 function renderTable() {
     const tableContainer = document.getElementById('admin-table-container');
     if(!tableContainer) return;
-
     if (!draftData || draftData.length === 0) {
         tableContainer.innerHTML = "<p style='padding:20px;'>No data. Load a file first.</p>";
         updateMismatchCount();
@@ -267,7 +351,18 @@ function renderTable() {
             }
         });
     });
-
+    
+    document.querySelectorAll('.filter-header-select').forEach(sel => {
+        sel.addEventListener('change', (e) => {
+            if(e.target.value !== '') {
+                activeTableFilters[e.target.dataset.col] = e.target.value;
+                e.target.value = '';
+                renderFilters();
+                renderTable();
+            }
+        });
+    });
+    
     updateMismatchCount();
 }
 
@@ -288,7 +383,6 @@ window.editCell = function(td, rowIndex, col) {
         td.querySelector('select').focus();
     } else {
         if (td.isContentEditable) return; 
-        
         td.contentEditable = "true";
         td.focus();
         
@@ -300,15 +394,9 @@ window.editCell = function(td, rowIndex, col) {
                     draftData[rowIndex][col] = newVal;
                     td.classList.add('edited-cell');
                     saveDraftsToLocal();
-                    updateMismatchCount();
                 }
             });
-            td.addEventListener('keydown', function(e) {
-                if(e.key === 'Enter') {
-                    e.preventDefault();
-                    td.blur(); 
-                }
-            });
+            td.addEventListener('keydown', function(e) { if(e.key === 'Enter') { e.preventDefault(); td.blur(); } });
             td.dataset.listening = "true";
         }
     }
@@ -325,47 +413,218 @@ window.saveCell = function(selectEl, rowIndex, col) {
     selectEl.parentElement.innerText = newVal;
     selectEl.parentElement.classList.add('edited-cell');
     saveDraftsToLocal();
-    updateMismatchCount();
 };
 
 let currentMismatchIds = [];
-
 function updateMismatchCount() {
     if(liveData.length === 0) {
         const mismatchEl = document.getElementById('summary-mismatch');
-        if(mismatchEl) {
-            mismatchEl.innerText = "Live data not loaded for comparison.";
-            mismatchEl.style.color = 'var(--text-light)';
-        }
+        if(mismatchEl) { mismatchEl.innerText = "Live data not loaded."; mismatchEl.style.color = 'var(--text-light)'; }
         return;
     }
-    
     currentMismatchIds = [];
     draftData.forEach(dRow => {
         const idField = currentMode === 'venues' ? 'Venue_ID' : 'Event_ID';
         const lRow = liveData.find(l => l[idField] === dRow[idField]);
-        if(!lRow || JSON.stringify(lRow) !== JSON.stringify(dRow)) {
-            currentMismatchIds.push(dRow[idField]);
-        }
+        if(!lRow || JSON.stringify(lRow) !== JSON.stringify(dRow)) currentMismatchIds.push(dRow[idField]);
     });
     
     const txt = document.getElementById('summary-mismatch');
     if(txt) {
-        if(currentMismatchIds.length === 0) {
-            txt.innerText = "All records match live data.";
-            txt.style.color = "var(--primary-blue)";
-        } else {
-            txt.innerText = `${currentMismatchIds.length} / ${draftData.length} records do not match.`;
-            txt.style.color = "var(--bright-red-orange)";
-        }
+        if(currentMismatchIds.length === 0) { txt.innerText = "All records match live data."; txt.style.color = "var(--primary-blue)"; } 
+        else { txt.innerText = `${currentMismatchIds.length} records do not match.`; txt.style.color = "var(--bright-red-orange)"; }
     }
 }
 
-// Initialization and DOM Element Binding
+window.removePreviewRow = function(idx) {
+    tempMergeData[idx] = null; 
+    document.getElementById(`preview-row-${idx}`).style.display = 'none';
+}
+window.updatePreviewData = function(idx, col, el) {
+    if(tempMergeData[idx]) tempMergeData[idx][col] = el.innerText.trim();
+}
+
+async function loadAdminAvatars() {
+    try {
+        const res = await fetch('Profile_images/avatar_list.json?v=' + Date.now());
+        if(res.ok) avatarAdminData = await res.json();
+        else avatarAdminData = [];
+    } catch(e) { avatarAdminData = []; }
+    renderAdminAvatars();
+}
+
+
+// =================== part 2 ================
+
+
+function renderAdminAvatars() {
+    const list = document.getElementById('avatar-manager-list');
+    if(!list) return;
+    list.innerHTML = '';
+    
+    avatarAdminData.forEach((av, idx) => {
+        const row = document.createElement('div');
+        row.className = 'avatar-admin-row';
+        row.innerHTML = `
+            <img src="Profile_images/${av.file}" onerror="this.src='placeholder_venue.jpg'">
+            <input type="text" value="${av.label}" onblur="updateAvatarLabel(${idx}, this.value)" placeholder="Label">
+            <select onchange="updateAvatarCat(${idx}, this.value)">
+                <option value="Young" ${av.category === 'Young' ? 'selected' : ''}>Young</option>
+                <option value="Prime" ${av.category === 'Prime' ? 'selected' : ''}>Prime</option>
+                <option value="Mature" ${av.category === 'Mature' ? 'selected' : ''}>Mature</option>
+            </select>
+            <div class="up-down-btns">
+                <button onclick="moveAvatar(${idx}, -1)">▲</button>
+                <button onclick="moveAvatar(${idx}, 1)">▼</button>
+            </div>
+            <button class="btn" style="background:var(--dark-red); color:#fff; padding:5px;" onclick="deleteAvatar(${idx})">❌</button>
+        `;
+        list.appendChild(row);
+    });
+}
+
+window.updateAvatarLabel = (idx, val) => { avatarAdminData[idx].label = val; }
+window.updateAvatarCat = (idx, val) => { avatarAdminData[idx].category = val; }
+window.moveAvatar = (idx, dir) => {
+    if(idx + dir < 0 || idx + dir >= avatarAdminData.length) return;
+    const temp = avatarAdminData[idx];
+    avatarAdminData[idx] = avatarAdminData[idx + dir];
+    avatarAdminData[idx + dir] = temp;
+    renderAdminAvatars();
+}
+window.deleteAvatar = (idx) => {
+    avatarAdminData.splice(idx, 1);
+    renderAdminAvatars();
+}
+
+document.getElementById('btn-add-avatar')?.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if(file) {
+        const name = file.name;
+        avatarAdminData.push({ file: name, label: "New Avatar", category: "Prime" });
+        renderAdminAvatars();
+        e.target.value = '';
+    }
+});
+
+document.getElementById('btn-download-avatars')?.addEventListener('click', () => {
+    const dataStr = JSON.stringify(avatarAdminData, null, 2);
+    const blob = new Blob([dataStr], {type: 'application/json'});
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `avatar_list.json`;
+    a.click();
+    showToast("Downloaded avatar_list.json");
+});
+
+const wysiwygContent = document.getElementById('wysiwyg-content');
+const wysiwygSource = document.getElementById('wysiwyg-source');
+
+function saveEditorState() {
+    if(!wysiwygContent) return;
+    historyIndex++;
+    editorHistory.splice(historyIndex);
+    editorHistory.push(wysiwygContent.innerHTML);
+    if(editorHistory.length > 50) { editorHistory.shift(); historyIndex--; }
+}
+
+wysiwygContent?.addEventListener('input', () => {
+    clearTimeout(window.editorSaveTimer);
+    window.editorSaveTimer = setTimeout(saveEditorState, 500);
+});
+
+// v0.38 Fix - Ensure content editor has focus before formatting
+window.editorAction = function(action, val, event) {
+    if(event) event.preventDefault(); 
+    if(wysiwygSource && !wysiwygSource.classList.contains('hidden')) return alert("Switch to Visual Editor first.");
+    
+    wysiwygContent.focus(); 
+    
+    if(action === 'undo') {
+        if(historyIndex > 0) { historyIndex--; wysiwygContent.innerHTML = editorHistory[historyIndex]; }
+    } else if(action === 'redo') {
+        if(historyIndex < editorHistory.length - 1) { historyIndex++; wysiwygContent.innerHTML = editorHistory[historyIndex]; }
+    } else if(action === 'normal') {
+        document.execCommand('removeFormat', false, null);
+    } else if(action === 'h1') {
+        document.execCommand('insertHTML', false, `<span style="font-size: 2.2rem; font-family: 'Antonio', sans-serif; color: var(--primary-blue); font-weight: bold; text-transform: uppercase;">${window.getSelection().toString()}</span>`);
+    } else if(action === 'h2') {
+        document.execCommand('insertHTML', false, `<span style="font-size: 1.6rem; font-family: 'Antonio', sans-serif; color: var(--primary-blue); font-weight: bold; text-transform: uppercase;">${window.getSelection().toString()}</span>`);
+    } else if(action === 'bold') {
+        document.execCommand('bold', false, null);
+    } else if(action === 'color') {
+        document.execCommand('foreColor', false, val);
+    } else if(action === 'insertTable') {
+        document.execCommand('insertHTML', false, '<table border="1" style="width:100%; border-collapse:collapse; margin: 15px 0;"><tr><td style="padding:8px;">Cell</td><td style="padding:8px;">Cell</td></tr><tr><td style="padding:8px;">Cell</td><td style="padding:8px;">Cell</td></tr></table><p><br></p>');
+    } else if(['addRow', 'addCol', 'deleteRow', 'deleteCol'].includes(action)) {
+        handleTableAction(action);
+    }
+    saveEditorState();
+}
+
+document.querySelectorAll('.editor-toolbar button').forEach(btn => {
+    btn.addEventListener('mousedown', (e) => {
+        if(e.target.tagName === 'BUTTON') e.preventDefault(); 
+    });
+});
+
+function handleTableAction(action) {
+    const sel = window.getSelection();
+    if(!sel.rangeCount) return;
+    let node = sel.anchorNode;
+    let td = null, tr = null, table = null;
+    
+    while(node && node !== wysiwygContent) {
+        if(node.nodeName === 'TD') td = node;
+        if(node.nodeName === 'TR') tr = node;
+        if(node.nodeName === 'TABLE') table = node;
+        node = node.parentNode;
+    }
+    if(!table || !tr || !td) return alert("Place cursor inside a table cell first.");
+    
+    const cellIndex = Array.from(tr.children).indexOf(td);
+    
+    if(action === 'addRow') {
+        const newTr = table.insertRow(tr.rowIndex + 1);
+        for(let i=0; i<tr.cells.length; i++) newTr.insertCell(i).innerHTML = 'New';
+    } else if(action === 'addCol') {
+        Array.from(table.rows).forEach(r => r.insertCell(cellIndex + 1).innerHTML = 'New');
+    } else if(action === 'deleteRow') {
+        table.deleteRow(tr.rowIndex);
+    } else if(action === 'deleteCol') {
+        Array.from(table.rows).forEach(r => { if(r.cells[cellIndex]) r.deleteCell(cellIndex); });
+    }
+}
+
+window.toggleEditorSource = function() {
+    const btn = document.getElementById('btn-toggle-source');
+    if(wysiwygSource.classList.contains('hidden')) {
+        wysiwygSource.value = wysiwygContent.innerHTML;
+        wysiwygContent.classList.add('hidden');
+        wysiwygSource.classList.remove('hidden');
+        btn.innerText = '👁️ Visual Editor';
+    } else {
+        wysiwygContent.innerHTML = wysiwygSource.value;
+        wysiwygSource.classList.add('hidden');
+        wysiwygContent.classList.remove('hidden');
+        btn.innerText = '👁️ View Source';
+        saveEditorState();
+    }
+}
+
+window.downloadEditorHTML = function() {
+    const content = wysiwygSource.classList.contains('hidden') ? wysiwygContent.innerHTML : wysiwygSource.value;
+    const select = document.getElementById('editor-page-select');
+    const blob = new Blob([content], {type: 'text/html'});
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `backroom_${select.value}_${new Date().toISOString().split('T')[0]}.html`;
+    a.click();
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     const pinGate = document.getElementById('pin-gate');
     const adminShell = document.getElementById('admin-shell');
-    const pinInput = document.getElementById('admin-pin');
     const btnLogin = document.getElementById('btn-login');
 
     if(localStorage.getItem('br_admin_logged_in') === 'true') {
@@ -373,32 +632,20 @@ document.addEventListener('DOMContentLoaded', () => {
         if(adminShell) adminShell.classList.remove('hidden');
         loadDraftsFromLocal();
     }
-
     if(btnLogin) btnLogin.addEventListener('click', window.checkPin);
 
-    document.addEventListener('keydown', (e) => {
-        if (pinGate && !pinGate.classList.contains('hidden')) {
-            if (/^[0-9]$/.test(e.key) && pinInput && pinInput.value.length < 4) {
-                pinInput.value += e.key;
-                window.checkPin();
-            } else if (e.key === 'Backspace') {
-                window.delPin();
-            } else if (e.key === 'Enter') {
-                window.checkPin();
-            }
-        }
+    document.getElementById('nav-venues')?.addEventListener('click', () => switchView('venues'));
+    document.getElementById('nav-events')?.addEventListener('click', () => switchView('events'));
+    document.getElementById('nav-editor')?.addEventListener('click', () => switchView('editor'));
+    document.getElementById('nav-avatars')?.addEventListener('click', () => switchView('avatars'));
+
+    document.getElementById('btn-sidebar-pending')?.addEventListener('click', () => {
+        document.getElementById('sidebar-pending-list').classList.toggle('hidden');
+    });
+    document.getElementById('btn-sidebar-old')?.addEventListener('click', () => {
+        document.getElementById('sidebar-old-list').classList.toggle('hidden');
     });
 
-    const navVenues = document.getElementById('nav-venues');
-    if (navVenues) navVenues.addEventListener('click', () => switchView('venues'));
-
-    const navEvents = document.getElementById('nav-events');
-    if (navEvents) navEvents.addEventListener('click', () => switchView('events'));
-
-    const navEditor = document.getElementById('nav-editor');
-    if (navEditor) navEditor.addEventListener('click', () => switchView('editor'));
-
-    // Draggable functionality setup
     const makeDraggable = (headerId, windowId) => {
         const header = document.getElementById(headerId);
         const win = document.getElementById(windowId);
@@ -406,20 +653,13 @@ document.addEventListener('DOMContentLoaded', () => {
         let isDragging = false, startX, startY, initialLeft, initialTop;
         
         header.addEventListener('mousedown', (e) => {
-            isDragging = true;
-            startX = e.clientX; startY = e.clientY;
-            const rect = win.getBoundingClientRect();
-            win.style.transform = 'none';
+            isDragging = true; startX = e.clientX; startY = e.clientY;
+            const rect = win.getBoundingClientRect(); win.style.transform = 'none';
             initialLeft = rect.left; initialTop = rect.top;
-            win.style.left = initialLeft + 'px';
-            win.style.top = initialTop + 'px';
+            win.style.left = initialLeft + 'px'; win.style.top = initialTop + 'px';
         });
-
         document.addEventListener('mousemove', (e) => {
-            if(isDragging) {
-                win.style.left = (initialLeft + e.clientX - startX) + 'px';
-                win.style.top = (initialTop + e.clientY - startY) + 'px';
-            }
+            if(isDragging) { win.style.left = (initialLeft + e.clientX - startX) + 'px'; win.style.top = (initialTop + e.clientY - startY) + 'px'; }
         });
         document.addEventListener('mouseup', () => isDragging = false);
     };
@@ -430,221 +670,126 @@ document.addEventListener('DOMContentLoaded', () => {
     const clipboard = document.getElementById('clipboard-text');
     if(clipboard) {
         clipboard.value = localStorage.getItem('br_admin_clipboard') || '';
-        clipboard.addEventListener('input', (e) => {
-            localStorage.setItem('br_admin_clipboard', e.target.value);
-        });
+        clipboard.addEventListener('input', (e) => localStorage.setItem('br_admin_clipboard', e.target.value));
     }
 
-    const btnFetchLive = document.getElementById('btn-fetch-live');
-    if(btnFetchLive) {
-        btnFetchLive.addEventListener('click', async () => {
+    document.getElementById('btn-fetch-live')?.addEventListener('click', async () => {
+        try {
+            const url = currentMode === 'venues' ? 'listings.json' : 'events.json';
+            const res = await fetch(url + '?v=' + new Date().getTime());
+            if(!res.ok) throw new Error("Could not find file.");
+            liveData = await res.json();
+            draftData = JSON.parse(JSON.stringify(liveData)); 
+            saveDraftsToLocal();
+            renderTable();
+            showToast(`Live data loaded / Changes cleared!`);
+        } catch(err) { showToast("Fetch failed."); }
+    });
+
+    document.getElementById('file-upload-replace')?.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (event) => {
             try {
-                const url = currentMode === 'venues' ? 'listings.json' : 'events.json';
-                const res = await fetch(url + '?v=' + new Date().getTime());
-                if(!res.ok) throw new Error("Could not find file.");
-                liveData = await res.json();
-                draftData = JSON.parse(JSON.stringify(liveData)); 
+                draftData = JSON.parse(event.target.result);
                 saveDraftsToLocal();
                 renderTable();
-                showToast(`Live ${currentMode} data loaded and saved to draft!`);
-            } catch(err) {
-                showToast("Fetch failed. Try Manual Upload.");
-            }
-        });
-    }
+                showToast("Data replaced successfully!");
+            } catch (err) { handleJSONError(err, event.target.result); }
+        };
+        reader.readAsText(file);
+    });
 
-    const fileReplace = document.getElementById('file-upload-replace');
-    if(fileReplace) {
-        fileReplace.addEventListener('change', (e) => {
-            const file = e.target.files[0];
-            if (!file) return;
-            const reader = new FileReader();
-            reader.onload = (event) => {
-                const text = event.target.result;
-                try {
-                    draftData = JSON.parse(text);
-                    saveDraftsToLocal();
-                    renderTable();
-                    showToast("Data replaced successfully!");
-                } catch (err) { handleJSONError(err, text); }
-            };
-            reader.readAsText(file);
-        });
-    }
-
-    const fileMerge = document.getElementById('file-upload-merge');
-    if(fileMerge) {
-        fileMerge.addEventListener('change', (e) => {
-            const file = e.target.files[0];
-            if (!file) return;
-            const reader = new FileReader();
-            reader.onload = (event) => {
-                const text = event.target.result;
-                try {
-                    const uploadedData = JSON.parse(text);
-                    if(!Array.isArray(uploadedData)) throw new Error("File is not an array");
-                    
-                    const idField = currentMode === 'venues' ? 'Venue_ID' : 'Event_ID';
-                    let mergedCount = 0, addedCount = 0;
-                    
-                    uploadedData.forEach(newRow => {
-                        const existingIdx = draftData.findIndex(d => d[idField] === newRow[idField]);
-                        if(existingIdx >= 0) {
-                            draftData[existingIdx] = { ...draftData[existingIdx], ...newRow };
-                            mergedCount++;
-                        } else {
-                            draftData.push(newRow);
-                            addedCount++;
-                        }
-                    });
-                    
-                    saveDraftsToLocal();
-                    renderTable();
-                    showToast(`Merge Complete: ${mergedCount} updated, ${addedCount} new.`);
-                } catch (err) { handleJSONError(err, text); }
-            };
-            reader.readAsText(file);
-        });
-    }
-
-    // Preview Import Logic (v0.36)
-    const filePreview = document.getElementById('file-preview-import');
-    if(filePreview) {
-        filePreview.addEventListener('change', (e) => {
-            const file = e.target.files[0];
-            if (!file) return;
-            const reader = new FileReader();
-            reader.onload = (event) => {
-                const text = event.target.result;
-                try {
-                    const previewData = JSON.parse(text);
-                    if(!Array.isArray(previewData)) throw new Error("File is not an array");
-                    
-                    const container = document.getElementById('preview-table-container');
-                    if(container) {
-                        container.innerHTML = generateTableHTML(previewData, false);
-                        document.getElementById('preview-import-modal').classList.remove('hidden');
-                        showToast("Preview loaded successfully.");
-                    }
-                } catch (err) { handleJSONError(err, text); }
-            };
-            reader.readAsText(file);
-            filePreview.value = ''; // Reset so same file can be triggered again
-        });
-    }
-
-    // JSON Error Handlers (v0.36)
-    document.getElementById('btn-copy-error')?.addEventListener('click', () => {
-        navigator.clipboard.writeText(lastJsonErrorText);
-        showToast("Error report copied to clipboard.");
+    let isMergeAction = false;
+    
+    document.getElementById('file-upload-merge')?.addEventListener('change', (e) => {
+        isMergeAction = true;
+        triggerPreviewRead(e.target.files[0]);
+        e.target.value = '';
     });
     
-    document.getElementById('btn-download-error')?.addEventListener('click', () => {
-        const blob = new Blob([lastJsonErrorText], {type: 'text/plain'});
+    document.getElementById('file-preview-import')?.addEventListener('change', (e) => {
+        isMergeAction = false;
+        triggerPreviewRead(e.target.files[0]);
+        e.target.value = '';
+    });
+
+    function triggerPreviewRead(file) {
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (event) => {
+            const text = event.target.result;
+            try {
+                tempMergeData = JSON.parse(text);
+                if(!Array.isArray(tempMergeData)) throw new Error("File is not an array");
+                
+                document.getElementById('preview-table-container').innerHTML = generateTableHTML(tempMergeData, false);
+                document.getElementById('preview-modal-title').innerText = isMergeAction ? "👁️ REVIEW & MERGE IMPORT" : "👁️ PREVIEW DATA";
+                
+                const btnApply = document.getElementById('btn-apply-merge');
+                if(isMergeAction) btnApply.classList.remove('hidden');
+                else btnApply.classList.add('hidden');
+                
+                document.getElementById('preview-import-modal').classList.remove('hidden');
+            } catch (err) { handleJSONError(err, text); }
+        };
+        reader.readAsText(file);
+    }
+
+    document.getElementById('btn-apply-merge')?.addEventListener('click', () => {
+        const validMergeData = tempMergeData.filter(d => d !== null);
+        const idField = currentMode === 'venues' ? 'Venue_ID' : 'Event_ID';
+        let mCount = 0, aCount = 0;
+        
+        validMergeData.forEach(newRow => {
+            const existingIdx = draftData.findIndex(d => d[idField] === newRow[idField]);
+            if(existingIdx >= 0) { draftData[existingIdx] = { ...draftData[existingIdx], ...newRow }; mCount++; } 
+            else { draftData.push(newRow); aCount++; }
+        });
+        
+        saveDraftsToLocal();
+        renderTable();
+        document.getElementById('preview-import-modal').classList.add('hidden');
+        showToast(`Merge Applied: ${mCount} updated, ${aCount} new.`);
+    });
+
+    document.getElementById('btn-copy-error')?.addEventListener('click', () => { navigator.clipboard.writeText(lastJsonErrorText); showToast("Copied"); });
+    document.getElementById('btn-export-csv')?.addEventListener('click', () => { /* Reserved for CSV Logic */ });
+    document.getElementById('btn-export-json')?.addEventListener('click', () => {
+        const dataStr = JSON.stringify(draftData, null, 2);
         const a = document.createElement('a');
-        a.href = URL.createObjectURL(blob);
-        a.download = `json_import_error_${new Date().toISOString().split('T')[0]}.txt`;
+        a.href = URL.createObjectURL(new Blob([dataStr], {type: 'application/json'}));
+        a.download = `backroom_${currentMode}_${new Date().toISOString().split('T')[0]}.json`;
         a.click();
-        URL.revokeObjectURL(a.href);
+    });
+    
+    document.getElementById('btn-download-all')?.addEventListener('click', () => {
+        const v = localStorage.getItem('br_admin_venues_draft');
+        const e = localStorage.getItem('br_admin_events_draft');
+        if(v) { let a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([v])); a.download='listings.json'; a.click(); }
+        if(e) setTimeout(()=> { let a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([e])); a.download='events.json'; a.click(); }, 500);
     });
 
-    const btnExportCSV = document.getElementById('btn-export-csv');
-    if(btnExportCSV) {
-        btnExportCSV.addEventListener('click', () => {
-            if(!draftData || draftData.length === 0) return alert('No data available to export.');
-            
-            const cols = Object.keys(draftData[0]);
-            let csvString = cols.join(',') + '\n';
-            
-            draftData.forEach(row => {
-                csvString += cols.map(c => {
-                    let val = row[c] === null || row[c] === undefined ? '' : String(row[c]);
-                    val = val.replace(/"/g, '""'); 
-                    return `"${val}"`; 
-                }).join(',') + '\n';
-            });
-            
-            const blob = new Blob([csvString], {type: 'text/csv'});
-            const a = document.createElement('a');
-            a.href = URL.createObjectURL(blob);
-            a.download = `backroom_${currentMode}_${new Date().toISOString().split('T')[0]}.csv`;
-            a.click();
+    document.getElementById('summary-mismatch')?.addEventListener('click', () => {
+        if(currentMismatchIds.length === 0) return;
+        const list = document.getElementById('mismatch-list');
+        list.innerHTML = '';
+        // v0.38 - Make mismatch items clickable to jump straight to the row
+        currentMismatchIds.forEach(id => {
+            list.innerHTML += `<li style="color:var(--bright-red-orange); font-weight:bold; cursor:pointer; padding:4px 0; text-decoration:underline;" 
+                onclick="document.getElementById('mismatch-modal').classList.add('hidden'); jumpToRow('${id}')">${id}</li>`;
         });
-    }
+        document.getElementById('mismatch-modal').classList.remove('hidden');
+    });
 
-    const btnExportJSON = document.getElementById('btn-export-json');
-    if(btnExportJSON) {
-        btnExportJSON.addEventListener('click', () => {
-            if(!draftData || draftData.length === 0) return alert('No data available to export.');
-            const dataStr = JSON.stringify(draftData, null, 2);
-            const blob = new Blob([dataStr], {type: 'application/json'});
-            const a = document.createElement('a');
-            a.href = URL.createObjectURL(blob);
-            a.download = `backroom_${currentMode}_${new Date().toISOString().split('T')[0]}.json`;
-            a.click();
-            URL.revokeObjectURL(a.href);
-            showToast("JSON downloaded.");
-        });
-    }
-
-    const btnDownloadAll = document.getElementById('btn-download-all');
-    if(btnDownloadAll) {
-        btnDownloadAll.addEventListener('click', () => {
-            const vDraft = localStorage.getItem('br_admin_venues_draft');
-            const eDraft = localStorage.getItem('br_admin_events_draft');
-            
-            const download = (dataStr, name) => {
-                if(!dataStr) return;
-                const blob = new Blob([dataStr], {type: 'application/json'});
-                const a = document.createElement('a');
-                a.href = URL.createObjectURL(blob);
-                a.download = name;
-                a.click();
-            };
-            
-            if(vDraft) download(vDraft, 'listings.json');
-            if(eDraft) setTimeout(() => download(eDraft, 'events.json'), 500);
-        });
-    }
-
-    const summaryMismatch = document.getElementById('summary-mismatch');
-    if(summaryMismatch) {
-        summaryMismatch.addEventListener('click', () => {
-            if(currentMismatchIds.length === 0) return;
-            const list = document.getElementById('mismatch-list');
-            if(list) {
-                list.innerHTML = '';
-                currentMismatchIds.forEach(id => {
-                    list.innerHTML += `<li style="color:var(--bright-red-orange); font-weight:bold;">${id}</li>`;
-                });
-            }
-            const mismatchModal = document.getElementById('mismatch-modal');
-            if(mismatchModal) mismatchModal.classList.remove('hidden');
-        });
-    }
-
-    const btnHighlightChanges = document.getElementById('btn-highlight-changes');
-    if(btnHighlightChanges) {
-        btnHighlightChanges.addEventListener('click', () => {
-            if(liveData.length === 0) return alert("Load live data first to compare!");
-            const tbody = document.getElementById('admin-tbody');
-            if(!tbody) return;
-            
-            Array.from(tbody.children).forEach(tr => {
-                const id = tr.dataset.id;
-                if(currentMismatchIds.includes(id)) {
-                    tr.classList.add('row-mismatch');
-                } else {
-                    tr.classList.remove('row-mismatch');
-                }
-            });
-        });
-    }
-
-    document.querySelectorAll('.close-modal-btn').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-            const modal = e.target.closest('.modal');
-            if(modal) modal.classList.add('hidden');
+    document.getElementById('btn-highlight-changes')?.addEventListener('click', () => {
+        if(liveData.length===0) return alert("Load live data!");
+        Array.from(document.getElementById('admin-tbody').children).forEach(tr => {
+            if(currentMismatchIds.includes(tr.dataset.id)) tr.classList.add('row-mismatch');
+            else tr.classList.remove('row-mismatch');
         });
     });
+
+    document.querySelectorAll('.close-modal-btn').forEach(btn => btn.addEventListener('click', (e) => e.target.closest('.modal')?.classList.add('hidden')));
 });
