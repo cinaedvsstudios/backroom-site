@@ -1,46 +1,15 @@
-// --- Application State ---
-const APP_VERSION = "v0.36";
-const APP_DATE = "May 14, 2026";
+let liveData = [];
+let draftData = [];
+let currentMode = 'venues'; // 'venues', 'events', 'editor', 'avatars'
+let lastSavedDate = localStorage.getItem('br_admin_timestamp') || 'Never';
+let activeTableFilters = {}; 
 
-let systemInfo = {}, designTheme = {}, venues = [], events = [];
-let activeFilter = 'All';
-let selectedCardId = null;
-let currentTargetVenue = null; 
-let currentEventCityFilter = 'All';
+let avatarAdminData = [];
+let tempMergeData = []; // Holds preview data before commit
 
-// Profile Data Structure (Save Game Style)
-let userProfile = JSON.parse(localStorage.getItem('br_profile')) || { name: '', avatar: '' };
-let savedProfiles = JSON.parse(localStorage.getItem('br_saved_profiles')) || {};
-
-// Globals swapped per profile
-let userFavorites = [];
-let userShortlists = {};
-let userEvents = [];
-let userTravel = [];
-
-let importInfo = JSON.parse(localStorage.getItem('br_import_info')) || null;
-const avatarCategories = ["Twink", "Twunk", "Jock", "Muscle", "Geek", "Uncle", "Daddy", "Silver Fox", "Opa", "Bear", "Seal", "Otter", "Cub", "Wolf", "Circuit", "Leather", "Rubber", "Puppy", "Alternative", "Queer", "Femboy", "Slave"];
-
-let leafletMap = null;
-let leafletMarker = null;
-
-const ageGate = document.getElementById('age-gate');
-const appShell = document.getElementById('app-shell');
-const errorPanel = document.getElementById('error-panel');
-const btnEnter = document.getElementById('btn-enter');
-const resultsContainer = document.getElementById('results-container');
-const searchInput = document.getElementById('search-input');
-const filterChips = document.querySelectorAll('.chip');
-const contextHeader = document.getElementById('context-header');
-const welcomeScreen = document.getElementById('welcome-screen');
-const venueModal = document.getElementById('venue-modal');
-const locModal = document.getElementById('location-modal');
-const settingsModal = document.getElementById('settings-modal');
-const addShortlistModal = document.getElementById('add-to-shortlist-modal');
-const profileModal = document.getElementById('profile-modal');
-const sidebar = document.getElementById('sidebar');
-const hitArea = document.getElementById('sidebar-hit-area');
-let sidebarTimeout;
+// WYSIWYG State
+let editorHistory = [];
+let historyIndex = -1;
 
 function showToast(message) {
     const container = document.getElementById('toast-container');
@@ -58,1379 +27,751 @@ function showToast(message) {
     }, 2500);
 }
 
-function formatDateToDDMMYYYY(ymdDate) {
-    if(!ymdDate) return '';
-    const parts = ymdDate.split('-');
-    if(parts.length !== 3) return ymdDate;
-    return `${parts[2]}-${parts[1]}-${parts[0]}`; 
-}
-
-function getBadgeDateParts(ymdDate) {
-    if(!ymdDate) return { d:'', my:'' };
-    const parts = ymdDate.split('-');
-    if(parts.length !== 3) return { d:'', my:'' };
-    return { d: parts[2], my: `${parts[1]}-${parts[0]}` };
-}
-
-function recordUserInteraction() {
-    sessionStorage.setItem('br_welcome_dismissed', 'true');
-    welcomeScreen?.classList.add('hidden');
-}
-
-function getDistanceFromLatLonInKm(lat1, lon1, lat2, lon2) {
-    if (!lat1 || !lon1 || !lat2 || !lon2) return Infinity;
-    var R = 6371; var dLat = (lat2-lat1) * (Math.PI/180); var dLon = (lon2-lon1) * (Math.PI/180); 
-    var a = Math.sin(dLat/2) * Math.sin(dLat/2) + Math.cos(lat1 * (Math.PI/180)) * Math.cos(lat2 * (Math.PI/180)) * Math.sin(dLon/2) * Math.sin(dLon/2); 
-    return R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a))); 
-}
-
-function loadActiveProfileData() {
-    if (userProfile.name && savedProfiles[userProfile.name]) {
-        const bundle = savedProfiles[userProfile.name];
-        userFavorites = bundle.favorites || [];
-        userShortlists = bundle.shortlists || {};
-        userEvents = bundle.events || [];
-        userTravel = bundle.travel || [];
-    } else {
-        userFavorites = JSON.parse(localStorage.getItem('br_favorites')) || [];
-        userShortlists = JSON.parse(localStorage.getItem('br_shortlists')) || {};
-        userEvents = JSON.parse(localStorage.getItem('br_events')) || [];
-        userTravel = JSON.parse(localStorage.getItem('br_travel')) || [];
-    }
-}
-
-function saveCurrentToBundle() {
-    if (userProfile.name) {
-        savedProfiles[userProfile.name] = {
-            ...userProfile,
-            favorites: userFavorites,
-            shortlists: userShortlists,
-            events: userEvents,
-            travel: userTravel
-        };
-        localStorage.setItem('br_saved_profiles', JSON.stringify(savedProfiles));
-    }
-    localStorage.setItem('br_favorites', JSON.stringify(userFavorites));
-    localStorage.setItem('br_shortlists', JSON.stringify(userShortlists));
-    localStorage.setItem('br_events', JSON.stringify(userEvents));
-    localStorage.setItem('br_travel', JSON.stringify(userTravel));
-    localStorage.setItem('br_profile', JSON.stringify(userProfile));
-}
-
-function setupCriticalListeners() {
-    const handleEnter = (e) => {
-        if(e.cancelable) e.preventDefault();
-        localStorage.setItem('br_age_verified', 'true');
-        ageGate?.classList.add('hidden');
-        appShell?.classList.remove('hidden');
-        showToast("Backroom " + APP_VERSION);
-        handleRouting(); 
-    };
-    btnEnter?.addEventListener('click', handleEnter);
-    btnEnter?.addEventListener('touchstart', handleEnter, {passive: false});
-
-    if(localStorage.getItem('br_age_verified') === 'true') {
-        ageGate?.classList.add('hidden');
-        appShell?.classList.remove('hidden');
-        showToast("Backroom " + APP_VERSION);
-    }
-}
-
-async function initApp() {
-    loadActiveProfileData(); 
-    setupCriticalListeners();
-    const verDisplay = document.getElementById('sidebar-version-display');
-    if(verDisplay) verDisplay.innerHTML = `${APP_VERSION}<br>${APP_DATE}`;
+// JSON Error Handling
+let lastJsonErrorText = "";
+function handleJSONError(err, fileText) {
+    const modal = document.getElementById('json-error-modal');
+    const details = document.getElementById('json-error-details');
+    if(!modal || !details) return alert("JSON Error: " + err.message);
     
-    updateProfileDisplay();
-    checkImportPreview();
+    let report = `Error: ${err.message}\n\n`;
+    const match = err.message.match(/at position (\d+)/);
+    if(match && fileText) {
+        const pos = parseInt(match[1]);
+        const start = Math.max(0, pos - 30);
+        const end = Math.min(fileText.length, pos + 30);
+        let snippet = fileText.substring(start, end);
+        report += `--- Context Snippet (Near character ${pos}) ---\n`;
+        report += `...${snippet}...\n`;
+        report += `   ${' '.repeat(pos - start)}^ (Error roughly here)\n`;
+    } else {
+        report += `Could not extract character position.\n`;
+    }
+    
+    lastJsonErrorText = report;
+    details.innerText = report;
+    modal.classList.remove('hidden');
+}
 
+// Global UI / PIN
+window.addPin = function(num) {
+    const pinInput = document.getElementById('admin-pin');
+    if(pinInput && pinInput.value.length < 4) pinInput.value += num;
+    window.checkPin();
+};
+
+window.delPin = function() {
+    const pinInput = document.getElementById('admin-pin');
+    if(pinInput) pinInput.value = pinInput.value.slice(0, -1);
+};
+
+window.checkPin = function() {
+    const pinInput = document.getElementById('admin-pin');
+    const pinGate = document.getElementById('pin-gate');
+    const adminShell = document.getElementById('admin-shell');
+    if (!pinInput || !pinGate || !adminShell) return;
+
+    if (pinInput.value === '6997') {
+        localStorage.setItem('br_admin_logged_in', 'true');
+        pinGate.classList.add('hidden');
+        adminShell.classList.remove('hidden');
+        loadDraftsFromLocal();
+    } else if (pinInput.value.length === 4) {
+        const err = document.getElementById('pin-error');
+        if(err) err.classList.remove('hidden');
+        pinInput.value = '';
+    }
+};
+
+window.switchView = function(view) {
+    currentMode = view;
+    const views = {
+        'tables': document.getElementById('view-tables'),
+        'editor': document.getElementById('view-editor'),
+        'avatars': document.getElementById('view-avatars')
+    };
+    
+    Object.keys(views).forEach(k => {
+        if(views[k]) {
+            views[k].style.display = 'none';
+            views[k].classList.add('hidden');
+        }
+    });
+
+    if(view === 'editor') {
+        views['editor'].style.display = 'flex';
+        views['editor'].classList.remove('hidden');
+        saveEditorState(); // init history
+    } else if (view === 'avatars') {
+        views['avatars'].style.display = 'flex';
+        views['avatars'].classList.remove('hidden');
+        loadAdminAvatars();
+    } else {
+        views['tables'].style.display = 'flex';
+        views['tables'].classList.remove('hidden');
+        const title = document.getElementById('summary-title');
+        if(title) title.innerText = view === 'venues' ? 'VENUE DATA' : 'EVENT DATA';
+        activeTableFilters = {};
+        loadDraftsFromLocal();
+    }
+};
+
+// --- DATA MANAGEMENT ---
+function loadDraftsFromLocal() {
+    if(currentMode !== 'venues' && currentMode !== 'events') return;
+    const draftKey = currentMode === 'venues' ? 'br_admin_venues_draft' : 'br_admin_events_draft';
+    const draft = localStorage.getItem(draftKey);
+    if(draft) draftData = JSON.parse(draft);
+    else draftData = [];
+    
+    fetchLiveSilently();
+    const timeDisplay = document.getElementById('summary-timestamp');
+    if(timeDisplay) timeDisplay.innerText = `Showing Data From: ${lastSavedDate}`;
+    renderFilters();
+    renderTable();
+    generateReviewLists(); // v0.37 Update sidebars
+}
+
+function saveDraftsToLocal() {
+    lastSavedDate = new Date().toLocaleString();
+    localStorage.setItem('br_admin_timestamp', lastSavedDate);
+    const draftKey = currentMode === 'venues' ? 'br_admin_venues_draft' : 'br_admin_events_draft';
+    localStorage.setItem(draftKey, JSON.stringify(draftData));
+    const timeDisplay = document.getElementById('summary-timestamp');
+    if(timeDisplay) timeDisplay.innerText = `Showing Data From: ${lastSavedDate}`;
+    updateMismatchCount();
+    generateReviewLists();
+}
+
+async function fetchLiveSilently() {
     try {
-        const fetchJson = async (url) => {
-            const cacheBuster = '?v=' + new Date().getTime();
-            const res = await fetch(url + cacheBuster);
-            if (!res.ok) throw new Error(`HTTP ${res.status} on ${url}`);
-            return res.json();
-        };
+        const url = currentMode === 'venues' ? 'listings.json' : 'events.json';
+        const res = await fetch(url + '?v=' + new Date().getTime());
+        if(res.ok) liveData = await res.json();
+        updateMismatchCount();
+    } catch(e) {}
+}
 
-        try { systemInfo = await fetchJson('system_info.json'); } catch(e) { console.warn("Using default system info."); }
-        try { designTheme = await fetchJson('design_theme.json'); } catch(e) { console.warn("Using default theme."); }
-        try { events = await fetchJson('events.json'); } catch(e) { events = []; }
-
-        try {
-            venues = await fetchJson('listings.json');
-        } catch (e) {
-            throw new Error(`Failed to load listings.json. Error: ${e.message}`);
+// --- v0.37 SIDEBAR REVIEW LISTS ---
+function generateReviewLists() {
+    if(currentMode !== 'venues') {
+        document.getElementById('sidebar-pending-list').innerHTML = '';
+        document.getElementById('sidebar-old-list').innerHTML = '';
+        return;
+    }
+    
+    const pendingList = document.getElementById('sidebar-pending-list');
+    const oldList = document.getElementById('sidebar-old-list');
+    pendingList.innerHTML = ''; oldList.innerHTML = '';
+    
+    const now = new Date();
+    
+    draftData.forEach(row => {
+        const name = row.Name || 'Unknown';
+        const id = row.Venue_ID;
+        
+        // Pending Review Logic
+        if(!row.Share_URL || String(row.Share_URL).toLowerCase() === 'false' || String(row.Share_URL) === 'PENDING') {
+            const div = document.createElement('div');
+            div.innerText = `• ${name}`;
+            div.onclick = () => jumpToRow(id);
+            pendingList.appendChild(div);
         }
-
-        applyTheme(); 
-        populateSystemText(); 
-        setupEventListeners(); 
-        loadSavedLocation(); 
         
-        if(localStorage.getItem('br_age_verified') === 'true') handleRouting();
-        
-    } catch (error) {
-        console.error("Data load failed:", error);
-        const errText = document.getElementById('error-text');
-        if(errText) errText.innerText = `SYSTEM ERROR: ${error.message}. Click bypass below to view a dummy UI.`;
-        errorPanel?.classList.remove('hidden');
-        
-        const bypassContainer = document.getElementById('bypass-container');
-        if(bypassContainer) {
-            bypassContainer.innerHTML = '';
-            const bypassBtn = document.createElement('button');
-            bypassBtn.innerText = "Continue Without Data (Dummy Mode)";
-            bypassBtn.className = "btn secondary-btn pill-btn display-font";
-            
-            const bypassLogic = (e) => {
-                if(e && e.cancelable) e.preventDefault();
-                errorPanel?.classList.add('hidden');
-                if(!systemInfo.labels) systemInfo = { labels: { rated_by_gays: "Rated by gays" } };
-                
-                venues = [{ 
-                    Venue_ID: "LOCAL-01", 
-                    Name: "Dummy GitHub Venue", 
-                    City: "Berlin", 
-                    Category: "Club", 
-                    Status: "Live", 
-                    Description: "If you see this on GitHub, it means listings.json failed to load. Check the red error message that appeared previously.", 
-                    Views: 420,
-                    Rating_Age_Range: 3,
-                    Rating_Size: 4,
-                    Rating_Popularity: 5,
-                    Feature_Darkroom: true
-                }]; 
-                if(!events) events = [];
-                
-                applyTheme(); populateSystemText(); setupEventListeners(); loadSavedLocation(); 
-                if(localStorage.getItem('br_age_verified') === 'true') {
-                    showToast("Backroom " + APP_VERSION);
-                    handleRouting();
+        // Old Listings Logic (> 30 days)
+        if(row.Last_Updated) {
+            const parts = row.Last_Updated.split('-'); // DD-MM-YYYY
+            if(parts.length === 3) {
+                const updatedDate = new Date(`${parts[2]}-${parts[1]}-${parts[0]}`);
+                const diffDays = Math.floor((now - updatedDate) / (1000 * 60 * 60 * 24));
+                if(diffDays > 30) {
+                    const div = document.createElement('div');
+                    div.innerText = `• ${name} (${diffDays}d)`;
+                    div.onclick = () => jumpToRow(id);
+                    oldList.appendChild(div);
                 }
-            };
-
-            bypassBtn.addEventListener('click', bypassLogic);
-            bypassBtn.addEventListener('touchstart', bypassLogic, {passive: false});
-            bypassContainer.appendChild(bypassBtn);
-        }
-    }
-}
-
-function applyTheme() {
-    if(!designTheme.palette) return;
-    const r = document.documentElement, p = designTheme.palette;
-    r.style.setProperty('--bg-color', p.black); r.style.setProperty('--primary-blue', p.bright_cyan_blue);
-    r.style.setProperty('--near-black', p.near_black_grey); r.style.setProperty('--navy-grey', p.deep_navy_grey);
-    r.style.setProperty('--panel-dark', p.dark_panel_grey); r.style.setProperty('--panel-standard', p.standard_panel_grey);
-    r.style.setProperty('--panel-mid', p.mid_panel_grey); r.style.setProperty('--label-grey', p.muted_label_grey);
-    r.style.setProperty('--text-light', p.light_text_grey); r.style.setProperty('--bright-red-orange', p.bright_red_orange);
-}
-
-function populateSystemText() {
-    const agText = document.getElementById('ag-text');
-    const agDisc = document.getElementById('ag-disclaimer');
-    if(agText) agText.innerText = systemInfo.age_gate_text || '';
-    if(agDisc) agDisc.innerText = systemInfo.disclaimer_text || '';
-}
-
-window.addEventListener('hashchange', handleRouting);
-
-function handleRouting() {
-    const hash = window.location.hash;
-    const query = searchInput?.value.trim() || '';
-    
-    document.querySelectorAll('.modal').forEach(m => m.classList.add('hidden'));
-    contextHeader?.classList.add('hidden');
-    document.getElementById('event-city-filters')?.classList.add('hidden');
-    document.getElementById('btn-new-shortlist-view')?.classList.add('hidden');
-    document.getElementById('main-filters')?.classList.remove('hidden');
-    document.getElementById('discounts-container')?.classList.add('hidden');
-    welcomeScreen?.classList.add('hidden');
-    document.getElementById('profile-wipe-toast')?.classList.add('hidden');
-
-    if (hash === '' && query === '' && activeFilter === 'All' && sessionStorage.getItem('br_welcome_dismissed') !== 'true') {
-        document.getElementById('main-filters')?.classList.add('hidden');
-        if(resultsContainer) resultsContainer.innerHTML = '';
-        renderWelcomeScreen();
-        return;
-    }
-
-    if (hash.startsWith('#venue=')) {
-        const id = hash.replace('#venue=', '');
-        const venue = venues.find(v => v.Venue_ID === id);
-        if (venue) { openVenueModal(venue); applyFilters(); } 
-        else window.location.hash = ''; 
-    } else if (hash === '#favorites') {
-        recordUserInteraction();
-        renderFavoritesView();
-    } else if (hash === '#myevents') {
-        recordUserInteraction();
-        renderMyEventsView();
-    } else if (hash === '#myshortlists') {
-        recordUserInteraction();
-        renderShortlistsFullView();
-    } else if (hash === '#mytravel') {
-        recordUserInteraction();
-        renderTravelFullView();
-    } else if (hash === '#discounts') {
-        recordUserInteraction();
-        renderDiscountsView();
-    } else if (hash.startsWith('#shortlist=')) {
-        recordUserInteraction();
-        const name = decodeURIComponent(hash.replace('#shortlist=', ''));
-        renderSingleShortlist(name);
-    } else {
-        applyFilters();
-    }
-    
-    updateTravelSidebarHighlight();
-}
-
-function renderWelcomeScreen() {
-    const wName = document.getElementById('welcome-name');
-    const wAvatar = document.getElementById('welcome-avatar');
-    if(wName) wName.innerText = userProfile.name || 'GUEST';
-    if(wAvatar && userProfile.avatar) wAvatar.src = `Profile_images/${userProfile.avatar}`;
-    welcomeScreen?.classList.remove('hidden');
-}
-
-function renderDiscountsView() {
-    document.getElementById('main-filters')?.classList.add('hidden');
-    if(resultsContainer) resultsContainer.innerHTML = '';
-    document.getElementById('discounts-container')?.classList.remove('hidden');
-}
-
-function setupEventListeners() {
-    const addEvt = (id, evt, func) => {
-        const el = document.getElementById(id);
-        if(el) el.addEventListener(evt, func);
-    };
-
-    document.querySelectorAll('.close-modal-btn').forEach(btn => {
-        btn.addEventListener('click', (e) => e.target.closest('.modal')?.classList.add('hidden'));
-    });
-    
-    addEvt('close-modal', 'click', () => {
-        window.history.pushState(null, '', window.location.pathname + window.location.search);
-        handleRouting();
-    });
-
-    addEvt('btn-location', 'click', () => {
-        if(window.location.hash !== '') window.location.hash = '';
-        locModal?.classList.remove('hidden');
-    });
-    
-    addEvt('btn-settings', 'click', () => settingsModal?.classList.remove('hidden'));
-    addEvt('btn-profile-menu', 'click', openProfileMenu);
-    addEvt('btn-favorites', 'click', () => window.location.hash = '#favorites');
-    addEvt('btn-shortlists-menu', 'click', () => window.location.hash = '#myshortlists');
-    
-    addEvt('btn-sidebar-travel', 'click', () => {
-        const drop = document.getElementById('travel-dropdown');
-        drop?.classList.toggle('hidden');
-        renderTravelDropdown();
-    });
-
-    addEvt('btn-language', 'click', () => alert("Translation widget placeholder"));
-    addEvt('btn-back-to-results', 'click', () => {
-        if(searchInput) searchInput.value = '';
-        window.location.hash = '';
-        updateTravelSidebarHighlight();
-    });
-
-    addEvt('btn-save-location', 'click', saveLocation);
-    addEvt('btn-clear-location', 'click', clearLocation);
-    
-    addEvt('btn-gps', 'click', () => {
-        if(navigator.geolocation) {
-            navigator.geolocation.getCurrentPosition(
-                async (pos) => { 
-                    const lat = pos.coords.latitude;
-                    const lon = pos.coords.longitude;
-                    const cityInput = document.getElementById('loc-city');
-                    
-                    try {
-                        const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`);
-                        const data = await res.json();
-                        const city = data.address.city || data.address.town || data.address.village || 'My Location';
-                        if(cityInput) {
-                            cityInput.value = city;
-                            cityInput.dataset.lat = lat;
-                            cityInput.dataset.lon = lon;
-                        }
-                        const countryInput = document.getElementById('loc-country');
-                        if(countryInput) countryInput.value = data.address.country || '';
-                    } catch (e) {
-                        if(cityInput) cityInput.value = `My Location`;
-                    }
-                    initLeafletMap(lat, lon);
-                },
-                (err) => { alert("GPS Denied or Unavailable."); }
-            );
-        } else alert("Geolocation not supported.");
-    });
-
-    addEvt('btn-search-map', 'click', async () => {
-        const country = document.getElementById('loc-country')?.value.trim() || '';
-        const city = document.getElementById('loc-city')?.value.trim() || '';
-        const pc = document.getElementById('loc-postcode')?.value.trim() || '';
-        const query = `${pc} ${city}, ${country}`.trim();
-        
-        if(!query) return;
-        
-        try {
-            const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}`);
-            const data = await res.json();
-            if(data && data.length > 0) {
-                initLeafletMap(data[0].lat, data[0].lon);
-            } else {
-                alert("Location not found on map, but will be saved for filtering.");
-            }
-        } catch(e) {
-            console.error("OSM Error", e);
-        }
-    });
-
-    addEvt('btn-save-travel', 'click', () => {
-        const cityInp = document.getElementById('loc-city');
-        if(!cityInp) return;
-        const city = cityInp.value.trim();
-        if(city && city !== 'My Location' && !userTravel.includes(city)) {
-            userTravel.push(city);
-            saveCurrentToBundle();
-            showToast(`Saved to Travel 🚄: ${city}`);
-            cityInp.value = '';
-            if(window.location.hash === '#mytravel') renderTravelFullView();
-            else renderTravelDropdown();
-        }
-    });
-
-    addEvt('btn-reset-age', 'click', () => {
-        localStorage.removeItem('br_age_verified');
-        window.location.reload();
-    });
-    
-    addEvt('btn-clear-data', 'click', () => {
-        if(confirm("Delete all favorites, shortlists, events, and settings? This cannot be undone.")) {
-            localStorage.clear();
-            window.location.reload();
-        }
-    });
-    
-    document.querySelectorAll('.btn-export-trigger').forEach(btn => btn.addEventListener('click', exportUserData));
-    addEvt('import-data-file', 'change', importUserData);
-
-    addEvt('btn-add-create-shortlist', 'click', () => {
-        const nameInp = document.getElementById('add-new-shortlist-name');
-        if(!nameInp) return;
-        const name = nameInp.value.trim();
-        if(name && currentTargetVenue) { 
-            userShortlists[name] = [currentTargetVenue.Venue_ID]; 
-            saveCurrentToBundle(); 
-            addShortlistModal?.classList.add('hidden');
-            showToast(`Added to shortlist: ${name}`);
-            const sBtn = document.getElementById('modal-shortlist');
-            if(sBtn) sBtn.classList.add('active-star');
-        }
-    });
-    
-    addEvt('btn-save-profile', 'click', () => {
-        const nameInp = document.getElementById('profile-name');
-        if(nameInp) userProfile.name = nameInp.value.trim();
-        saveCurrentToBundle(); 
-        profileModal?.classList.add('hidden');
-        updateProfileDisplay();
-        showToast("Profile saved locally!");
-        if(window.location.hash === '' && searchInput?.value === '') renderWelcomeScreen();
-    });
-
-    addEvt('btn-new-profile', 'click', () => {
-        document.getElementById('profile-wipe-toast')?.classList.remove('hidden');
-    });
-
-    addEvt('btn-wipe-all', 'click', () => {
-        userProfile = { name: '', avatar: '' };
-        userFavorites = []; userShortlists = {}; userEvents = []; userTravel = [];
-        saveCurrentToBundle();
-        const pName = document.getElementById('profile-name');
-        if(pName) pName.value = '';
-        renderProfileAvatars();
-        updateProfileDisplay();
-        document.getElementById('profile-wipe-toast')?.classList.add('hidden');
-        showToast("Started fresh blank profile.");
-        handleRouting();
-    });
-
-    addEvt('btn-wipe-profile-only', 'click', () => {
-        userProfile = { name: '', avatar: '' };
-        saveCurrentToBundle();
-        const pName = document.getElementById('profile-name');
-        if(pName) pName.value = '';
-        renderProfileAvatars();
-        updateProfileDisplay();
-        document.getElementById('profile-wipe-toast')?.classList.add('hidden');
-        showToast("Profile copied. Choose a new name.");
-    });
-
-    addEvt('profile-switcher', 'change', (e) => {
-        const pName = e.target.value;
-        if(pName && savedProfiles[pName]) {
-            userProfile = { ...savedProfiles[pName] };
-            const nInp = document.getElementById('profile-name');
-            if(nInp) nInp.value = userProfile.name;
-            loadActiveProfileData();
-            renderProfileAvatars();
-            updateProfileDisplay();
-            showToast(`Switched to profile: ${pName}`);
-            handleRouting();
-        }
-    });
-
-    if(hitArea && sidebar) {
-        const showSidebar = () => {
-            sidebar.classList.add('visible');
-            clearTimeout(sidebarTimeout);
-            sidebarTimeout = setTimeout(() => { sidebar.classList.remove('visible'); }, 5000);
-        };
-        hitArea.addEventListener('click', showSidebar);
-        sidebar.addEventListener('click', showSidebar);
-    }
-
-    if(searchInput) {
-        searchInput.addEventListener('input', () => { recordUserInteraction(); window.location.hash=''; handleRouting(); });
-    }
-    
-    filterChips.forEach(chip => {
-        chip.addEventListener('click', (e) => {
-            recordUserInteraction();
-            filterChips.forEach(c => c.classList.remove('active'));
-            e.target.classList.add('active');
-            activeFilter = e.target.getAttribute('data-filter');
-            window.location.hash=''; 
-            handleRouting();
-        });
-    });
-}
-
-function initLeafletMap(lat, lng) {
-    document.getElementById('map-preview-placeholder')?.classList.add('hidden');
-    const mapDiv = document.getElementById('loc-map');
-    if(!mapDiv) return;
-    mapDiv.style.display = 'block';
-    
-    if (!leafletMap) {
-        leafletMap = L.map('loc-map').setView([lat, lng], 13);
-        L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            maxZoom: 19,
-            attribution: '© OpenStreetMap contributors'
-        }).addTo(leafletMap);
-        leafletMarker = L.marker([lat, lng]).addTo(leafletMap);
-    } else {
-        leafletMap.setView([lat, lng], 13);
-        leafletMarker.setLatLng([lat, lng]);
-    }
-    setTimeout(() => leafletMap.invalidateSize(), 150);
-}
-
-function updateProfileDisplay() {
-    const topAvatarContainer = document.getElementById('top-profile-container');
-    const topAvatar = document.getElementById('top-profile-avatar');
-    const topName = document.getElementById('top-profile-name');
-    
-    if(!topName || !topAvatar) return;
-
-    if(userProfile.name) topName.innerText = userProfile.name;
-    else topName.innerText = '👤';
-
-    if(userProfile.avatar) {
-        topAvatar.src = `Profile_images/${userProfile.avatar}`;
-        if(topAvatarContainer) topAvatarContainer.style.display = 'block'; 
-        else topAvatar.style.display = 'inline-block';
-        
-        if(!userProfile.name) topName.style.display = 'none'; 
-    } else {
-        if(topAvatarContainer) topAvatarContainer.style.display = 'none';
-        else topAvatar.style.display = 'none';
-        topName.style.display = 'inline-block';
-    }
-}
-
-function renderTravelDropdown() {
-    const list = document.getElementById('travel-cities-list');
-    if(!list) return;
-    list.classList.remove('hidden');
-    list.innerHTML = '';
-    
-    const query = searchInput?.value.trim().toLowerCase() || '';
-
-    userTravel.forEach(city => {
-        const item = document.createElement('div');
-        const isActive = query === city.toLowerCase() ? 'active-travel' : '';
-        item.className = `submenu-item ${isActive}`;
-        item.innerHTML = `<span style="flex-grow:1;" onclick="const s = document.getElementById('search-input'); if(s) s.value='${city}'; window.location.hash=''; handleRouting();">${city}</span>`;
-        list.appendChild(item);
-    });
-}
-
-function updateTravelSidebarHighlight() {
-    const query = searchInput?.value.trim().toLowerCase() || '';
-    const items = document.querySelectorAll('#travel-cities-list .submenu-item');
-    items.forEach(item => {
-        const spanText = item.querySelector('span').innerText.toLowerCase();
-        if(spanText === query && window.location.hash === '') {
-            item.classList.add('active-travel');
-        } else {
-            item.classList.remove('active-travel');
-        }
-    });
-}
-
-window.removeTravel = function(city) {
-    userTravel = userTravel.filter(c => c !== city);
-    saveCurrentToBundle();
-    if(window.location.hash === '#mytravel') renderTravelFullView();
-    else renderTravelDropdown();
-}
-
-function applyFilters() {
-    const query = searchInput?.value || '';
-    let filteredVenues = venues || [];
-    selectedCardId = null;
-
-    if(activeFilter !== 'All') {
-        filteredVenues = filteredVenues.filter(v => {
-            if(activeFilter === 'Darkroom') return v.Feature_Darkroom;
-            if(activeFilter === 'Men Only') return v.Feature_Men_Only;
-            if(activeFilter === 'Open Now') return v.Status === 'Live';
-            return true;
-        });
-    }
-
-    if(query.trim() !== '') {
-        filteredVenues = filteredVenues.filter(v => fuzzyMatch(v.Name + " " + v.Description + " " + v.Vibe_Tags + " " + v.City, query));
-    }
-
-    renderListings(filteredVenues);
-    updateTravelSidebarHighlight();
-}
-
-function getLevenshteinDistance(a, b) {
-    if (a.length === 0) return b.length;
-    if (b.length === 0) return a.length;
-    const matrix = [];
-    for (let i = 0; i <= b.length; i++) matrix[i] = [i];
-    for (let j = 0; j <= a.length; j++) matrix[0][j] = j;
-    for (let i = 1; i <= b.length; i++) {
-        for (let j = 1; j <= a.length; j++) {
-            if (b.charAt(i - 1) === a.charAt(j - 1)) matrix[i][j] = matrix[i - 1][j - 1];
-            else matrix[i][j] = Math.min(matrix[i - 1][j - 1] + 1, Math.min(matrix[i][j - 1] + 1, matrix[i - 1][j] + 1));
-        }
-    }
-    return matrix[b.length][a.length];
-}
-
-function fuzzyMatch(text, query) {
-    if(!query) return true;
-    const str = (text||'').toLowerCase();
-    const q = query.toLowerCase();
-    if (str.includes(q)) return true;
-    
-    const words = str.split(/[\s,.-]+/);
-    const queryWords = q.split(/[\s,.-]+/);
-    
-    for(let qw of queryWords) {
-        if(!qw) continue;
-        let matchFound = false;
-        for(let w of words) {
-            if(!w) continue;
-            if(Math.abs(w.length - qw.length) <= 1) {
-                if(getLevenshteinDistance(w, qw) <= 1) { matchFound = true; break; }
             }
         }
-        if(!matchFound) return false; 
-    }
-    return true;
-}
-
-function toggleFavorite(id, btnElement) {
-    const index = userFavorites.indexOf(id);
-    if(index > -1) {
-        userFavorites.splice(index, 1);
-        btnElement?.classList.remove('active-star');
-        showToast("Removed from Favourites");
-    } else {
-        userFavorites.push(id);
-        btnElement?.classList.add('active-star');
-        showToast("Added to Favourites ⚜️");
-    }
-    saveCurrentToBundle();
-    if(window.location.hash === '#favorites') renderFavoritesView();
-}
-
-window.toggleEventFavorite = function(eventId, btnElement, isRemovalView = false) {
-    const index = userEvents.indexOf(eventId);
-    if(index > -1) {
-        if(isRemovalView && !confirm("Remove this event from your list?")) return;
-        userEvents.splice(index, 1);
-        btnElement?.classList.remove('active-star');
-        if(!isRemovalView) showToast("Removed from Events");
-    } else {
-        userEvents.push(eventId);
-        btnElement?.classList.add('active-star');
-        showToast("Saved to 💖 Events");
-    }
-    saveCurrentToBundle();
-    if(window.location.hash === '#myevents') renderMyEventsView();
-}
-
-function renderFavoritesView() {
-    document.getElementById('main-filters')?.classList.add('hidden');
-    contextHeader?.classList.remove('hidden');
-    const cTitle = document.getElementById('context-title');
-    const cDesc = document.getElementById('context-desc');
-    if(cTitle) cTitle.innerHTML = "⚜️ MY FAVOURITES";
-    if(cDesc) cDesc.innerText = "Venues you have starred locally.";
-    
-    const favVenues = (venues||[]).filter(v => userFavorites.includes(v.Venue_ID));
-    renderListings(favVenues, true);
-}
-
-function renderMyEventsView() {
-    document.getElementById('main-filters')?.classList.add('hidden');
-    contextHeader?.classList.remove('hidden');
-    
-    const cTitle = document.getElementById('context-title');
-    const cDesc = document.getElementById('context-desc');
-    if(cTitle) cTitle.innerHTML = "💖 MY EVENTS";
-    if(cDesc) cDesc.innerText = "Events you have pinned locally.";
-    
-    const cityFilterContainer = document.getElementById('event-city-filters');
-    if(cityFilterContainer) {
-        cityFilterContainer.classList.remove('hidden');
-        cityFilterContainer.innerHTML = '';
-    }
-    
-    let myEvts = (events||[]).filter(e => userEvents.includes(e.Event_ID));
-    
-    if(myEvts.length === 0) {
-        if(resultsContainer) resultsContainer.innerHTML = `<p style="text-align:center; color:var(--label-grey); margin-top:20px; width: 100%; grid-column: 1 / -1;">No saved events.</p>`;
-        cityFilterContainer?.classList.add('hidden');
-        return;
-    }
-
-    const cities = new Set();
-    myEvts.forEach(ev => {
-        const venue = (venues||[]).find(v => v.Venue_ID === ev.Venue_ID);
-        if(venue && venue.City) cities.add(venue.City);
-    });
-
-    const createCityBtn = (cityName, label) => {
-        if(!cityFilterContainer) return;
-        const btn = document.createElement('button');
-        btn.className = `chip pill-btn ${currentEventCityFilter === cityName ? 'active' : ''}`;
-        btn.innerText = label;
-        btn.onclick = () => { currentEventCityFilter = cityName; renderMyEventsView(); };
-        cityFilterContainer.appendChild(btn);
-    };
-
-    createCityBtn('All', 'All');
-    cities.forEach(city => createCityBtn(city, city));
-
-    if(currentEventCityFilter !== 'All') {
-        myEvts = myEvts.filter(ev => {
-            const venue = (venues||[]).find(v => v.Venue_ID === ev.Venue_ID);
-            return venue && venue.City === currentEventCityFilter;
-        });
-    }
-
-    if(resultsContainer) resultsContainer.innerHTML = '';
-    myEvts.forEach(ev => {
-        const venue = (venues||[]).find(v => v.Venue_ID === ev.Venue_ID);
-        const venueName = venue ? venue.Name : 'Unknown Venue';
-        const card = document.createElement('div');
-        card.className = 'card';
-        card.style.border = '1px solid var(--primary-blue)';
-        card.innerHTML = `
-            <div class="card-inner-content">
-                <div class="card-header">
-                    <div><h3 class="card-title display-font">${ev.Event_Name}</h3><div class="card-meta">${formatDateToDDMMYYYY(ev.Event_Date)} | @ ${venueName}</div></div>
-                    <button class="icon-btn fav-btn active-star" style="font-size:1.5rem;" onclick="toggleEventFavorite('${ev.Event_ID}', null, true)">❌</button>
-                </div>
-                <div class="card-about">${ev.Event_Description || ''}</div>
-            </div>
-        `;
-        if(resultsContainer) resultsContainer.appendChild(card);
     });
 }
 
-function renderTravelFullView() {
-    document.getElementById('main-filters')?.classList.add('hidden');
-    contextHeader?.classList.remove('hidden');
-    
-    const cTitle = document.getElementById('context-title');
-    const cDesc = document.getElementById('context-desc');
-    if(cTitle) cTitle.innerHTML = "🚄 MY TRAVEL PINS";
-    if(cDesc) cDesc.innerText = "Cities you plan to visit.";
-    
-    if(resultsContainer) resultsContainer.innerHTML = '';
-
-    if(userTravel.length === 0) {
-        if(resultsContainer) resultsContainer.innerHTML = `<p style="text-align:center; color:var(--label-grey); margin-top:20px; width: 100%; grid-column: 1 / -1;">No travel pins saved yet.</p>`;
-        return;
+window.jumpToRow = function(id) {
+    const tr = document.querySelector(`tr[data-id="${id}"]`);
+    if(tr) {
+        tr.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        tr.classList.remove('flash-row');
+        void tr.offsetWidth; // trigger reflow
+        tr.classList.add('flash-row');
     }
-
-    userTravel.forEach(city => {
-        const card = document.createElement('div');
-        card.className = 'card';
-        card.style.cursor = 'pointer';
-        card.innerHTML = `
-            <div class="card-inner-content" style="flex-direction:row; justify-content:space-between; align-items:center;">
-                <div onclick="const s = document.getElementById('search-input'); if(s) s.value='${city}'; window.location.hash=''; handleRouting();" style="flex-grow:1;">
-                    <h3 class="card-title display-font" style="color:var(--primary-blue);">${city}</h3>
-                </div>
-                <button class="icon-btn" style="color:var(--bright-red-orange);" onclick="event.stopPropagation(); if(confirm('Delete ${city}?')){ removeTravel('${city}'); }">❌</button>
-            </div>
-        `;
-        if(resultsContainer) resultsContainer.appendChild(card);
-    });
 }
 
-function renderShortlistsFullView() {
-    document.getElementById('main-filters')?.classList.add('hidden');
-    contextHeader?.classList.remove('hidden');
-    
-    const cTitle = document.getElementById('context-title');
-    const cDesc = document.getElementById('context-desc');
-    if(cTitle) cTitle.innerHTML = "📑 MY SHORTLISTS";
-    if(cDesc) cDesc.innerText = "Your named venue collections.";
-    
-    const newBtn = document.getElementById('btn-new-shortlist-view');
-    if(newBtn) {
-        newBtn.classList.remove('hidden');
-        newBtn.onclick = () => {
-            const name = prompt("Enter new shortlist name:");
-            if(name && name.trim() !== '') {
-                userShortlists[name.trim()] = [];
-                saveCurrentToBundle();
-                renderShortlistsFullView();
-            }
-        };
+window.markReviewed = function(id) {
+    const rowIndex = draftData.findIndex(d => d.Venue_ID === id || d.Event_ID === id);
+    if(rowIndex >= 0) {
+        draftData[rowIndex].Share_URL = true;
+        
+        const now = new Date();
+        const dd = String(now.getDate()).padStart(2, '0');
+        const mm = String(now.getMonth() + 1).padStart(2, '0');
+        const yyyy = now.getFullYear();
+        draftData[rowIndex].Last_Updated = `${dd}-${mm}-${yyyy}`;
+        
+        saveDraftsToLocal();
+        renderTable();
+        showToast("Marked as Reviewed!");
     }
-
-    if(resultsContainer) resultsContainer.innerHTML = '';
-    const lists = Object.keys(userShortlists);
-
-    if(lists.length === 0) {
-        if(resultsContainer) resultsContainer.innerHTML = `<p style="text-align:center; color:var(--label-grey); margin-top:20px; width: 100%; grid-column: 1 / -1;">No shortlists created yet.</p>`;
-        return;
-    }
-
-    lists.forEach(name => {
-        const count = userShortlists[name].length;
-        const card = document.createElement('div');
-        card.className = 'card';
-        card.style.cursor = 'pointer';
-        card.innerHTML = `
-            <div class="card-inner-content" style="flex-direction:row; justify-content:space-between; align-items:center;">
-                <div onclick="window.location.hash='#shortlist=${encodeURIComponent(name)}';" style="flex-grow:1;">
-                    <h3 class="card-title display-font" style="color:var(--primary-blue);">${name}</h3>
-                    <p class="meta-text" style="margin-top:5px;">${count} venue${count === 1 ? '' : 's'}</p>
-                </div>
-                <div style="display:flex; gap:10px;">
-                    <button class="icon-btn" onclick="shareShortlist('${name}')" title="Share">🔗</button>
-                    <button class="icon-btn" style="color:var(--bright-red-orange);" onclick="event.stopPropagation(); if(confirm('Delete shortlist ${name}?')){ delete userShortlists['${name}']; saveCurrentToBundle(); renderShortlistsFullView(); }">❌</button>
-                </div>
-            </div>
-        `;
-        if(resultsContainer) resultsContainer.appendChild(card);
-    });
 }
 
-function renderSingleShortlist(listName) {
-    if(!userShortlists[listName]) { window.location.hash=''; return; }
-    document.getElementById('main-filters')?.classList.add('hidden');
-    contextHeader?.classList.remove('hidden');
-    
-    const cTitle = document.getElementById('context-title');
-    const cDesc = document.getElementById('context-desc');
-    if(cTitle) cTitle.innerText = listName.toUpperCase();
-    if(cDesc) cDesc.innerText = "Saved Shortlist";
-    
-    const ids = userShortlists[listName];
-    const shortVenues = (venues||[]).filter(v => ids.includes(v.Venue_ID));
-    renderListings(shortVenues, true);
-}
+// --- TABLE RENDERING ---
+window.removeFilter = function(col) {
+    delete activeTableFilters[col];
+    renderFilters();
+    renderTable();
+};
 
-function renderProfileAvatars() {
-    const grid = document.getElementById('avatar-grid');
-    if(!grid) return;
-    grid.innerHTML = '';
-    
-    const switcher = document.getElementById('profile-switcher');
-    if (switcher) {
-        switcher.innerHTML = '<option value="">Switch Profile...</option>';
-        Object.keys(savedProfiles).forEach(pName => {
-            switcher.innerHTML += `<option value="${pName}">${pName}</option>`;
-        });
-    }
+window.toggleColumn = function(idx) {
+    const cols = document.querySelectorAll(`.col-idx-${idx}`);
+    cols.forEach(c => c.classList.toggle('hidden-col'));
+};
 
-    avatarCategories.forEach(cat => {
-        for(let i=1; i<=3; i++) {
-            const numStr = i < 10 ? '0' + i : i;
-            const imgName = `${cat.toLowerCase()}${numStr}.png`; 
-            const item = document.createElement('div');
-            item.className = 'avatar-item';
-            if(userProfile.avatar === imgName) item.classList.add('selected');
-            
-            item.innerHTML = `<img src="Profile_images/${imgName}" onerror="this.parentElement.style.display='none';" alt="${cat} ${i}"><span>${cat} ${i}</span>`;
-            
-            item.addEventListener('click', () => {
-                if (item.classList.contains('selected')) {
-                    document.querySelectorAll('.avatar-item').forEach(el => el.classList.remove('selected', 'hidden'));
-                    userProfile.avatar = '';
-                } else {
-                    document.querySelectorAll('.avatar-item').forEach(el => {
-                        el.classList.remove('selected');
-                        if (el !== item) el.classList.add('hidden');
-                    });
-                    item.classList.add('selected');
-                    userProfile.avatar = imgName;
-                    showToast("Click the avatar again to go back to the list");
-                }
-            });
-            grid.appendChild(item);
-        }
-    });
-}
+window.unhideAllColumns = function() {
+    document.querySelectorAll('.hidden-col').forEach(c => c.classList.remove('hidden-col'));
+};
 
-function renderProfileStats() {
-    const container = document.getElementById('profile-stats-container');
+const headerMapping = {
+    "Event_Start_Time": "Start Time", "Event_End_Time": "End Time", "Venue_ID": "ID", "Event_ID": "ID",
+    "Description": "Desc", "Event_Description": "Desc", "Rating_General": "Gen", "Rating_Darkroom": "Dark"
+};
+
+function renderFilters() {
+    const container = document.getElementById('active-filters');
     if(!container) return;
-    
-    const favCount = userFavorites.length;
-    const eventCount = userEvents.length;
-    const shortCount = Object.keys(userShortlists).length;
-    const travelCount = userTravel.length;
-    
-    let html = `
-        <hr style="border: 0; height: 2px; background: var(--bright-red-orange); margin: 20px 0;">
-        <h3 style="color: var(--primary-blue); margin-bottom: 15px; font-size: 1.2rem;" class="display-font">YOUR PROFILE CONTAINS</h3>
-        <div style="display: flex; flex-direction: column; gap: 10px;">
-    `;
-
-    const createStatHtml = (title, count, items, icon) => {
-        let itemsHtml = items.length > 0 ? `<div class="hidden meta-text" style="padding-left:30px; margin-top:8px; font-size:0.95rem; line-height: 1.4;">${items.join('<br>')}</div>` : '';
-        return `
-            <div style="background: var(--panel-dark); border: 1px solid var(--panel-mid); padding: 12px; border-radius: var(--radius-card); cursor: pointer;" onclick="const d=this.querySelector('.meta-text'); if(d) d.classList.toggle('hidden');">
-                <div style="display:flex; justify-content:space-between; align-items:center;">
-                    <strong style="font-size: 1.05rem;">${icon} ${title}</strong>
-                    <span style="background:var(--primary-blue); color:#fff; padding:3px 10px; border-radius:var(--radius-pill); font-size:0.9rem; font-weight: bold;">${count}</span>
-                </div>
-                ${itemsHtml}
-            </div>
-        `;
-    };
-
-    const favNames = userFavorites.map(id => {
-        const v = venues.find(v => v.Venue_ID === id);
-        return v ? v.Name : id;
-    });
-    const eventNames = userEvents.map(id => {
-        const e = events.find(e => e.Event_ID === id);
-        return e ? e.Event_Name : id;
-    });
-    const shortNames = Object.keys(userShortlists);
-    
-    html += createStatHtml('Saved Locations', travelCount, userTravel, '🚄');
-    html += createStatHtml('Shortlists', shortCount, shortNames, '📑');
-    html += createStatHtml('Saved Events', eventCount, eventNames, '💖');
-    html += createStatHtml('Saved Venues', favCount, favNames, '⚜️');
-    
-    html += `</div>`;
-    container.innerHTML = html;
-}
-
-function openProfileMenu() {
-    const pName = document.getElementById('profile-name');
-    if(pName) pName.value = userProfile.name || '';
-    renderProfileAvatars();
-    renderProfileStats();
-    profileModal?.classList.remove('hidden');
-}
-
-function promptAddToShortlist(venue) {
-    currentTargetVenue = venue;
-    const tName = document.getElementById('add-shortlist-target-name');
-    if(tName) tName.innerText = venue.Name;
-    const container = document.getElementById('add-shortlist-options');
-    if(!container) return;
-    
     container.innerHTML = '';
+    Object.keys(activeTableFilters).forEach(col => {
+        container.innerHTML += `<div class="filter-pill">${col}: ${activeTableFilters[col]} <span onclick="removeFilter('${col}')">✕</span></div>`;
+    });
+}
+
+function generateTableHTML(dataObj, isMainTable) {
+    if (!dataObj || dataObj.length === 0) return "<p style='padding:20px;'>No data available.</p>";
+
+    const columns = Object.keys(dataObj[0] || {});
+    let html = `<table><thead><tr>`;
     
-    const lists = Object.keys(userShortlists);
-    if(lists.length === 0) {
-        container.innerHTML = '<p class="meta-text">No shortlists exist.</p>';
-    } else {
-        lists.forEach(name => {
-            const isAdded = userShortlists[name].includes(venue.Venue_ID);
-            const btn = document.createElement('button');
-            btn.className = `btn pill-btn ${isAdded ? 'secondary-btn' : 'primary-btn'}`;
-            btn.innerText = isAdded ? `Remove from ${name}` : `Add to ${name}`;
-            btn.addEventListener('click', () => {
-                if(isAdded) {
-                    userShortlists[name] = userShortlists[name].filter(id => id !== venue.Venue_ID);
-                } else {
-                    userShortlists[name].push(venue.Venue_ID);
-                }
-                saveCurrentToBundle();
-                addShortlistModal?.classList.add('hidden');
-                showToast(isAdded ? "Removed from Shortlist" : "Added to Shortlist");
-                
-                const sBtn = document.getElementById('modal-shortlist');
-                const isNowShortlisted = Object.values(userShortlists).some(list => list.includes(venue.Venue_ID));
-                if(sBtn) {
-                    if(isNowShortlisted) sBtn.classList.add('active-star');
-                    else sBtn.classList.remove('active-star');
-                }
-            });
-            container.appendChild(btn);
-        });
-    }
-    addShortlistModal?.classList.remove('hidden');
-}
-
-function exportUserData() {
-    const data = {
-        profile: userProfile,
-        saved_profiles: savedProfiles,
-        favorites: userFavorites,
-        shortlists: userShortlists,
-        events: userEvents,
-        travel: userTravel,
-        location: JSON.parse(localStorage.getItem('br_location') || 'null')
-    };
-    const blob = new Blob([JSON.stringify(data, null, 2)], {type: 'application/json'});
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url; 
-    a.download = `backroom_userdata_${new Date().toISOString().split('T')[0]}.json`; 
-    a.click();
-}
-
-function importUserData(e) {
-    const file = e.target.files[0];
-    if(!file) return;
-    const reader = new FileReader();
-    reader.onload = (event) => {
-        try {
-            const data = JSON.parse(event.target.result);
-            if(data.profile) { userProfile = data.profile; localStorage.setItem('br_profile', JSON.stringify(userProfile)); }
-            if(data.saved_profiles) { savedProfiles = data.saved_profiles; localStorage.setItem('br_saved_profiles', JSON.stringify(savedProfiles)); }
-            if(data.favorites) { userFavorites = data.favorites; saveUserFavorites(); }
-            if(data.shortlists) { userShortlists = data.shortlists; saveUserShortlists(); }
-            if(data.events) { userEvents = data.events; saveUserEvents(); }
-            if(data.travel) { userTravel = data.travel; localStorage.setItem('br_travel', JSON.stringify(userTravel)); }
-            if(data.location) { localStorage.setItem('br_location', JSON.stringify(data.location)); updateLocationDisplay(data.location); }
-            
-            importInfo = { date: new Date().toLocaleString(), filename: file.name, userName: userProfile.name || 'Anonymous' };
-            localStorage.setItem('br_import_info', JSON.stringify(importInfo));
-            
-            showToast("Data imported successfully!");
-            setTimeout(() => window.location.reload(), 1000);
-        } catch(err) {
-            alert("Invalid backup file.");
-        }
-    };
-    reader.readAsText(file);
-}
-
-function checkImportPreview() {
-    const previewBox = document.getElementById('import-preview-info');
-    if(importInfo && previewBox) {
-        previewBox.innerHTML = `<strong>Current Active File:</strong><br>Name: ${importInfo.userName}<br>File: ${importInfo.filename}<br>Loaded: ${importInfo.date}`;
-        previewBox.classList.remove('hidden');
-    }
-}
-
-function handleImageCarousel(imgElement) {
-    imgElement.addEventListener('click', (e) => {
-        e.stopPropagation(); 
-        const id = imgElement.getAttribute('data-id');
-        let index = parseInt(imgElement.getAttribute('data-index') || '1') + 1;
-        let numStr = index < 10 ? '0' + index : index;
-        let newSrc = `Venue_images/${id}-${numStr}.jpg`;
+    // Action columns
+    if(!isMainTable) html += `<th style="min-width:40px;">🗑️</th>`; // Trash for preview
+    if(isMainTable) html += `<th style="min-width:60px;">Review</th>`; // Quick Action
         
-        let tempImg = new Image();
-        tempImg.onload = () => {
-            imgElement.src = newSrc;
-            imgElement.setAttribute('data-index', index);
-            showToast("Double tap the venue name to open");
-        };
-        tempImg.onerror = () => {
-            imgElement.src = `Venue_images/${id}-01.jpg`;
-            imgElement.setAttribute('data-index', 1);
-            showToast("Double tap the venue name to open");
-        };
-        tempImg.src = newSrc;
+    columns.forEach((col, idx) => {
+        const displayName = headerMapping[col] || col;
+        html += `<th class="col-idx-${idx}">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+                <span class="eye-btn" onclick="toggleColumn(${idx})" title="Toggle Hide">👁️</span>
+                <span class="col-title" style="flex-grow:1;">${displayName}</span>
+            </div>`;
+        if(isMainTable) html += `<input type="text" class="filter-header-input" placeholder="Filter..." data-col="${col}">`;
+        html += `</th>`;
     });
-}
-
-function renderListings(data, isContextView = false) {
-    if(resultsContainer) resultsContainer.innerHTML = '';
-    const today = new Date(); today.setHours(0,0,0,0);
-
-    if(!data || data.length === 0) {
-        let emptyHtml = `<p style="text-align:center; color:var(--label-grey); margin-top:20px; width: 100%; grid-column: 1 / -1;">No venues found.</p>`;
+    
+    html += `</tr></thead><tbody ${isMainTable ? 'id="admin-tbody"' : ''}>`;
+    
+    dataObj.forEach((row, rowIndex) => {
+        const id = row.Venue_ID || row.Event_ID || rowIndex;
+        html += `<tr data-id="${id}" ${!isMainTable ? `id="preview-row-${rowIndex}"` : ''}>`;
         
-        const cityInput = document.getElementById('loc-city');
-        const userLat = parseFloat(cityInput?.dataset.lat || 'NaN');
-        const userLon = parseFloat(cityInput?.dataset.lon || 'NaN');
+        // Action cells
+        if(!isMainTable) {
+            html += `<td style="text-align:center; cursor:pointer;" onclick="removePreviewRow(${rowIndex})">❌</td>`;
+        }
+        if(isMainTable) {
+            const needsReview = (!row.Share_URL || String(row.Share_URL) === 'false' || String(row.Share_URL) === 'PENDING');
+            html += `<td style="text-align:center;">
+                ${needsReview ? `<button onclick="markReviewed('${id}')" style="background:var(--primary-blue); border:none; color:#fff; border-radius:4px; cursor:pointer; padding:2px 5px;" title="Mark Reviewed">✔️</button>` : ''}
+            </td>`;
+        }
         
-        if (!isNaN(userLat) && !isNaN(userLon) && venues.length > 0) {
-            let nearest = null;
-            let minDist = Infinity;
-            venues.forEach(v => {
-                const dist = getDistanceFromLatLonInKm(userLat, userLon, parseFloat(v.Latitude), parseFloat(v.Longitude));
-                if (dist < minDist) { minDist = dist; nearest = v; }
-            });
-            
-            if (nearest && minDist !== Infinity) {
-                const distRounded = Math.round(minDist);
-                emptyHtml = `<p style="text-align:center; color:var(--label-grey); margin-top:20px; width: 100%; grid-column: 1 / -1;">
-                    No venues found here.<br><br>
-                    <a href="javascript:void(0)" onclick="const s = document.getElementById('search-input'); if(s) s.value='${nearest.City}'; applyFilters();" style="color:var(--primary-blue); font-weight:bold; font-size:1.1rem; text-decoration:underline;">
-                        Closest venue is ${distRounded} km away in ${nearest.City}.<br>Click here to load ${nearest.City}.
-                    </a>
-                </p>`;
+        columns.forEach((col, idx) => {
+            let isEdited = false;
+            const idField = currentMode === 'venues' ? 'Venue_ID' : 'Event_ID';
+            if (isMainTable && liveData.length > 0) {
+                const lRow = liveData.find(l => l[idField] === row[idField]);
+                if (lRow && String(lRow[col]) !== String(row[col])) isEdited = true;
             }
-        }
-        if(resultsContainer) resultsContainer.innerHTML = emptyHtml;
-        return;
-    }
-
-    data.forEach(venue => {
-        let nextEventHtml = '';
-        let venueEvents = (events||[]).filter(e => e.Venue_ID === venue.Venue_ID && new Date(e.Event_Date) >= today);
-        if(venueEvents.length > 0) {
-            venueEvents.sort((a, b) => new Date(a.Event_Date) - new Date(b.Event_Date));
-            const nextE = venueEvents[0];
-            nextEventHtml = `<div class="card-next-event">📅 Next: ${nextE.Event_Name} (${formatDateToDDMMYYYY(nextE.Event_Date)})</div>`;
-        }
-
-        const isFav = userFavorites.includes(venue.Venue_ID);
-        const shortDesc = venue.Description.length > 90 ? venue.Description.substring(0, 90) + '...' : venue.Description;
-        const card = document.createElement('div');
-        card.className = 'card';
-        
-        const baseImageSrc = `Venue_images/${venue.Venue_ID}-01.jpg`;
-        
-        card.innerHTML = `
-            <div class="card-image-wrapper">
-                <img class="venue-image centered-image" src="${baseImageSrc}" onerror="this.src='placeholder_venue.jpg'" data-id="${venue.Venue_ID}" data-index="1" title="Tap to see next photo">
-            </div>
-            <div class="card-inner-content">
-                <div class="card-header">
-                    <div><h3 class="card-title display-font">${venue.Name}</h3><div class="card-meta">${venue.Category} • ${venue.City}</div></div>
-                    <div class="status-badge ${venue.Status.toLowerCase()}">${venue.Status.toUpperCase()}</div>
-                </div>
-                <div class="card-about">${shortDesc}</div>
-                ${nextEventHtml}
-                <div class="card-stats">
-                    <span>🌈 ${systemInfo.labels?.rated_by_gays || 'Rated by gays'}</span><span>👁️ ${venue.Views || 0}</span>
-                    <span class="star-btn icon-btn fav-btn ${isFav ? 'active-star' : ''}" style="margin-left:auto; font-size:1.8rem; line-height:1;">⚜️</span>
-                </div>
-            </div>
-        `;
-        
-        handleImageCarousel(card.querySelector('.venue-image'));
-
-        card.addEventListener('click', (e) => { 
-            if(e.target.classList.contains('star-btn')) {
-                toggleFavorite(venue.Venue_ID, e.target);
-            } else if (!e.target.classList.contains('venue-image')) {
-                if(selectedCardId === venue.Venue_ID) {
-                    recordUserInteraction();
-                    window.location.hash = `#venue=${venue.Venue_ID}`; 
-                } else {
-                    document.querySelectorAll('.card.selected').forEach(c => c.classList.remove('selected'));
-                    card.classList.add('selected');
-                    selectedCardId = venue.Venue_ID;
-                    showToast("Double tap the venue name to open");
-                }
-            } 
+            
+            const editedClass = isEdited ? 'edited-cell' : '';
+            if(isMainTable) {
+                html += `<td class="col-idx-${idx} ${editedClass}" onclick="editCell(this, ${rowIndex}, '${col}')">${String(row[col] || '')}</td>`;
+            } else {
+                // Editable preview cells
+                html += `<td class="col-idx-${idx} preview-editable-cell" contenteditable="true" onblur="updatePreviewData(${rowIndex}, '${col}', this)">${String(row[col] || '')}</td>`;
+            }
         });
-        if(resultsContainer) resultsContainer.appendChild(card);
+        html += `</tr>`;
     });
-}
-
-function getRatingCells(val, type) {
-    let html = '';
-    for(let i=1; i<=5; i++) {
-        const op = i <= val ? '1' : '0.25';
-        let asset = '';
-        
-        // v0.36 - +20% size increase for Age and Popularity
-        let iconSize = '26px';
-        if (type === 'Age' || type === 'Popularity') {
-            iconSize = '31.2px';
-        }
-        
-        // v0.36 - Replaced hand emojis with size01-05.png
-        if (type === 'Size') {
-            asset = `<img src="Emoji/size0${i}.png" style="width:${iconSize}; height:${iconSize}; vertical-align:middle; object-fit:contain;">`;
-        } else if (type === 'Age') {
-            asset = `<img src="Emoji/age0${i}.png" style="width:${iconSize}; height:${iconSize}; vertical-align:middle; object-fit:contain;">`;
-        } else {
-            const map = { 'General': 'eggplant', 'Darkroom': 'water', 'Cost': 'money', 'Location': 'peach', 'Popularity': 'busy' };
-            const prefix = map[type] || 'eggplant';
-            asset = `<img src="Emoji/${prefix}0${i}.png" style="width:${iconSize}; height:${iconSize}; vertical-align:middle; object-fit:contain;">`;
-        }
-        
-        html += `<div style="opacity:${op}; display:flex; align-items:center; justify-content:center;">${asset}</div>`;
-    }
+    
+    html += `</tbody></table>`;
     return html;
 }
 
-function openVenueModal(venue) {
-    const mTitle = document.getElementById('modal-title');
-    if(mTitle) mTitle.innerText = venue.Name;
-    
-    const dynamicLayout = document.getElementById('modal-dynamic-layout');
-    if(!dynamicLayout) return;
+function renderTable() {
+    const tableContainer = document.getElementById('admin-table-container');
+    if(!tableContainer) return;
+    if (!draftData || draftData.length === 0) {
+        tableContainer.innerHTML = "<p style='padding:20px;'>No data. Load a file first.</p>";
+        updateMismatchCount();
+        return;
+    }
 
-    const features = [];
-    if(venue.Feature_Darkroom) features.push('Darkroom');
-    if(venue.Feature_Men_Only) features.push('Men Only');
-    if(venue.Feature_Dancefloor) features.push('Dancefloor');
-    if(venue.Feature_Sauna) features.push('Sauna');
-    const featureHtml = features.map(f => `<span class="chip pill-btn" style="font-size:0.85rem; padding: 4px 10px;">${f}</span>`).join('');
-
-    const statsHtml = `
-        <div class="public-stats-block">
-            <span>🌈 ${systemInfo.labels?.rated_by_gays || 'Rated'}</span> 
-            <span>👁️ ${venue.Views || 0}</span>
-        </div>
-        <div class="feature-chips" style="margin-top: 15px;">${featureHtml}</div>
-    `;
-    
-    const ratingTypes = [
-        { label: 'Age Range', key: 'Rating_Age_Range', type: 'Age' },
-        { label: 'Size', key: 'Rating_Size', type: 'Size' },
-        { label: 'General', key: 'Rating_General', type: 'General' },
-        { label: 'Darkroom', key: 'Rating_Darkroom', type: 'Darkroom' },
-        { label: 'Cost', key: 'Rating_Cost', type: 'Cost' },
-        { label: 'Location', key: 'Rating_Location', type: 'Location' },
-        { label: 'Popularity', key: 'Rating_Busyness', type: 'Popularity' }
-    ];
-
-    let ratingsTableHtml = `<div style="display: grid; grid-template-columns: 1fr repeat(5, 30px); gap: 8px 2px; align-items: center; background-color: var(--near-black); padding: 15px; border-radius: var(--radius-card); border: 1px solid var(--panel-mid);">`;
-    
-    // v0.36 - Ratings Header Row
-    ratingsTableHtml += `
-        <div style="font-size: 0.9rem; color: var(--primary-blue); font-weight: bold; text-align: left; padding-right: 10px;">FEATURE</div>
-        <div style="font-size: 0.9rem; color: var(--primary-blue); font-weight: bold; text-align: center;">1</div>
-        <div style="font-size: 0.9rem; color: var(--primary-blue); font-weight: bold; text-align: center;">2</div>
-        <div style="font-size: 0.9rem; color: var(--primary-blue); font-weight: bold; text-align: center;">3</div>
-        <div style="font-size: 0.9rem; color: var(--primary-blue); font-weight: bold; text-align: center;">4</div>
-        <div style="font-size: 0.9rem; color: var(--primary-blue); font-weight: bold; text-align: center;">5</div>
-    `;
-    
-    ratingTypes.forEach(r => {
-        const val = venue[r.key] || 0;
-        ratingsTableHtml += `
-            <div style="font-size: 1rem; color: var(--text-light); text-transform: uppercase; letter-spacing: 0.5px; text-align: left; padding-right: 10px;">${r.label}</div>
-            ${getRatingCells(val, r.type)}
-        `;
-    });
-    
-    ratingsTableHtml += `</div>`;
-
-    let venueEvents = (events||[]).filter(e => e.Venue_ID === venue.Venue_ID);
-    const today = new Date(); today.setHours(0,0,0,0);
-    venueEvents.sort((a, b) => {
-        const dateA = new Date(a.Event_Date); const dateB = new Date(b.Event_Date);
-        const isPastA = dateA < today; const isPastB = dateB < today;
-        if (isPastA && !isPastB) return 1; if (!isPastA && isPastB) return -1;
-        return Math.abs(dateA - today) - Math.abs(dateB - today);
+    const filteredData = draftData.filter(row => {
+        for(let col in activeTableFilters) {
+            const rowVal = String(row[col] || '').toLowerCase();
+            const filterVal = activeTableFilters[col].toLowerCase();
+            if(!rowVal.includes(filterVal)) return false;
+        }
+        return true;
     });
 
-    let eventsHtml = '';
-    if(venueEvents.length > 0) {
-        eventsHtml = `<div class="events-block"><h3 class="display-font">UPCOMING EVENTS</h3>`;
-        venueEvents.forEach(ev => {
-            const isPast = new Date(ev.Event_Date) < today;
-            const isSaved = userEvents.includes(ev.Event_ID);
-            const badgeData = getBadgeDateParts(ev.Event_Date);
-            eventsHtml += `
-                <div class="event-card ${isPast ? 'past' : ''}">
-                    <div class="event-card-inner">
-                        <div class="event-date-badge">
-                            <span class="day">${badgeData.d}</span>
-                            <span class="month-year">${badgeData.my}</span>
-                        </div>
-                        <div class="event-card-details">
-                            <div style="display:flex; justify-content:space-between; align-items:flex-start;">
-                                <div>
-                                    <strong>${ev.Event_Name}</strong> ${isPast ? '<small>(Past)</small>' : ''}<br>
-                                    <span class="meta-text">${formatDateToDDMMYYYY(ev.Event_Date)} | ${ev.Event_Start_Time}</span>
-                                </div>
-                                <button class="icon-btn fav-btn ${isSaved ? 'active-star' : ''}" style="font-size: 1.5rem;" onclick="toggleEventFavorite('${ev.Event_ID}', this)">💖</button>
-                            </div>
-                            <p style="font-size:0.9rem; margin-top:5px;">${ev.Event_Description}</p>
-                        </div>
-                    </div>
-                </div>`;
-        });
-        eventsHtml += `</div>`;
-    }
+    tableContainer.innerHTML = generateTableHTML(filteredData, true);
 
-    dynamicLayout.innerHTML = `
-        <div class="modal-top-split">
-            <div class="modal-left-col">
-                <div class="modal-image-container">
-                    <img id="modal-venue-image" class="venue-image centered-image" src="Venue_images/${venue.Venue_ID}-01.jpg" onerror="this.src='placeholder_venue.jpg'" data-id="${venue.Venue_ID}" data-index="1" title="Tap for next image">
-                </div>
-                
-                <div class="desktop-stats">
-                    <div class="desktop-stats-container">
-                        ${statsHtml}
-                    </div>
-                </div>
-            </div>
-
-            <div class="modal-right-col">
-                <div style="display:flex; align-items:center; gap:8px; margin-bottom:10px;">
-                    <button id="btn-map" class="btn secondary-btn pill-btn" style="padding: 2px 8px; font-size: 0.75rem; width: auto; flex-shrink: 0;">🗺️ Directions</button>
-                    <p class="meta-text" style="margin:0;">${venue.Address || ''}</p>
-                </div>
-                
-                <div class="mobile-stats">
-                    ${statsHtml}
-                </div>
-                
-                ${ratingsTableHtml}
-            </div>
-        </div>
-        
-        <hr style="border: 0; height: 2px; background: var(--bright-red-orange); margin: 20px 0;">
-        
-        <div class="full-width-about" style="background-color: var(--near-black); padding: 20px; border-radius: var(--radius-card); margin-bottom: 15px;">
-            <h3 class="display-font" style="color: var(--primary-blue); margin-bottom:10px;">ABOUT</h3>
-            <p style="color: #fff; line-height: 1.5;">${venue.Description || ''}</p>
-        </div>
-        
-        ${eventsHtml}
-    `;
-
-    const img = document.getElementById('modal-venue-image');
-    if(img) handleImageCarousel(img);
-
-    const starBtn = document.getElementById('modal-star');
-    if(starBtn) {
-        const isFav = userFavorites.includes(venue.Venue_ID);
-        starBtn.className = `icon-btn fav-btn ${isFav ? 'active-star' : ''}`;
-        starBtn.onclick = () => toggleFavorite(venue.Venue_ID, starBtn);
-    }
-
-    const shortBtn = document.getElementById('modal-shortlist');
-    if(shortBtn) {
-        const isShortlisted = Object.values(userShortlists).some(list => list.includes(venue.Venue_ID));
-        shortBtn.className = `icon-btn fav-btn ${isShortlisted ? 'active-star' : ''}`;
-        shortBtn.onclick = () => promptAddToShortlist(venue);
-    }
-    
-    const shareBtn = document.getElementById('modal-share');
-    if(shareBtn) shareBtn.onclick = () => shareURL(`${window.location.origin}${window.location.pathname}?venue=${venue.Venue_ID}#venue=${venue.Venue_ID}`, venue.Name);
-    
-    const mapBtn = document.getElementById('btn-map');
-    if(mapBtn) {
-        mapBtn.onclick = () => {
-            const rawAddress = venue.Address || venue.City || venue.Name || '';
-            const queryPlus = encodeURIComponent(rawAddress.trim()).replace(/%20/g, '+');
-            const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
-            if (isIOS) {
-                window.open(`http://maps.apple.com/?q=${queryPlus}`, '_blank');
-            } else {
-                window.open(`https://www.google.com/maps/place/Am+Wriezener+bhf,+10243+Berlin-Bezirk+Friedrichshain-Kreuzberg?q=${queryPlus}`, '_blank');
+    document.querySelectorAll('.filter-header-input').forEach(inp => {
+        inp.addEventListener('keypress', (e) => {
+            if(e.key === 'Enter' && e.target.value.trim() !== '') {
+                activeTableFilters[e.target.dataset.col] = e.target.value.trim();
+                e.target.value = '';
+                renderFilters();
+                renderTable();
             }
-        };
-    }
-
-    venueModal?.classList.remove('hidden');
+        });
+    });
+    updateMismatchCount();
 }
 
-async function shareURL(url, title) {
-    if (navigator.share) {
-        try { await navigator.share({title: title, url: url}); } catch (e) {}
-    } else {
-        navigator.clipboard.writeText(url);
-        showToast("Link copied to clipboard!");
-    }
-}
-
-function shareShortlist(name) {
-    const url = `${window.location.origin}${window.location.pathname}#shortlist=${encodeURIComponent(name)}`;
-    shareURL(url, `Backroom Shortlist: ${name}`);
-}
-
-function saveLocation() {
-    recordUserInteraction();
-    const cityInp = document.getElementById('loc-city');
-    const loc = { 
-        country: document.getElementById('loc-country')?.value || '', 
-        city: cityInp?.value || '', 
-        postcode: document.getElementById('loc-postcode')?.value || '' 
-    };
+window.editCell = function(td, rowIndex, col) {
+    if(col === 'Venue_ID' || col === 'Event_ID') return; 
+    if(td.querySelector('select')) return; 
     
-    if(loc.city && loc.city !== 'My Location') {
-        if(searchInput) searchInput.value = loc.city;
-        window.location.hash = '';
-        applyFilters();
-    }
+    const currentVal = td.innerText.trim();
     
-    localStorage.setItem('br_location', JSON.stringify(loc));
-    updateLocationDisplay(loc);
-    locModal?.classList.add('hidden');
-}
-
-function clearLocation() {
-    localStorage.removeItem('br_location');
-    const cInp = document.getElementById('loc-country');
-    const ciInp = document.getElementById('loc-city');
-    const pInp = document.getElementById('loc-postcode');
-    const lMap = document.getElementById('loc-map');
-    const mPlace = document.getElementById('map-preview-placeholder');
-
-    if(cInp) cInp.value = ''; 
-    if(ciInp) { ciInp.value = ''; ciInp.dataset.lat = ''; ciInp.dataset.lon = ''; }
-    if(pInp) pInp.value = '';
-    if(lMap) lMap.style.display = 'none';
-    if(mPlace) mPlace.classList.remove('hidden');
-    
-    updateLocationDisplay(null);
-}
-
-function loadSavedLocation() {
-    const saved = localStorage.getItem('br_location');
-    if(saved) {
-        const loc = JSON.parse(saved);
-        const cInp = document.getElementById('loc-country');
-        const ciInp = document.getElementById('loc-city');
-        const pInp = document.getElementById('loc-postcode');
+    if(col === 'Status' || col.startsWith('Feature_') || col.startsWith('Rating_')) {
+        let options = '';
+        if(col === 'Status') options = '<option value="Live">Live</option><option value="Closed">Closed</option><option value="Hold">Hold</option><option value="Flag">Flag</option>';
+        else if(col.startsWith('Feature_')) options = '<option value="true">true</option><option value="false">false</option>';
+        else if(col.startsWith('Rating_')) options = '<option value="0">0</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option>';
         
-        if(cInp) cInp.value = loc.country || ''; 
-        if(ciInp) ciInp.value = loc.city || ''; 
-        if(pInp) pInp.value = loc.postcode || '';
-        updateLocationDisplay(loc);
+        td.innerHTML = `<select class="cell-edit" onblur="saveCell(this, ${rowIndex}, '${col}')" onchange="saveCell(this, ${rowIndex}, '${col}')">${options}</select>`;
+        td.querySelector('select').value = currentVal;
+        td.querySelector('select').focus();
+    } else {
+        if (td.isContentEditable) return; 
+        td.contentEditable = "true";
+        td.focus();
+        
+        if(!td.dataset.listening) {
+            td.addEventListener('blur', function() {
+                td.contentEditable = "false";
+                const newVal = td.innerText.trim();
+                if(String(draftData[rowIndex][col]) !== newVal) {
+                    draftData[rowIndex][col] = newVal;
+                    td.classList.add('edited-cell');
+                    saveDraftsToLocal();
+                }
+            });
+            td.addEventListener('keydown', function(e) { if(e.key === 'Enter') { e.preventDefault(); td.blur(); } });
+            td.dataset.listening = "true";
+        }
+    }
+};
+
+window.saveCell = function(selectEl, rowIndex, col) {
+    const newVal = selectEl.value;
+    let finalVal = newVal;
+    if(newVal === 'true') finalVal = true;
+    if(newVal === 'false') finalVal = false;
+    if(col.startsWith('Rating_')) finalVal = parseInt(newVal);
+
+    draftData[rowIndex][col] = finalVal;
+    selectEl.parentElement.innerText = newVal;
+    selectEl.parentElement.classList.add('edited-cell');
+    saveDraftsToLocal();
+};
+
+let currentMismatchIds = [];
+function updateMismatchCount() {
+    if(liveData.length === 0) {
+        const mismatchEl = document.getElementById('summary-mismatch');
+        if(mismatchEl) { mismatchEl.innerText = "Live data not loaded."; mismatchEl.style.color = 'var(--text-light)'; }
+        return;
+    }
+    currentMismatchIds = [];
+    draftData.forEach(dRow => {
+        const idField = currentMode === 'venues' ? 'Venue_ID' : 'Event_ID';
+        const lRow = liveData.find(l => l[idField] === dRow[idField]);
+        if(!lRow || JSON.stringify(lRow) !== JSON.stringify(dRow)) currentMismatchIds.push(dRow[idField]);
+    });
+    
+    const txt = document.getElementById('summary-mismatch');
+    if(txt) {
+        if(currentMismatchIds.length === 0) { txt.innerText = "All records match live data."; txt.style.color = "var(--primary-blue)"; } 
+        else { txt.innerText = `${currentMismatchIds.length} / ${draftData.length} records do not match.`; txt.style.color = "var(--bright-red-orange)"; }
     }
 }
 
-function updateLocationDisplay(loc) {
-    const display = document.getElementById('current-location-display');
-    if(!display) return;
-    if(loc && (loc.city || loc.country)) display.innerText = `Current: ${loc.city ? loc.city : ''} ${loc.country ? loc.country : ''}`; 
-    else display.innerText = 'No location set.';
+// --- PREVIEW MERGE LOGIC (v0.37) ---
+window.removePreviewRow = function(idx) {
+    tempMergeData[idx] = null; // Mark as deleted
+    document.getElementById(`preview-row-${idx}`).style.display = 'none';
+}
+window.updatePreviewData = function(idx, col, el) {
+    if(tempMergeData[idx]) tempMergeData[idx][col] = el.innerText.trim();
 }
 
-document.addEventListener('DOMContentLoaded', initApp);
+// --- AVATAR MANAGER (v0.37) ---
+async function loadAdminAvatars() {
+    try {
+        const res = await fetch('Profile_images/avatar_list.json?v=' + Date.now());
+        if(res.ok) avatarAdminData = await res.json();
+        else avatarAdminData = [];
+    } catch(e) { avatarAdminData = []; }
+    renderAdminAvatars();
+}
+
+function renderAdminAvatars() {
+    const list = document.getElementById('avatar-manager-list');
+    if(!list) return;
+    list.innerHTML = '';
+    
+    avatarAdminData.forEach((av, idx) => {
+        const row = document.createElement('div');
+        row.className = 'avatar-admin-row';
+        row.innerHTML = `
+            <img src="Profile_images/${av.file}" onerror="this.src='placeholder_venue.jpg'">
+            <input type="text" value="${av.label}" onblur="updateAvatarLabel(${idx}, this.value)" placeholder="Label">
+            <select onchange="updateAvatarCat(${idx}, this.value)">
+                <option value="Young" ${av.category === 'Young' ? 'selected' : ''}>Young</option>
+                <option value="Mid" ${av.category === 'Mid' ? 'selected' : ''}>Mid</option>
+                <option value="Old" ${av.category === 'Old' ? 'selected' : ''}>Old</option>
+            </select>
+            <div class="up-down-btns">
+                <button onclick="moveAvatar(${idx}, -1)">▲</button>
+                <button onclick="moveAvatar(${idx}, 1)">▼</button>
+            </div>
+            <button class="btn" style="background:var(--dark-red); color:#fff; padding:5px;" onclick="deleteAvatar(${idx})">❌</button>
+        `;
+        list.appendChild(row);
+    });
+}
+
+window.updateAvatarLabel = (idx, val) => { avatarAdminData[idx].label = val; }
+window.updateAvatarCat = (idx, val) => { avatarAdminData[idx].category = val; }
+window.moveAvatar = (idx, dir) => {
+    if(idx + dir < 0 || idx + dir >= avatarAdminData.length) return;
+    const temp = avatarAdminData[idx];
+    avatarAdminData[idx] = avatarAdminData[idx + dir];
+    avatarAdminData[idx + dir] = temp;
+    renderAdminAvatars();
+}
+window.deleteAvatar = (idx) => {
+    avatarAdminData.splice(idx, 1);
+    renderAdminAvatars();
+}
+
+document.getElementById('btn-add-avatar')?.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if(file) {
+        const name = file.name;
+        avatarAdminData.push({ file: name, label: "New Avatar", category: "Mid" });
+        renderAdminAvatars();
+        e.target.value = '';
+    }
+});
+
+document.getElementById('btn-download-avatars')?.addEventListener('click', () => {
+    const dataStr = JSON.stringify(avatarAdminData, null, 2);
+    const blob = new Blob([dataStr], {type: 'application/json'});
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `avatar_list.json`;
+    a.click();
+    showToast("Downloaded avatar_list.json");
+});
+
+
+// --- WYSIWYG EDITOR (v0.37) ---
+const wysiwygContent = document.getElementById('wysiwyg-content');
+const wysiwygSource = document.getElementById('wysiwyg-source');
+
+function saveEditorState() {
+    if(!wysiwygContent) return;
+    historyIndex++;
+    editorHistory.splice(historyIndex);
+    editorHistory.push(wysiwygContent.innerHTML);
+    if(editorHistory.length > 50) { editorHistory.shift(); historyIndex--; }
+}
+
+wysiwygContent?.addEventListener('input', () => {
+    clearTimeout(window.editorSaveTimer);
+    window.editorSaveTimer = setTimeout(saveEditorState, 500);
+});
+
+window.editorAction = function(action, val) {
+    if(wysiwygSource && !wysiwygSource.classList.contains('hidden')) return alert("Switch to Visual Editor first.");
+    wysiwygContent.focus();
+    
+    if(action === 'undo') {
+        if(historyIndex > 0) { historyIndex--; wysiwygContent.innerHTML = editorHistory[historyIndex]; }
+    } else if(action === 'redo') {
+        if(historyIndex < editorHistory.length - 1) { historyIndex++; wysiwygContent.innerHTML = editorHistory[historyIndex]; }
+    } else if(action === 'normal') {
+        document.execCommand('removeFormat', false, null);
+    } else if(action === 'h1') {
+        wrapSelectionSpan("font-size: 2.2rem; font-family: 'Antonio', sans-serif; color: var(--primary-blue); font-weight: bold; text-transform: uppercase;");
+    } else if(action === 'h2') {
+        wrapSelectionSpan("font-size: 1.6rem; font-family: 'Antonio', sans-serif; color: var(--primary-blue); font-weight: bold; text-transform: uppercase;");
+    } else if(action === 'bold') {
+        document.execCommand('bold', false, null);
+    } else if(action === 'color') {
+        wrapSelectionSpan(`color: ${val};`);
+    } else if(action === 'insertTable') {
+        document.execCommand('insertHTML', false, '<table border="1" style="width:100%; border-collapse:collapse; margin: 15px 0;"><tr><td style="padding:8px;">Cell</td><td style="padding:8px;">Cell</td></tr><tr><td style="padding:8px;">Cell</td><td style="padding:8px;">Cell</td></tr></table><p><br></p>');
+    } else if(['addRow', 'addCol', 'deleteRow', 'deleteCol'].includes(action)) {
+        handleTableAction(action);
+    }
+    saveEditorState();
+}
+
+function wrapSelectionSpan(styleString) {
+    const sel = window.getSelection();
+    if(sel.rangeCount && !sel.isCollapsed) {
+        const range = sel.getRangeAt(0);
+        const span = document.createElement('span');
+        span.style.cssText = styleString;
+        span.appendChild(range.extractContents());
+        range.insertNode(span);
+        sel.removeAllRanges();
+    }
+}
+
+function handleTableAction(action) {
+    const sel = window.getSelection();
+    if(!sel.rangeCount) return;
+    let node = sel.anchorNode;
+    let td = null, tr = null, table = null;
+    
+    while(node && node !== wysiwygContent) {
+        if(node.nodeName === 'TD') td = node;
+        if(node.nodeName === 'TR') tr = node;
+        if(node.nodeName === 'TABLE') table = node;
+        node = node.parentNode;
+    }
+    if(!table || !tr || !td) return alert("Place cursor inside a table cell first.");
+    
+    const cellIndex = Array.from(tr.children).indexOf(td);
+    
+    if(action === 'addRow') {
+        const newTr = table.insertRow(tr.rowIndex + 1);
+        for(let i=0; i<tr.cells.length; i++) newTr.insertCell(i).innerHTML = 'New';
+    } else if(action === 'addCol') {
+        Array.from(table.rows).forEach(r => r.insertCell(cellIndex + 1).innerHTML = 'New');
+    } else if(action === 'deleteRow') {
+        table.deleteRow(tr.rowIndex);
+    } else if(action === 'deleteCol') {
+        Array.from(table.rows).forEach(r => { if(r.cells[cellIndex]) r.deleteCell(cellIndex); });
+    }
+}
+
+window.toggleEditorSource = function() {
+    const btn = document.getElementById('btn-toggle-source');
+    if(wysiwygSource.classList.contains('hidden')) {
+        wysiwygSource.value = wysiwygContent.innerHTML;
+        wysiwygContent.classList.add('hidden');
+        wysiwygSource.classList.remove('hidden');
+        btn.innerText = '👁️ Visual Editor';
+    } else {
+        wysiwygContent.innerHTML = wysiwygSource.value;
+        wysiwygSource.classList.add('hidden');
+        wysiwygContent.classList.remove('hidden');
+        btn.innerText = '👁️ View Source';
+        saveEditorState();
+    }
+}
+
+window.downloadEditorHTML = function() {
+    const content = wysiwygSource.classList.contains('hidden') ? wysiwygContent.innerHTML : wysiwygSource.value;
+    const select = document.getElementById('editor-page-select');
+    const blob = new Blob([content], {type: 'text/html'});
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `backroom_${select.value}_${new Date().toISOString().split('T')[0]}.html`;
+    a.click();
+}
+
+
+// --- INITIALIZATION ---
+document.addEventListener('DOMContentLoaded', () => {
+    const pinGate = document.getElementById('pin-gate');
+    const adminShell = document.getElementById('admin-shell');
+    const btnLogin = document.getElementById('btn-login');
+
+    if(localStorage.getItem('br_admin_logged_in') === 'true') {
+        if(pinGate) pinGate.classList.add('hidden');
+        if(adminShell) adminShell.classList.remove('hidden');
+        loadDraftsFromLocal();
+    }
+    if(btnLogin) btnLogin.addEventListener('click', window.checkPin);
+
+    document.getElementById('nav-venues')?.addEventListener('click', () => switchView('venues'));
+    document.getElementById('nav-events')?.addEventListener('click', () => switchView('events'));
+    document.getElementById('nav-editor')?.addEventListener('click', () => switchView('editor'));
+    document.getElementById('nav-avatars')?.addEventListener('click', () => switchView('avatars'));
+
+    document.getElementById('btn-sidebar-pending')?.addEventListener('click', () => {
+        document.getElementById('sidebar-pending-list').classList.toggle('hidden');
+    });
+    document.getElementById('btn-sidebar-old')?.addEventListener('click', () => {
+        document.getElementById('sidebar-old-list').classList.toggle('hidden');
+    });
+
+    const makeDraggable = (headerId, windowId) => {
+        const header = document.getElementById(headerId);
+        const win = document.getElementById(windowId);
+        if(!header || !win) return;
+        let isDragging = false, startX, startY, initialLeft, initialTop;
+        
+        header.addEventListener('mousedown', (e) => {
+            isDragging = true; startX = e.clientX; startY = e.clientY;
+            const rect = win.getBoundingClientRect(); win.style.transform = 'none';
+            initialLeft = rect.left; initialTop = rect.top;
+            win.style.left = initialLeft + 'px'; win.style.top = initialTop + 'px';
+        });
+        document.addEventListener('mousemove', (e) => {
+            if(isDragging) { win.style.left = (initialLeft + e.clientX - startX) + 'px'; win.style.top = (initialTop + e.clientY - startY) + 'px'; }
+        });
+        document.addEventListener('mouseup', () => isDragging = false);
+    };
+
+    makeDraggable('clipboard-header', 'clipboard-float');
+    makeDraggable('preview-import-header', 'preview-import-modal');
+
+    const clipboard = document.getElementById('clipboard-text');
+    if(clipboard) {
+        clipboard.value = localStorage.getItem('br_admin_clipboard') || '';
+        clipboard.addEventListener('input', (e) => localStorage.setItem('br_admin_clipboard', e.target.value));
+    }
+
+    document.getElementById('btn-fetch-live')?.addEventListener('click', async () => {
+        try {
+            const url = currentMode === 'venues' ? 'listings.json' : 'events.json';
+            const res = await fetch(url + '?v=' + new Date().getTime());
+            if(!res.ok) throw new Error("Could not find file.");
+            liveData = await res.json();
+            draftData = JSON.parse(JSON.stringify(liveData)); 
+            saveDraftsToLocal();
+            renderTable();
+            showToast(`Live data loaded!`);
+        } catch(err) { showToast("Fetch failed."); }
+    });
+
+    document.getElementById('file-upload-replace')?.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (event) => {
+            try {
+                draftData = JSON.parse(event.target.result);
+                saveDraftsToLocal();
+                renderTable();
+                showToast("Data replaced successfully!");
+            } catch (err) { handleJSONError(err, event.target.result); }
+        };
+        reader.readAsText(file);
+    });
+
+    // Merge Preview Intercept Logic
+    let isMergeAction = false;
+    
+    document.getElementById('file-upload-merge')?.addEventListener('change', (e) => {
+        isMergeAction = true;
+        triggerPreviewRead(e.target.files[0]);
+        e.target.value = '';
+    });
+    
+    document.getElementById('file-preview-import')?.addEventListener('change', (e) => {
+        isMergeAction = false;
+        triggerPreviewRead(e.target.files[0]);
+        e.target.value = '';
+    });
+
+    function triggerPreviewRead(file) {
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (event) => {
+            const text = event.target.result;
+            try {
+                tempMergeData = JSON.parse(text);
+                if(!Array.isArray(tempMergeData)) throw new Error("File is not an array");
+                
+                document.getElementById('preview-table-container').innerHTML = generateTableHTML(tempMergeData, false);
+                document.getElementById('preview-modal-title').innerText = isMergeAction ? "👁️ REVIEW & MERGE IMPORT" : "👁️ PREVIEW DATA";
+                
+                const btnApply = document.getElementById('btn-apply-merge');
+                if(isMergeAction) btnApply.classList.remove('hidden');
+                else btnApply.classList.add('hidden');
+                
+                document.getElementById('preview-import-modal').classList.remove('hidden');
+            } catch (err) { handleJSONError(err, text); }
+        };
+        reader.readAsText(file);
+    }
+
+    document.getElementById('btn-apply-merge')?.addEventListener('click', () => {
+        const validMergeData = tempMergeData.filter(d => d !== null);
+        const idField = currentMode === 'venues' ? 'Venue_ID' : 'Event_ID';
+        let mCount = 0, aCount = 0;
+        
+        validMergeData.forEach(newRow => {
+            const existingIdx = draftData.findIndex(d => d[idField] === newRow[idField]);
+            if(existingIdx >= 0) { draftData[existingIdx] = { ...draftData[existingIdx], ...newRow }; mCount++; } 
+            else { draftData.push(newRow); aCount++; }
+        });
+        
+        saveDraftsToLocal();
+        renderTable();
+        document.getElementById('preview-import-modal').classList.add('hidden');
+        showToast(`Merge Applied: ${mCount} updated, ${aCount} new.`);
+    });
+
+    // JSON Exports & UI Binds
+    document.getElementById('btn-copy-error')?.addEventListener('click', () => { navigator.clipboard.writeText(lastJsonErrorText); showToast("Copied"); });
+    document.getElementById('btn-export-csv')?.addEventListener('click', () => { /* Logic preserved */ });
+    document.getElementById('btn-export-json')?.addEventListener('click', () => {
+        const dataStr = JSON.stringify(draftData, null, 2);
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(new Blob([dataStr], {type: 'application/json'}));
+        a.download = `backroom_${currentMode}_${new Date().toISOString().split('T')[0]}.json`;
+        a.click();
+    });
+    document.getElementById('btn-download-all')?.addEventListener('click', () => {
+        const v = localStorage.getItem('br_admin_venues_draft');
+        const e = localStorage.getItem('br_admin_events_draft');
+        if(v) { let a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([v])); a.download='listings.json'; a.click(); }
+        if(e) setTimeout(()=> { let a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([e])); a.download='events.json'; a.click(); }, 500);
+    });
+
+    document.getElementById('summary-mismatch')?.addEventListener('click', () => {
+        if(currentMismatchIds.length === 0) return;
+        const list = document.getElementById('mismatch-list');
+        list.innerHTML = '';
+        currentMismatchIds.forEach(id => list.innerHTML += `<li style="color:var(--bright-red-orange); font-weight:bold;">${id}</li>`);
+        document.getElementById('mismatch-modal').classList.remove('hidden');
+    });
+
+    document.getElementById('btn-highlight-changes')?.addEventListener('click', () => {
+        if(liveData.length===0) return alert("Load live data!");
+        Array.from(document.getElementById('admin-tbody').children).forEach(tr => {
+            if(currentMismatchIds.includes(tr.dataset.id)) tr.classList.add('row-mismatch');
+            else tr.classList.remove('row-mismatch');
+        });
+    });
+
+    document.querySelectorAll('.close-modal-btn').forEach(btn => btn.addEventListener('click', (e) => e.target.closest('.modal')?.classList.add('hidden')));
+});

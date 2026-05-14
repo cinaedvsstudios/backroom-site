@@ -3,12 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Backroom Admin Dashboard - v0.36</title>
+    <title>Backroom Admin Dashboard - v0.37</title>
     <link href="https://fonts.googleapis.com/css2?family=Antonio:wght@400;700&family=Barlow+Condensed:wght@400;500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
     <style>
         .admin-layout { display: flex; height: 100vh; overflow: hidden; background: var(--bg-color); color: #fff; font-family: sans-serif; }
-        .admin-sidebar { width: 250px; background: var(--panel-dark); border-right: 1px solid var(--panel-mid); padding: 20px 0; display:flex; flex-direction:column; flex-shrink:0; }
+        .admin-sidebar { width: 250px; background: var(--panel-dark); border-right: 1px solid var(--panel-mid); padding: 20px 0; display:flex; flex-direction:column; flex-shrink:0; overflow-y:auto; }
         .admin-main { flex-grow: 1; padding: 30px; overflow-y: auto; overflow-x: auto; display:flex; flex-direction:column; }
         
         .keypad { display:grid; grid-template-columns:repeat(3, 1fr); gap:10px; margin-top:20px; max-width:250px; margin-left:auto; margin-right:auto; }
@@ -22,6 +22,34 @@
         .filter-pill span { cursor:pointer; font-weight:bold; }
         
         select.cell-edit { width: 100%; background: var(--panel-dark); color: #fff; border: 1px solid var(--primary-blue); font-size:0.9rem; padding:4px; outline:none; }
+        
+        /* v0.37 Row Highlight Animation */
+        @keyframes flashRow {
+            0% { background-color: var(--bright-red-orange); }
+            50% { background-color: var(--primary-blue); }
+            100% { background-color: transparent; }
+        }
+        .flash-row { animation: flashRow 2s ease-out; }
+        
+        /* Review Sidebar List */
+        .sidebar-review-list { padding: 0 20px 10px 35px; font-size: 0.85rem; display: flex; flex-direction: column; gap: 5px; }
+        .sidebar-review-list div { cursor: pointer; color: var(--label-grey); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .sidebar-review-list div:hover { color: #fff; text-decoration: underline; }
+        
+        /* Avatar Manager Styles */
+        .avatar-admin-row { display: grid; grid-template-columns: 50px 1fr 100px 80px 40px; gap: 10px; align-items: center; background: var(--panel-standard); padding: 10px; border-radius: var(--radius-btn); margin-bottom: 10px; border: 1px solid var(--panel-mid); }
+        .avatar-admin-row img { width: 40px; height: 40px; border-radius: 4px; object-fit: cover; }
+        .avatar-admin-row input, .avatar-admin-row select { background: var(--navy-grey); color: #fff; border: 1px solid var(--panel-mid); padding: 5px; width: 100%; border-radius: 4px; }
+        .up-down-btns { display: flex; flex-direction: column; gap: 2px; }
+        .up-down-btns button { background: var(--panel-mid); border: none; color: #fff; cursor: pointer; font-size: 0.7rem; border-radius: 2px; }
+        .up-down-btns button:hover { background: var(--primary-blue); }
+        
+        /* Preview Table Editable Styles */
+        .preview-editable-cell { border: 1px dashed var(--label-grey); padding: 4px; min-width: 80px; }
+        .preview-editable-cell:focus { background: rgba(44, 168, 212, 0.2); outline: 1px solid var(--primary-blue); }
+        
+        /* WYSIWYG Source Textarea */
+        #wysiwyg-source { width: 100%; flex-grow: 1; background: #000; color: #0f0; font-family: monospace; font-size: 1rem; padding: 20px; border: none; resize: none; outline: none; }
     </style>
 </head>
 <body>
@@ -77,13 +105,12 @@
         </div>
     </div>
 
-    <div id="clipboard-float" class="hidden" style="position:fixed; top:10%; left:50%; width:90%; max-width: 450px; background:var(--panel-dark); border:1px solid var(--primary-blue); border-radius:var(--radius-card); z-index:2500; box-shadow:0 0 25px rgba(0,0,0,0.8); display:flex; flex-direction:column; min-height: 300px; resize: both; overflow: hidden;">
+    <div id="clipboard-float" class="hidden" style="position:fixed; top:10%; left:50%; width:90%; max-width: 450px; background:var(--panel-dark); border:1px solid var(--primary-blue); border-radius:var(--radius-card); z-index:9999; box-shadow:0 0 25px rgba(0,0,0,0.8); display:flex; flex-direction:column; min-height: 300px; resize: both; overflow: hidden;">
         <div id="clipboard-header" style="background:var(--primary-blue); color:#fff; padding:15px; font-weight:bold; display:flex; justify-content:space-between; align-items: center; border-radius:var(--radius-card) var(--radius-card) 0 0; cursor: move;">
             <span class="display-font" style="font-size: 1.2rem;">📋 ADMIN CLIPBOARD</span>
             <span style="cursor:pointer; font-size: 1.2rem;" onclick="document.getElementById('clipboard-float').classList.add('hidden')">❌</span>
         </div>
         <textarea id="clipboard-text" style="flex-grow:1; width:100%; background:var(--near-black); color:#fff; border:none; padding:15px; resize:none; outline:none; font-family: sans-serif; font-size: 1rem;" placeholder="Type notes here. Saves automatically..."></textarea>
-        
         <div style="display:flex; gap:1px; background: var(--panel-mid); border-radius: 0 0 var(--radius-card) var(--radius-card); overflow: hidden;">
             <button onclick="navigator.clipboard.writeText(document.getElementById('clipboard-text').value); showToast('Copied to system clipboard!');" class="btn" style="flex:1; border-radius:0; background: var(--panel-standard); color: #fff;">Copy</button>
             <button onclick="localStorage.setItem('br_admin_clipboard', document.getElementById('clipboard-text').value); showToast('Forced Save to Local Storage!');" class="btn" style="flex:1; border-radius:0; background: var(--primary-blue); color: #fff;">Save</button>
@@ -91,25 +118,38 @@
         </div>
     </div>
 
-    <div id="preview-import-modal" class="hidden" style="position:fixed; top:5%; left:5%; width:90%; height:90%; background:var(--panel-standard); border:2px solid var(--primary-blue); border-radius:var(--radius-window); z-index:2500; box-shadow:0 0 25px rgba(0,0,0,0.8); display:flex; flex-direction:column; resize: both; overflow: hidden;">
+    <div id="preview-import-modal" class="hidden" style="position:fixed; top:5%; left:5%; width:90%; height:90%; background:var(--panel-standard); border:2px solid var(--primary-blue); border-radius:var(--radius-window); z-index:9000; box-shadow:0 0 25px rgba(0,0,0,0.8); display:flex; flex-direction:column; resize: both; overflow: hidden;">
         <div id="preview-import-header" style="background:var(--panel-dark); color:#fff; padding:15px; font-weight:bold; display:flex; justify-content:space-between; align-items: center; border-radius:var(--radius-window) var(--radius-window) 0 0; cursor: move; border-bottom:1px solid var(--panel-mid);">
-            <span class="display-font" style="font-size: 1.2rem; color:var(--primary-blue);">👁️ PREVIEW IMPORT DATA</span>
-            <span style="cursor:pointer; font-size: 1.2rem;" onclick="document.getElementById('preview-import-modal').classList.add('hidden')">❌</span>
-        </div>
-        <div id="preview-table-container" style="flex-grow:1; overflow:auto; padding:0; background:var(--bg-color);" class="admin-main">
+            <span class="display-font" style="font-size: 1.2rem; color:var(--primary-blue);" id="preview-modal-title">👁️ PREVIEW IMPORT DATA</span>
+            <div style="display:flex; gap: 10px; align-items: center;">
+                <button id="btn-apply-merge" class="btn primary-btn pill-btn hidden" style="padding: 4px 15px; width: auto; font-size: 0.9rem;">Apply Merge</button>
+                <span style="cursor:pointer; font-size: 1.2rem;" onclick="document.getElementById('preview-import-modal').classList.add('hidden')">❌</span>
             </div>
+        </div>
+        <div id="preview-table-container" style="flex-grow:1; overflow:auto; padding:0; background:var(--bg-color);" class="admin-main"></div>
     </div>
 
     <div id="admin-shell" class="admin-layout hidden">
         <aside class="admin-sidebar">
-            <h2 class="display-font" style="color:var(--primary-blue); padding: 0 20px 20px; text-align:center;">BR ADMIN <span style="font-size: 0.9rem; color: var(--label-grey); margin-left: 5px;">v0.36</span></h2>
+            <h2 class="display-font" style="color:var(--primary-blue); padding: 0 20px 20px; text-align:center;">BR ADMIN <span style="font-size: 0.9rem; color: var(--label-grey); margin-left: 5px;">v0.37</span></h2>
             <div class="sidebar-menu" style="flex-grow:1;">
+                
                 <div class="sidebar-item" id="nav-venues"><span class="icon">📍</span> <span class="sidebar-text">Venues</span></div>
                 <div class="sidebar-item" id="nav-events"><span class="icon">📅</span> <span class="sidebar-text">Events</span></div>
+                
+                <div class="sidebar-item" id="btn-sidebar-pending" style="padding-bottom: 5px;"><span class="icon" style="color:var(--bright-red-orange);">🔍</span> <span class="sidebar-text">Pending Review</span></div>
+                <div id="sidebar-pending-list" class="sidebar-review-list hidden"></div>
+                
+                <div class="sidebar-item" id="btn-sidebar-old" style="padding-bottom: 5px;"><span class="icon" style="color:var(--label-grey);">⏳</span> <span class="sidebar-text">Review Old (>30d)</span></div>
+                <div id="sidebar-old-list" class="sidebar-review-list hidden"></div>
+
                 <hr class="divider">
+                
                 <div class="sidebar-item" id="nav-editor"><span class="icon">🚄</span> <span class="sidebar-text">Page Editor</span></div>
-                <div class="sidebar-item" onclick="alert('Profile avatar management placeholder')"><span class="icon">👤</span> <span class="sidebar-text">Profile Avatars</span></div>
+                <div class="sidebar-item" id="nav-avatars"><span class="icon">👤</span> <span class="sidebar-text">Profile Avatars</span></div>
+                
                 <hr class="divider">
+                
                 <div class="sidebar-item" onclick="document.getElementById('clipboard-float').classList.toggle('hidden')"><span class="icon">📋</span> <span class="sidebar-text">Toggle Clipboard</span></div>
                 <div class="sidebar-item" onclick="window.open('https://chatgpt.com/', '_blank')"><span class="icon">🤖</span> <span class="sidebar-text">Scrape Info</span></div>
                 
@@ -137,7 +177,7 @@
                 <div style="display:flex; gap:10px; margin-bottom: 15px; flex-wrap:wrap;">
                     <button id="btn-fetch-live" class="btn primary-btn pill-btn" style="width:auto;">☁️ Load Live Site Data</button>
                     
-                    <label class="btn secondary-btn pill-btn" style="width:auto; cursor:pointer;">
+                    <label class="btn secondary-btn pill-btn" style="width:auto; cursor:pointer;" title="Opens in Preview Window first">
                         🔄 Merge JSON
                         <input type="file" id="file-upload-merge" class="hidden" accept=".json">
                     </label>
@@ -148,7 +188,7 @@
                     
                     <button id="btn-export-csv" class="btn secondary-btn pill-btn" style="width:auto;">📊 Export CSV</button>
                     <button id="btn-export-json" class="btn secondary-btn pill-btn" style="width:auto;">💾 Export JSON</button>
-                    <button class="btn secondary-btn pill-btn" style="width:auto;" onclick="unhideAllColumns()">👁️ Unhide All Columns</button>
+                    <button class="btn secondary-btn pill-btn" style="width:auto;" onclick="unhideAllColumns()">👁️ Unhide Columns</button>
                 </div>
 
                 <div id="active-filters" class="active-filters-area"></div>
@@ -161,34 +201,77 @@
             <div id="view-editor" class="hidden" style="display:none; flex-direction:column; flex-grow:1; height:100%;">
                 <div class="summary-bar" style="margin-bottom: 10px;">
                     <strong class="display-font" style="font-size:1.2rem; color:var(--primary-blue);">HTML PAGE EDITOR</strong>
-                    <select id="editor-page-select" class="form-input pill-input" style="width:200px; margin:0; padding:4px 10px;">
-                        <option value="discounts">Discounts Page</option>
-                        <option value="about">About Page</option>
-                    </select>
+                    <div style="display:flex; gap:10px; align-items:center;">
+                        <select id="editor-page-select" class="form-input pill-input" style="width:200px; margin:0; padding:4px 10px;">
+                            <option value="discounts">Discounts Page</option>
+                            <option value="about">About Page</option>
+                        </select>
+                    </div>
                 </div>
                 
                 <div class="editor-container">
                     <div class="editor-toolbar">
-                        <button onclick="document.execCommand('formatBlock', false, 'H1')">H1</button>
-                        <button onclick="document.execCommand('formatBlock', false, 'H2')">H2</button>
-                        <button onclick="document.execCommand('bold', false, null)" style="font-weight:bold;">B</button>
-                        <button onclick="const url = prompt('Enter link URL:'); if(url) document.execCommand('createLink', false, url);">🔗 Link</button>
+                        <button onclick="editorAction('undo')">↩️ Undo</button>
+                        <button onclick="editorAction('redo')">↪️ Redo</button>
+                        <div style="width:1px; height:20px; background:var(--panel-mid); margin:0 5px;"></div>
+                        
+                        <button onclick="editorAction('normal')">T Normal Text</button>
+                        <button onclick="editorAction('h1')">H1</button>
+                        <button onclick="editorAction('h2')">H2</button>
+                        <button onclick="editorAction('bold')" style="font-weight:bold;">B</button>
+                        
                         <div class="color-picker-wrap">
                             <button onclick="this.nextElementSibling.classList.toggle('hidden')">🎨 Color</button>
                             <div class="color-picker-dropdown hidden">
-                                <div class="color-swatch" style="background:#2CA8D4;" onclick="document.execCommand('foreColor', false, '#2CA8D4'); this.parentElement.classList.add('hidden');"></div>
-                                <div class="color-swatch" style="background:#D55036;" onclick="document.execCommand('foreColor', false, '#D55036'); this.parentElement.classList.add('hidden');"></div>
-                                <div class="color-swatch" style="background:#969CAE;" onclick="document.execCommand('foreColor', false, '#969CAE'); this.parentElement.classList.add('hidden');"></div>
-                                <div class="color-swatch" style="background:#ffffff;" onclick="document.execCommand('foreColor', false, '#ffffff'); this.parentElement.classList.add('hidden');"></div>
+                                <div class="color-swatch" style="background:#2CA8D4;" onclick="editorAction('color', '#2CA8D4'); this.parentElement.classList.add('hidden');"></div>
+                                <div class="color-swatch" style="background:#D55036;" onclick="editorAction('color', '#D55036'); this.parentElement.classList.add('hidden');"></div>
+                                <div class="color-swatch" style="background:#969CAE;" onclick="editorAction('color', '#969CAE'); this.parentElement.classList.add('hidden');"></div>
+                                <div class="color-swatch" style="background:#ffffff;" onclick="editorAction('color', '#ffffff'); this.parentElement.classList.add('hidden');"></div>
                             </div>
                         </div>
-                        <button onclick="const e = document.getElementById('wysiwyg-content'); alert(e.innerHTML);">👁️ View Source</button>
-                        <button onclick="downloadEditorHTML()" style="margin-left:auto; background:var(--primary-blue); font-weight:bold;">💾 Download HTML</button>
+                        
+                        <button onclick="const url = prompt('Enter link URL:'); if(url) document.execCommand('createLink', false, url); saveEditorState();">🔗 Link</button>
+                        
+                        <div class="color-picker-wrap">
+                            <button onclick="this.nextElementSibling.classList.toggle('hidden')">📊 Table</button>
+                            <div class="color-picker-dropdown hidden" style="flex-direction:column; gap:4px; padding:10px;">
+                                <button onclick="editorAction('insertTable'); this.parentElement.classList.add('hidden');">Insert 2x2 Table</button>
+                                <hr style="border:0; height:1px; background:var(--label-grey); margin:2px 0;">
+                                <button onclick="editorAction('addRow'); this.parentElement.classList.add('hidden');">Add Row Below</button>
+                                <button onclick="editorAction('addCol'); this.parentElement.classList.add('hidden');">Add Col Right</button>
+                                <button onclick="editorAction('deleteRow'); this.parentElement.classList.add('hidden');">Delete Row</button>
+                                <button onclick="editorAction('deleteCol'); this.parentElement.classList.add('hidden');">Delete Col</button>
+                            </div>
+                        </div>
+
+                        <div style="width:1px; height:20px; background:var(--panel-mid); margin:0 5px; margin-left:auto;"></div>
+                        <button id="btn-toggle-source" onclick="toggleEditorSource()">👁️ View Source</button>
+                        <button onclick="downloadEditorHTML()" style="background:var(--primary-blue); font-weight:bold;">💾 Download</button>
                     </div>
                     <div id="wysiwyg-content" class="editor-content" contenteditable="true">
                         <h1>Travel Discounts</h1>
-                        <p>Start typing or pasting content here. Use the toolbar above to format.</p>
+                        <p>Start typing or pasting content here. Highlight text to apply specific formatting.</p>
                     </div>
+                    <textarea id="wysiwyg-source" class="hidden"></textarea>
+                </div>
+            </div>
+
+            <div id="view-avatars" class="hidden" style="display:none; flex-direction:column; flex-grow:1;">
+                <div class="summary-bar">
+                    <strong class="display-font" style="font-size:1.2rem; color:var(--primary-blue);">PROFILE AVATAR MANAGER</strong>
+                    <div style="display:flex; gap:10px;">
+                        <label class="btn secondary-btn pill-btn" style="cursor:pointer; width:auto; padding:4px 15px;">
+                            + Add New Avatar
+                            <input type="file" id="btn-add-avatar" class="hidden" accept=".png, .jpg, .jpeg">
+                        </label>
+                        <button id="btn-download-avatars" class="btn primary-btn pill-btn" style="width:auto; padding:4px 15px;">💾 Download JSON</button>
+                    </div>
+                </div>
+                
+                <div style="background:var(--panel-dark); padding: 15px; border-radius:var(--radius-card); margin-bottom: 20px;">
+                    <p class="meta-text" style="margin-bottom:15px;">Add, remove, relabel, and reorder avatars. Click Download JSON to save changes and upload <code>avatar_list.json</code> to your repo.</p>
+                    <div id="avatar-manager-list">
+                        </div>
                 </div>
             </div>
 

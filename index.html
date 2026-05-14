@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Backroom - v0.36</title>
+    <title>Backroom - v0.37</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Antonio:wght@400;700&family=Barlow+Condensed:wght@400;500;700&display=swap" rel="stylesheet">
@@ -66,9 +66,9 @@
                     <input type="text" id="search-input" class="body-font pill-input" placeholder="search name or description" autocomplete="off" autocorrect="off">
                 </div>
                 <div class="nav-buttons-wrapper">
-                    <button id="btn-location" class="top-btn pill-btn" title="Location"><span class="btn-icon">📍</span><span class="btn-text"> Location</span></button>
+                    <button id="btn-location" class="top-btn pill-btn" title="Location"><img src="location.png" style="width:16px; vertical-align:middle;"> <span class="btn-text"> Location</span></button>
                     <button id="btn-favorites" class="top-btn pill-btn" title="Favorites"><span class="btn-icon">⚜️</span><span class="btn-text"> Favourites</span></button>
-                    <button id="btn-shortlists-menu" class="top-btn pill-btn" title="Shortlists"><span class="btn-icon">📑</span><span class="btn-text"> Shortlists</span></button>
+                    <button id="btn-shortlists-menu" class="top-btn pill-btn" title="Shortlists"><img src="shortlist.png" style="width:16px; vertical-align:middle;"> <span class="btn-text"> Shortlists</span></button>
                 </div>
             </div>
 
@@ -168,8 +168,8 @@
                 <h2 id="modal-title" class="display-font">VENUE NAME</h2>
                 <div class="modal-actions">
                     <button id="modal-star" class="icon-btn" title="Toggle Favorite" style="font-size: 1.8rem;">⚜️</button>
-                    <button id="modal-shortlist" class="icon-btn" title="Add to Shortlist">📑</button>
-                    <button id="modal-share" class="icon-btn" title="Share">🔗</button>
+                    <button id="modal-shortlist" class="icon-btn" title="Add to Shortlist"><img src="shortlist.png" style="width:24px;"></button>
+                    <button id="modal-share" class="icon-btn" title="Share"><img src="link.png" style="width:24px;"></button>
                 </div>
             </div>
             
@@ -191,7 +191,7 @@
             <div class="modal-header"><h2 class="display-font">SET LOCATION</h2></div>
             <div class="modal-body body-font">
                 <p class="meta-text" style="margin-bottom:15px;">Set your location to find nearby venues and events.</p>
-                <button id="btn-gps" class="btn primary-btn pill-btn">📍 Use My GPS Location</button>
+                <button id="btn-gps" class="btn primary-btn pill-btn"><img src="location.png" style="width:18px; vertical-align:middle; margin-right:8px;"> Use My GPS Location</button>
                 <hr class="divider">
                 <input type="text" id="loc-country" class="form-input pill-input" placeholder="Country">
                 <div style="display:flex; gap:10px;">
@@ -201,7 +201,7 @@
                 <input type="text" id="loc-postcode" class="form-input pill-input" placeholder="Postcode (Optional)">
                 
                 <div id="map-preview-placeholder" class="map-preview">
-                    <span style="font-size:2rem;">🗺️</span><br>Map Preview<br><small>Click Search or GPS to load</small>
+                    <img src="location.png" style="width:32px; opacity:0.6; margin-bottom:5px;"><br>Map Preview<br><small>Click Search or GPS to load</small>
                 </div>
                 <div id="loc-map" style="height: 180px; width: 100%; display:none; border-radius: var(--radius-card); border: 1px solid var(--panel-mid); margin-top: 10px;"></div>
                 <div style="font-size:0.75rem; text-align:center; color:var(--label-grey); margin-top:5px; margin-bottom:15px;">© <a href="https://www.openstreetmap.org/copyright" target="_blank" style="color:var(--primary-blue);">OpenStreetMap</a> contributors</div>

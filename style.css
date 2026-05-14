@@ -40,11 +40,14 @@ body { background-color: var(--bg-color); color: #fff; font-family: 'Barlow Cond
 .secondary-btn { background-color: var(--panel-mid); color: #fff; }
 .secondary-btn:hover { background-color: var(--label-grey); }
 
-.icon-btn { background: none; border: none; color: var(--text-light); font-size: 1.2rem; cursor: pointer; transition: color 0.2s; }
+.icon-btn { background: none; border: none; color: var(--text-light); font-size: 1.2rem; cursor: pointer; transition: color 0.2s; display: flex; align-items: center; justify-content: center; }
 .icon-btn:hover { color: #fff; }
 
+/* Social Bar Hover Effect */
+.social-bar img:hover { transform: scale(1.15); filter: brightness(1.2); }
+
 .fav-btn { opacity: 0.5; transition: opacity 0.2s, transform 0.2s; }
-.fav-btn.active-star { opacity: 1; color: var(--bright-red-orange) !important; text-shadow: 0 0 5px var(--bright-red-orange); }
+.fav-btn.active-star { opacity: 1; color: var(--bright-red-orange) !important; text-shadow: 0 0 5px var(--bright-red-orange); filter: drop-shadow(0 0 5px var(--bright-red-orange)); }
 .fav-btn:hover { opacity: 0.8; }
 
 .form-input { width: 100%; padding: 10px; background-color: var(--navy-grey); border: 1px solid var(--panel-mid); color: #fff; font-family: 'Barlow Condensed', sans-serif; margin-bottom: 10px; border-radius: var(--radius-btn); }
