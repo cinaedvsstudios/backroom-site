@@ -1,5 +1,5 @@
 // --- Application State ---
-const APP_VERSION = "v0.32";
+const APP_VERSION = "v0.33";
 const APP_DATE = "May 14, 2026";
 
 let systemInfo = {}, designTheme = {}, venues = [], events = [];
@@ -1113,29 +1113,35 @@ function renderListings(data, isContextView = false) {
 }
 
 function getRatingHtml(val, type) {
+    let html = '<div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 2px; align-items: center; justify-items: center; border: none;">';
+    
     if (type === 'Size') {
-        let html = '';
+        const hands = ['🤏', '👍', '✌️', '🖐️', '🤲'];
         for(let i=1; i<=5; i++) {
             const op = i <= val ? '1' : '0.25';
-            html += `<span style="opacity:${op}; font-size: 22px; margin-right:2px;">🖐️</span>`;
+            html += `<span style="opacity:${op}; font-size: 26.4px; line-height: 1; text-align: center;">${hands[i-1]}</span>`;
         }
-        return html;
+    } else if (type === 'Age') {
+        for(let i=1; i<=5; i++) {
+            const op = i <= val ? '1' : '0.25';
+            html += `<img src="Emoji/age0${i}.png" class="rating-png" style="opacity:${op}; width:31.2px; height:31.2px; vertical-align:middle; text-align: center;">`;
+        }
+    } else {
+        const map = {
+            'General': 'eggplant',
+            'Darkroom': 'water',
+            'Cost': 'money',
+            'Location': 'peach',
+            'Popularity': 'busy'
+        };
+        const prefix = map[type] || 'eggplant';
+        for(let i=1; i<=5; i++) {
+            const op = i <= val ? '1' : '0.25';
+            html += `<img src="Emoji/${prefix}0${i}.png" class="rating-png" style="opacity:${op}; width:31.2px; height:31.2px; vertical-align:middle; text-align: center;">`;
+        }
     }
     
-    const map = {
-        'Age': 'age',
-        'General': 'eggplant',
-        'Darkroom': 'water',
-        'Cost': 'money',
-        'Location': 'peach',
-        'Popularity': 'busy'
-    };
-    const prefix = map[type] || 'eggplant';
-    let html = '';
-    for(let i=1; i<=5; i++) {
-        const op = i <= val ? '1' : '0.25';
-        html += `<img src="Emoji/${prefix}0${i}.png" class="rating-png" style="opacity:${op}; width:26px; height:26px; vertical-align:middle; margin-right:2px;">`;
-    }
+    html += '</div>';
     return html;
 }
 
@@ -1273,12 +1279,13 @@ function openVenueModal(venue) {
     const mapBtn = document.getElementById('btn-map');
     if(mapBtn) {
         mapBtn.onclick = () => {
-            const query = encodeURIComponent(venue.Address || venue.City || venue.Name);
+            const rawAddress = venue.Address || venue.City || venue.Name || '';
+            const queryPlus = encodeURIComponent(rawAddress.trim()).replace(/%20/g, '+');
             const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
             if (isIOS) {
-                window.open(`http://maps.apple.com/?q=${query}`, '_blank');
+                window.open(`http://maps.apple.com/?q=${queryPlus}`, '_blank');
             } else {
-                window.open(`https://www.google.com/maps/search/?api=1&query=?q=${query}`, '_blank');
+                window.open(`https://www.google.com/maps/place/Am+Wriezener+bhf,+10243+Berlin-Bezirk+Friedrichshain-Kreuzberg?q=${queryPlus}`, '_blank');
             }
         };
     }

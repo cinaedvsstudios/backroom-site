@@ -76,9 +76,9 @@ body { background-color: var(--bg-color); color: #fff; font-family: 'Barlow Cond
 
 .profile-btn-wrap { padding: 4px 8px !important; }
 #top-profile-avatar { 
-    width: 36px; 
-    height: 36px; 
-    object-fit: none; 
+    width: 24px; 
+    height: 24px; 
+    object-fit: cover; 
     object-position: center top; 
     border-radius: 4px; 
     margin-right: 5px; 

@@ -4,17 +4,6 @@ let currentMode = 'venues';
 let lastSavedDate = localStorage.getItem('br_admin_timestamp') || 'Never';
 let activeTableFilters = {}; 
 
-const pinGate = document.getElementById('pin-gate');
-const adminShell = document.getElementById('admin-shell');
-const tableContainer = document.getElementById('admin-table-container');
-const pinInput = document.getElementById('admin-pin');
-
-if(localStorage.getItem('br_admin_logged_in') === 'true') {
-    pinGate.classList.add('hidden');
-    adminShell.classList.remove('hidden');
-    loadDraftsFromLocal();
-}
-
 function showToast(message) {
     const container = document.getElementById('toast-container');
     if(!container) return;
@@ -31,74 +20,43 @@ function showToast(message) {
     }, 2500);
 }
 
-// Clipboard Logic
-const clipboardFloat = document.getElementById('clipboard-float');
-const clipHeader = document.getElementById('clipboard-header');
-let isDragging = false, startX, startY, initialLeft, initialTop;
-
-clipHeader.addEventListener('mousedown', (e) => {
-    isDragging = true;
-    startX = e.clientX; startY = e.clientY;
-    const rect = clipboardFloat.getBoundingClientRect();
-    clipboardFloat.style.transform = 'none';
-    initialLeft = rect.left; initialTop = rect.top;
-    clipboardFloat.style.left = initialLeft + 'px';
-    clipboardFloat.style.top = initialTop + 'px';
-});
-
-document.addEventListener('mousemove', (e) => {
-    if(isDragging) {
-        clipboardFloat.style.left = (initialLeft + e.clientX - startX) + 'px';
-        clipboardFloat.style.top = (initialTop + e.clientY - startY) + 'px';
-    }
-});
-document.addEventListener('mouseup', () => isDragging = false);
-
-const clipboard = document.getElementById('clipboard-text');
-clipboard.value = localStorage.getItem('br_admin_clipboard') || '';
-clipboard.addEventListener('input', (e) => {
-    localStorage.setItem('br_admin_clipboard', e.target.value);
-});
-
-window.addPin = (num) => {
-    if(pinInput.value.length < 4) pinInput.value += num;
-    checkPin();
+// Global functions required for inline HTML calls (like dynamically generated table cells)
+window.addPin = function(num) {
+    const pinInput = document.getElementById('admin-pin');
+    if(pinInput && pinInput.value.length < 4) pinInput.value += num;
+    window.checkPin();
 };
-window.delPin = () => pinInput.value = pinInput.value.slice(0, -1);
 
-document.addEventListener('keydown', (e) => {
-    if (!pinGate.classList.contains('hidden')) {
-        if (/^[0-9]$/.test(e.key) && pinInput.value.length < 4) {
-            pinInput.value += e.key;
-            checkPin();
-        } else if (e.key === 'Backspace') {
-            delPin();
-        } else if (e.key === 'Enter') {
-            checkPin();
-        }
-    }
-});
+window.delPin = function() {
+    const pinInput = document.getElementById('admin-pin');
+    if(pinInput) pinInput.value = pinInput.value.slice(0, -1);
+};
 
-document.getElementById('btn-login').addEventListener('click', checkPin);
+window.checkPin = function() {
+    const pinInput = document.getElementById('admin-pin');
+    const pinGate = document.getElementById('pin-gate');
+    const adminShell = document.getElementById('admin-shell');
+    if (!pinInput || !pinGate || !adminShell) return;
 
-function checkPin() {
     if (pinInput.value === '6997') {
         localStorage.setItem('br_admin_logged_in', 'true');
         pinGate.classList.add('hidden');
         adminShell.classList.remove('hidden');
         loadDraftsFromLocal();
     } else if (pinInput.value.length === 4) {
-        document.getElementById('pin-error').classList.remove('hidden');
+        const err = document.getElementById('pin-error');
+        if(err) err.classList.remove('hidden');
         pinInput.value = '';
     }
-}
+};
 
 window.switchView = function(view) {
     currentMode = view;
-    document.getElementById('summary-title').innerText = view === 'venues' ? 'VENUE DATA' : 'EVENT DATA';
+    const title = document.getElementById('summary-title');
+    if(title) title.innerText = view === 'venues' ? 'VENUE DATA' : 'EVENT DATA';
     activeTableFilters = {};
     loadDraftsFromLocal();
-}
+};
 
 function loadDraftsFromLocal() {
     const draftKey = currentMode === 'venues' ? 'br_admin_venues_draft' : 'br_admin_events_draft';
@@ -107,7 +65,8 @@ function loadDraftsFromLocal() {
     else draftData = [];
     
     fetchLiveSilently();
-    document.getElementById('summary-timestamp').innerText = `Showing Data From: ${lastSavedDate}`;
+    const timeDisplay = document.getElementById('summary-timestamp');
+    if(timeDisplay) timeDisplay.innerText = `Showing Data From: ${lastSavedDate}`;
     renderFilters();
     renderTable();
 }
@@ -117,7 +76,8 @@ function saveDraftsToLocal() {
     localStorage.setItem('br_admin_timestamp', lastSavedDate);
     const draftKey = currentMode === 'venues' ? 'br_admin_venues_draft' : 'br_admin_events_draft';
     localStorage.setItem(draftKey, JSON.stringify(draftData));
-    document.getElementById('summary-timestamp').innerText = `Showing Data From: ${lastSavedDate}`;
+    const timeDisplay = document.getElementById('summary-timestamp');
+    if(timeDisplay) timeDisplay.innerText = `Showing Data From: ${lastSavedDate}`;
     updateMismatchCount();
 }
 
@@ -130,141 +90,21 @@ async function fetchLiveSilently() {
     } catch(e) {}
 }
 
-document.getElementById('btn-fetch-live').addEventListener('click', async () => {
-    try {
-        const url = currentMode === 'venues' ? 'listings.json' : 'events.json';
-        const res = await fetch(url + '?v=' + new Date().getTime());
-        if(!res.ok) throw new Error("Could not find file.");
-        liveData = await res.json();
-        draftData = JSON.parse(JSON.stringify(liveData)); 
-        saveDraftsToLocal();
-        renderTable();
-        showToast(`Live ${currentMode} data loaded and saved to draft!`);
-    } catch(err) {
-        showToast("Fetch failed. Try Manual Upload.");
-    }
-});
-
-document.getElementById('file-upload-replace').addEventListener('change', (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (event) => {
-        try {
-            draftData = JSON.parse(event.target.result);
-            saveDraftsToLocal();
-            renderTable();
-            showToast("Data replaced successfully!");
-        } catch (err) { alert("Error parsing JSON."); }
-    };
-    reader.readAsText(file);
-});
-
-document.getElementById('file-upload-merge').addEventListener('change', (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (event) => {
-        try {
-            const uploadedData = JSON.parse(event.target.result);
-            if(!Array.isArray(uploadedData)) throw new Error("File is not an array");
-            
-            const idField = currentMode === 'venues' ? 'Venue_ID' : 'Event_ID';
-            let mergedCount = 0;
-            let addedCount = 0;
-            
-            uploadedData.forEach(newRow => {
-                const existingIdx = draftData.findIndex(d => d[idField] === newRow[idField]);
-                if(existingIdx >= 0) {
-                    draftData[existingIdx] = { ...draftData[existingIdx], ...newRow };
-                    mergedCount++;
-                } else {
-                    draftData.push(newRow);
-                    addedCount++;
-                }
-            });
-            
-            saveDraftsToLocal();
-            renderTable();
-            showToast(`Merge Complete: ${mergedCount} updated, ${addedCount} new.`);
-        } catch (err) { alert("Error merging JSON."); }
-    };
-    reader.readAsText(file);
-});
-
-document.getElementById('btn-export-csv').addEventListener('click', () => {
-    if(!draftData || draftData.length === 0) return alert('No data available to export.');
-    
-    const cols = Object.keys(draftData[0]);
-    let csvString = cols.join(',') + '\n';
-    
-    draftData.forEach(row => {
-        csvString += cols.map(c => {
-            let val = row[c] === null || row[c] === undefined ? '' : String(row[c]);
-            val = val.replace(/"/g, '""'); 
-            return `"${val}"`; 
-        }).join(',') + '\n';
-    });
-    
-    const blob = new Blob([csvString], {type: 'text/csv'});
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = `backroom_${currentMode}_${new Date().toISOString().split('T')[0]}.csv`;
-    a.click();
-});
-
-document.getElementById('btn-download-all').addEventListener('click', () => {
-    const vDraft = localStorage.getItem('br_admin_venues_draft');
-    const eDraft = localStorage.getItem('br_admin_events_draft');
-    
-    const download = (dataStr, name) => {
-        if(!dataStr) return;
-        const blob = new Blob([dataStr], {type: 'application/json'});
-        const a = document.createElement('a');
-        a.href = URL.createObjectURL(blob);
-        a.download = name;
-        a.click();
-    };
-    
-    if(vDraft) download(vDraft, 'listings.json');
-    if(eDraft) setTimeout(() => download(eDraft, 'events.json'), 500);
-});
-
-function applyTableFilters() {
-    return draftData.filter(row => {
-        for(let col in activeTableFilters) {
-            const rowVal = String(row[col] || '').toLowerCase();
-            const filterVal = activeTableFilters[col].toLowerCase();
-            if(!rowVal.includes(filterVal)) return false;
-        }
-        return true;
-    });
-}
-
 window.removeFilter = function(col) {
     delete activeTableFilters[col];
     renderFilters();
     renderTable();
-}
-
-function renderFilters() {
-    const container = document.getElementById('active-filters');
-    container.innerHTML = '';
-    Object.keys(activeTableFilters).forEach(col => {
-        container.innerHTML += `<div class="filter-pill">${col}: ${activeTableFilters[col]} <span onclick="removeFilter('${col}')">✕</span></div>`;
-    });
-}
+};
 
 window.toggleColumn = function(idx) {
     const cols = document.querySelectorAll(`.col-idx-${idx}`);
     cols.forEach(c => c.classList.toggle('hidden-col'));
-}
+};
 
 window.unhideAllColumns = function() {
     document.querySelectorAll('.hidden-col').forEach(c => c.classList.remove('hidden-col'));
-}
+};
 
-// V0.31: Header Mapping to shrink long titles
 const headerMapping = {
     "Event_Start_Time": "Start Time",
     "Event_End_Time": "End Time",
@@ -278,18 +118,37 @@ const headerMapping = {
     "Feature_Darkroom": "Darkroom"
 };
 
+function renderFilters() {
+    const container = document.getElementById('active-filters');
+    if(!container) return;
+    container.innerHTML = '';
+    Object.keys(activeTableFilters).forEach(col => {
+        container.innerHTML += `<div class="filter-pill">${col}: ${activeTableFilters[col]} <span onclick="removeFilter('${col}')">✕</span></div>`;
+    });
+}
+
 function renderTable() {
+    const tableContainer = document.getElementById('admin-table-container');
+    if(!tableContainer) return;
+
     if (!draftData || draftData.length === 0) {
         tableContainer.innerHTML = "<p style='padding:20px;'>No data. Load a file first.</p>";
         updateMismatchCount();
         return;
     }
 
-    const filteredData = applyTableFilters();
+    const filteredData = draftData.filter(row => {
+        for(let col in activeTableFilters) {
+            const rowVal = String(row[col] || '').toLowerCase();
+            const filterVal = activeTableFilters[col].toLowerCase();
+            if(!rowVal.includes(filterVal)) return false;
+        }
+        return true;
+    });
+
     const columns = Object.keys(draftData[0] || {});
 
-    let html = `<table><thead><tr>
-        <th style="min-width:60px;">Edit</th>`;
+    let html = `<table><thead><tr><th style="min-width:60px;">Edit</th>`;
         
     columns.forEach((col, idx) => {
         const displayName = headerMapping[col] || col;
@@ -381,7 +240,7 @@ window.editCell = function(td, rowIndex, col) {
             td.dataset.listening = "true";
         }
     }
-}
+};
 
 window.saveCell = function(selectEl, rowIndex, col) {
     const newVal = selectEl.value;
@@ -395,14 +254,17 @@ window.saveCell = function(selectEl, rowIndex, col) {
     selectEl.parentElement.classList.add('edited-cell');
     saveDraftsToLocal();
     updateMismatchCount();
-}
+};
 
 let currentMismatchIds = [];
 
 function updateMismatchCount() {
     if(liveData.length === 0) {
-        document.getElementById('summary-mismatch').innerText = "Live data not loaded for comparison.";
-        document.getElementById('summary-mismatch').style.color = 'var(--text-light)';
+        const mismatchEl = document.getElementById('summary-mismatch');
+        if(mismatchEl) {
+            mismatchEl.innerText = "Live data not loaded for comparison.";
+            mismatchEl.style.color = 'var(--text-light)';
+        }
         return;
     }
     
@@ -416,40 +278,238 @@ function updateMismatchCount() {
     });
     
     const txt = document.getElementById('summary-mismatch');
-    if(currentMismatchIds.length === 0) {
-        txt.innerText = "All records match live data.";
-        txt.style.color = "var(--primary-blue)";
-    } else {
-        txt.innerText = `${currentMismatchIds.length} / ${draftData.length} records do not match.`;
-        txt.style.color = "var(--bright-red-orange)";
+    if(txt) {
+        if(currentMismatchIds.length === 0) {
+            txt.innerText = "All records match live data.";
+            txt.style.color = "var(--primary-blue)";
+        } else {
+            txt.innerText = `${currentMismatchIds.length} / ${draftData.length} records do not match.`;
+            txt.style.color = "var(--bright-red-orange)";
+        }
     }
 }
 
-document.getElementById('summary-mismatch').addEventListener('click', () => {
-    if(currentMismatchIds.length === 0) return;
-    const list = document.getElementById('mismatch-list');
-    list.innerHTML = '';
-    currentMismatchIds.forEach(id => {
-        list.innerHTML += `<li style="color:var(--bright-red-orange); font-weight:bold;">${id}</li>`;
-    });
-    document.getElementById('mismatch-modal').classList.remove('hidden');
-});
+// Initialization and DOM Element Binding
+document.addEventListener('DOMContentLoaded', () => {
+    const pinGate = document.getElementById('pin-gate');
+    const adminShell = document.getElementById('admin-shell');
+    const pinInput = document.getElementById('admin-pin');
+    const btnLogin = document.getElementById('btn-login');
 
-document.getElementById('btn-highlight-changes').addEventListener('click', () => {
-    if(liveData.length === 0) return alert("Load live data first to compare!");
-    const tbody = document.getElementById('admin-tbody');
-    if(!tbody) return;
-    
-    Array.from(tbody.children).forEach(tr => {
-        const id = tr.dataset.id;
-        if(currentMismatchIds.includes(id)) {
-            tr.classList.add('row-mismatch');
-        } else {
-            tr.classList.remove('row-mismatch');
+    if(localStorage.getItem('br_admin_logged_in') === 'true') {
+        if(pinGate) pinGate.classList.add('hidden');
+        if(adminShell) adminShell.classList.remove('hidden');
+        loadDraftsFromLocal();
+    }
+
+    if(btnLogin) btnLogin.addEventListener('click', window.checkPin);
+
+    document.addEventListener('keydown', (e) => {
+        if (pinGate && !pinGate.classList.contains('hidden')) {
+            if (/^[0-9]$/.test(e.key) && pinInput && pinInput.value.length < 4) {
+                pinInput.value += e.key;
+                window.checkPin();
+            } else if (e.key === 'Backspace') {
+                window.delPin();
+            } else if (e.key === 'Enter') {
+                window.checkPin();
+            }
         }
     });
-});
 
-document.querySelectorAll('.close-modal-btn').forEach(btn => {
-    btn.addEventListener('click', (e) => e.target.closest('.modal').classList.add('hidden'));
+    // Sidebar explicitly bound 
+    const navVenues = document.getElementById('nav-venues');
+    if (navVenues) navVenues.addEventListener('click', () => switchView('venues'));
+
+    const navEvents = document.getElementById('nav-events');
+    if (navEvents) navEvents.addEventListener('click', () => switchView('events'));
+
+    // Clipboard Logic explicitly bound
+    const clipboardFloat = document.getElementById('clipboard-float');
+    const clipHeader = document.getElementById('clipboard-header');
+    const clipboard = document.getElementById('clipboard-text');
+    let isDragging = false, startX, startY, initialLeft, initialTop;
+
+    if(clipHeader && clipboardFloat) {
+        clipHeader.addEventListener('mousedown', (e) => {
+            isDragging = true;
+            startX = e.clientX; startY = e.clientY;
+            const rect = clipboardFloat.getBoundingClientRect();
+            clipboardFloat.style.transform = 'none';
+            initialLeft = rect.left; initialTop = rect.top;
+            clipboardFloat.style.left = initialLeft + 'px';
+            clipboardFloat.style.top = initialTop + 'px';
+        });
+
+        document.addEventListener('mousemove', (e) => {
+            if(isDragging) {
+                clipboardFloat.style.left = (initialLeft + e.clientX - startX) + 'px';
+                clipboardFloat.style.top = (initialTop + e.clientY - startY) + 'px';
+            }
+        });
+        document.addEventListener('mouseup', () => isDragging = false);
+    }
+
+    if(clipboard) {
+        clipboard.value = localStorage.getItem('br_admin_clipboard') || '';
+        clipboard.addEventListener('input', (e) => {
+            localStorage.setItem('br_admin_clipboard', e.target.value);
+        });
+    }
+
+    // Explicitly binding main dashboard buttons
+    const btnFetchLive = document.getElementById('btn-fetch-live');
+    if(btnFetchLive) {
+        btnFetchLive.addEventListener('click', async () => {
+            try {
+                const url = currentMode === 'venues' ? 'listings.json' : 'events.json';
+                const res = await fetch(url + '?v=' + new Date().getTime());
+                if(!res.ok) throw new Error("Could not find file.");
+                liveData = await res.json();
+                draftData = JSON.parse(JSON.stringify(liveData)); 
+                saveDraftsToLocal();
+                renderTable();
+                showToast(`Live ${currentMode} data loaded and saved to draft!`);
+            } catch(err) {
+                showToast("Fetch failed. Try Manual Upload.");
+            }
+        });
+    }
+
+    const fileReplace = document.getElementById('file-upload-replace');
+    if(fileReplace) {
+        fileReplace.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                try {
+                    draftData = JSON.parse(event.target.result);
+                    saveDraftsToLocal();
+                    renderTable();
+                    showToast("Data replaced successfully!");
+                } catch (err) { alert("Error parsing JSON."); }
+            };
+            reader.readAsText(file);
+        });
+    }
+
+    const fileMerge = document.getElementById('file-upload-merge');
+    if(fileMerge) {
+        fileMerge.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                try {
+                    const uploadedData = JSON.parse(event.target.result);
+                    if(!Array.isArray(uploadedData)) throw new Error("File is not an array");
+                    
+                    const idField = currentMode === 'venues' ? 'Venue_ID' : 'Event_ID';
+                    let mergedCount = 0, addedCount = 0;
+                    
+                    uploadedData.forEach(newRow => {
+                        const existingIdx = draftData.findIndex(d => d[idField] === newRow[idField]);
+                        if(existingIdx >= 0) {
+                            draftData[existingIdx] = { ...draftData[existingIdx], ...newRow };
+                            mergedCount++;
+                        } else {
+                            draftData.push(newRow);
+                            addedCount++;
+                        }
+                    });
+                    
+                    saveDraftsToLocal();
+                    renderTable();
+                    showToast(`Merge Complete: ${mergedCount} updated, ${addedCount} new.`);
+                } catch (err) { alert("Error merging JSON."); }
+            };
+            reader.readAsText(file);
+        });
+    }
+
+    const btnExportCSV = document.getElementById('btn-export-csv');
+    if(btnExportCSV) {
+        btnExportCSV.addEventListener('click', () => {
+            if(!draftData || draftData.length === 0) return alert('No data available to export.');
+            
+            const cols = Object.keys(draftData[0]);
+            let csvString = cols.join(',') + '\n';
+            
+            draftData.forEach(row => {
+                csvString += cols.map(c => {
+                    let val = row[c] === null || row[c] === undefined ? '' : String(row[c]);
+                    val = val.replace(/"/g, '""'); 
+                    return `"${val}"`; 
+                }).join(',') + '\n';
+            });
+            
+            const blob = new Blob([csvString], {type: 'text/csv'});
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = `backroom_${currentMode}_${new Date().toISOString().split('T')[0]}.csv`;
+            a.click();
+        });
+    }
+
+    const btnDownloadAll = document.getElementById('btn-download-all');
+    if(btnDownloadAll) {
+        btnDownloadAll.addEventListener('click', () => {
+            const vDraft = localStorage.getItem('br_admin_venues_draft');
+            const eDraft = localStorage.getItem('br_admin_events_draft');
+            
+            const download = (dataStr, name) => {
+                if(!dataStr) return;
+                const blob = new Blob([dataStr], {type: 'application/json'});
+                const a = document.createElement('a');
+                a.href = URL.createObjectURL(blob);
+                a.download = name;
+                a.click();
+            };
+            
+            if(vDraft) download(vDraft, 'listings.json');
+            if(eDraft) setTimeout(() => download(eDraft, 'events.json'), 500);
+        });
+    }
+
+    const summaryMismatch = document.getElementById('summary-mismatch');
+    if(summaryMismatch) {
+        summaryMismatch.addEventListener('click', () => {
+            if(currentMismatchIds.length === 0) return;
+            const list = document.getElementById('mismatch-list');
+            if(list) {
+                list.innerHTML = '';
+                currentMismatchIds.forEach(id => {
+                    list.innerHTML += `<li style="color:var(--bright-red-orange); font-weight:bold;">${id}</li>`;
+                });
+            }
+            const mismatchModal = document.getElementById('mismatch-modal');
+            if(mismatchModal) mismatchModal.classList.remove('hidden');
+        });
+    }
+
+    const btnHighlightChanges = document.getElementById('btn-highlight-changes');
+    if(btnHighlightChanges) {
+        btnHighlightChanges.addEventListener('click', () => {
+            if(liveData.length === 0) return alert("Load live data first to compare!");
+            const tbody = document.getElementById('admin-tbody');
+            if(!tbody) return;
+            
+            Array.from(tbody.children).forEach(tr => {
+                const id = tr.dataset.id;
+                if(currentMismatchIds.includes(id)) {
+                    tr.classList.add('row-mismatch');
+                } else {
+                    tr.classList.remove('row-mismatch');
+                }
+            });
+        });
+    }
+
+    document.querySelectorAll('.close-modal-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const modal = e.target.closest('.modal');
+            if(modal) modal.classList.add('hidden');
+        });
+    });
 });
