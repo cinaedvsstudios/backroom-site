@@ -449,7 +449,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // FIXED: Dedicated Export JSON Button logic added
     const btnExportJSON = document.getElementById('btn-export-json');
     if(btnExportJSON) {
         btnExportJSON.addEventListener('click', () => {
