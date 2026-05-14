@@ -1,6 +1,6 @@
 let liveData = [];
 let draftData = [];
-let currentMode = 'venues'; 
+let currentMode = 'venues'; // 'venues', 'events', or 'editor'
 let lastSavedDate = localStorage.getItem('br_admin_timestamp') || 'Never';
 let activeTableFilters = {}; 
 
@@ -20,7 +20,35 @@ function showToast(message) {
     }, 2500);
 }
 
-// Global functions required for inline HTML calls
+// Advanced JSON Error Handling (v0.36)
+let lastJsonErrorText = "";
+function handleJSONError(err, fileText) {
+    const modal = document.getElementById('json-error-modal');
+    const details = document.getElementById('json-error-details');
+    if(!modal || !details) return alert("JSON Error: " + err.message);
+    
+    let report = `Error: ${err.message}\n\n`;
+    
+    const match = err.message.match(/at position (\d+)/);
+    if(match && fileText) {
+        const pos = parseInt(match[1]);
+        const start = Math.max(0, pos - 30);
+        const end = Math.min(fileText.length, pos + 30);
+        
+        let snippet = fileText.substring(start, end);
+        report += `--- Context Snippet (Near character ${pos}) ---\n`;
+        report += `...${snippet}...\n`;
+        report += `   ${' '.repeat(pos - start)}^ (Error roughly here)\n`;
+    } else {
+        report += `Could not extract character position for a snippet.\n`;
+    }
+    
+    lastJsonErrorText = report;
+    details.innerText = report;
+    modal.classList.remove('hidden');
+}
+
+// Global UI Functions
 window.addPin = function(num) {
     const pinInput = document.getElementById('admin-pin');
     if(pinInput && pinInput.value.length < 4) pinInput.value += num;
@@ -52,13 +80,41 @@ window.checkPin = function() {
 
 window.switchView = function(view) {
     currentMode = view;
-    const title = document.getElementById('summary-title');
-    if(title) title.innerText = view === 'venues' ? 'VENUE DATA' : 'EVENT DATA';
-    activeTableFilters = {};
-    loadDraftsFromLocal();
+    const viewTables = document.getElementById('view-tables');
+    const viewEditor = document.getElementById('view-editor');
+    
+    if(view === 'editor') {
+        viewTables.style.display = 'none';
+        viewEditor.style.display = 'flex';
+        viewEditor.classList.remove('hidden');
+    } else {
+        viewTables.style.display = 'flex';
+        viewEditor.style.display = 'none';
+        viewEditor.classList.add('hidden');
+        const title = document.getElementById('summary-title');
+        if(title) title.innerText = view === 'venues' ? 'VENUE DATA' : 'EVENT DATA';
+        activeTableFilters = {};
+        loadDraftsFromLocal();
+    }
+};
+
+window.downloadEditorHTML = function() {
+    const content = document.getElementById('wysiwyg-content');
+    const select = document.getElementById('editor-page-select');
+    if(!content || !select) return;
+    
+    const htmlStr = content.innerHTML;
+    const blob = new Blob([htmlStr], {type: 'text/html'});
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `backroom_${select.value}_${new Date().toISOString().split('T')[0]}.html`;
+    a.click();
+    URL.revokeObjectURL(a.href);
+    showToast("HTML downloaded successfully!");
 };
 
 function loadDraftsFromLocal() {
+    if(currentMode === 'editor') return;
     const draftKey = currentMode === 'venues' ? 'br_admin_venues_draft' : 'br_admin_events_draft';
     const draft = localStorage.getItem(draftKey);
     if(draft) draftData = JSON.parse(draft);
@@ -127,6 +183,59 @@ function renderFilters() {
     });
 }
 
+function generateTableHTML(dataObj, showEditControls) {
+    if (!dataObj || dataObj.length === 0) return "<p style='padding:20px;'>No data available.</p>";
+
+    const columns = Object.keys(dataObj[0] || {});
+    let html = `<table><thead><tr>`;
+    
+    if(showEditControls) html += `<th style="min-width:60px;">Edit</th>`;
+        
+    columns.forEach((col, idx) => {
+        const displayName = headerMapping[col] || col;
+        html += `<th class="col-idx-${idx}">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+                <span class="eye-btn" onclick="toggleColumn(${idx})" title="Toggle Hide">👁️</span>
+                <span class="col-title" style="flex-grow:1;">${displayName}</span>
+            </div>`;
+        if(showEditControls) {
+            html += `<input type="text" class="filter-header-input" placeholder="Filter..." data-col="${col}">`;
+        }
+        html += `</th>`;
+    });
+    
+    html += `</tr></thead><tbody ${showEditControls ? 'id="admin-tbody"' : ''}>`;
+    
+    dataObj.forEach((row, rowIndex) => {
+        const id = row.Venue_ID || row.Event_ID || rowIndex;
+        html += `<tr data-id="${id}">`;
+        
+        if(showEditControls) {
+            html += `<td style="text-align:center; font-size:1.5rem;" onclick="alert('Phase 3 WYSIWYG Editor modal coming soon!')">✏️</td>`;
+        }
+        
+        columns.forEach((col, idx) => {
+            const idField = currentMode === 'venues' ? 'Venue_ID' : 'Event_ID';
+            let isEdited = false;
+            if (showEditControls && liveData.length > 0) {
+                const lRow = liveData.find(l => l[idField] === row[idField]);
+                if (lRow && String(lRow[col]) !== String(row[col])) isEdited = true;
+            }
+            
+            const editedClass = isEdited ? 'edited-cell' : '';
+            if(showEditControls) {
+                html += `<td class="col-idx-${idx} ${editedClass}" onclick="editCell(this, ${rowIndex}, '${col}')">${String(row[col] || '')}</td>`;
+            } else {
+                html += `<td class="col-idx-${idx} ${editedClass}">${String(row[col] || '')}</td>`;
+            }
+        });
+        html += `</tr>`;
+    });
+    
+    html += `</tbody></table>`;
+    return html;
+}
+
 function renderTable() {
     const tableContainer = document.getElementById('admin-table-container');
     if(!tableContainer) return;
@@ -146,44 +255,7 @@ function renderTable() {
         return true;
     });
 
-    const columns = Object.keys(draftData[0] || {});
-
-    let html = `<table><thead><tr><th style="min-width:60px;">Edit</th>`;
-        
-    columns.forEach((col, idx) => {
-        const displayName = headerMapping[col] || col;
-        html += `<th class="col-idx-${idx}">
-            <div style="display:flex; justify-content:space-between; align-items:center;">
-                <span class="eye-btn" onclick="toggleColumn(${idx})" title="Toggle Hide">👁️</span>
-                <span class="col-title" style="flex-grow:1;">${displayName}</span>
-            </div>
-            <input type="text" class="filter-header-input" placeholder="Filter..." data-col="${col}">
-        </th>`;
-    });
-    
-    html += `</tr></thead><tbody id="admin-tbody">`;
-    
-    filteredData.forEach((row, rowIndex) => {
-        const id = row.Venue_ID || row.Event_ID || rowIndex;
-        html += `<tr data-id="${id}">
-            <td style="text-align:center; font-size:1.5rem;" onclick="alert('Phase 3 WYSIWYG Editor modal coming soon!')">✏️</td>`;
-        
-        columns.forEach((col, idx) => {
-            const idField = currentMode === 'venues' ? 'Venue_ID' : 'Event_ID';
-            let isEdited = false;
-            if (liveData.length > 0) {
-                const lRow = liveData.find(l => l[idField] === row[idField]);
-                if (lRow && String(lRow[col]) !== String(row[col])) isEdited = true;
-            }
-            
-            const editedClass = isEdited ? 'edited-cell' : '';
-            html += `<td class="col-idx-${idx} ${editedClass}" onclick="editCell(this, ${rowIndex}, '${col}')">${String(row[col] || '')}</td>`;
-        });
-        html += `</tr>`;
-    });
-    
-    html += `</tbody></table>`;
-    tableContainer.innerHTML = html;
+    tableContainer.innerHTML = generateTableHTML(filteredData, true);
 
     document.querySelectorAll('.filter-header-input').forEach(inp => {
         inp.addEventListener('keypress', (e) => {
@@ -323,31 +395,39 @@ document.addEventListener('DOMContentLoaded', () => {
     const navEvents = document.getElementById('nav-events');
     if (navEvents) navEvents.addEventListener('click', () => switchView('events'));
 
-    const clipboardFloat = document.getElementById('clipboard-float');
-    const clipHeader = document.getElementById('clipboard-header');
-    const clipboard = document.getElementById('clipboard-text');
-    let isDragging = false, startX, startY, initialLeft, initialTop;
+    const navEditor = document.getElementById('nav-editor');
+    if (navEditor) navEditor.addEventListener('click', () => switchView('editor'));
 
-    if(clipHeader && clipboardFloat) {
-        clipHeader.addEventListener('mousedown', (e) => {
+    // Draggable functionality setup
+    const makeDraggable = (headerId, windowId) => {
+        const header = document.getElementById(headerId);
+        const win = document.getElementById(windowId);
+        if(!header || !win) return;
+        let isDragging = false, startX, startY, initialLeft, initialTop;
+        
+        header.addEventListener('mousedown', (e) => {
             isDragging = true;
             startX = e.clientX; startY = e.clientY;
-            const rect = clipboardFloat.getBoundingClientRect();
-            clipboardFloat.style.transform = 'none';
+            const rect = win.getBoundingClientRect();
+            win.style.transform = 'none';
             initialLeft = rect.left; initialTop = rect.top;
-            clipboardFloat.style.left = initialLeft + 'px';
-            clipboardFloat.style.top = initialTop + 'px';
+            win.style.left = initialLeft + 'px';
+            win.style.top = initialTop + 'px';
         });
 
         document.addEventListener('mousemove', (e) => {
             if(isDragging) {
-                clipboardFloat.style.left = (initialLeft + e.clientX - startX) + 'px';
-                clipboardFloat.style.top = (initialTop + e.clientY - startY) + 'px';
+                win.style.left = (initialLeft + e.clientX - startX) + 'px';
+                win.style.top = (initialTop + e.clientY - startY) + 'px';
             }
         });
         document.addEventListener('mouseup', () => isDragging = false);
-    }
+    };
 
+    makeDraggable('clipboard-header', 'clipboard-float');
+    makeDraggable('preview-import-header', 'preview-import-modal');
+
+    const clipboard = document.getElementById('clipboard-text');
     if(clipboard) {
         clipboard.value = localStorage.getItem('br_admin_clipboard') || '';
         clipboard.addEventListener('input', (e) => {
@@ -380,12 +460,13 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!file) return;
             const reader = new FileReader();
             reader.onload = (event) => {
+                const text = event.target.result;
                 try {
-                    draftData = JSON.parse(event.target.result);
+                    draftData = JSON.parse(text);
                     saveDraftsToLocal();
                     renderTable();
                     showToast("Data replaced successfully!");
-                } catch (err) { alert("Error parsing JSON."); }
+                } catch (err) { handleJSONError(err, text); }
             };
             reader.readAsText(file);
         });
@@ -398,8 +479,9 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!file) return;
             const reader = new FileReader();
             reader.onload = (event) => {
+                const text = event.target.result;
                 try {
-                    const uploadedData = JSON.parse(event.target.result);
+                    const uploadedData = JSON.parse(text);
                     if(!Array.isArray(uploadedData)) throw new Error("File is not an array");
                     
                     const idField = currentMode === 'venues' ? 'Venue_ID' : 'Event_ID';
@@ -419,11 +501,52 @@ document.addEventListener('DOMContentLoaded', () => {
                     saveDraftsToLocal();
                     renderTable();
                     showToast(`Merge Complete: ${mergedCount} updated, ${addedCount} new.`);
-                } catch (err) { alert("Error merging JSON."); }
+                } catch (err) { handleJSONError(err, text); }
             };
             reader.readAsText(file);
         });
     }
+
+    // Preview Import Logic (v0.36)
+    const filePreview = document.getElementById('file-preview-import');
+    if(filePreview) {
+        filePreview.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                const text = event.target.result;
+                try {
+                    const previewData = JSON.parse(text);
+                    if(!Array.isArray(previewData)) throw new Error("File is not an array");
+                    
+                    const container = document.getElementById('preview-table-container');
+                    if(container) {
+                        container.innerHTML = generateTableHTML(previewData, false);
+                        document.getElementById('preview-import-modal').classList.remove('hidden');
+                        showToast("Preview loaded successfully.");
+                    }
+                } catch (err) { handleJSONError(err, text); }
+            };
+            reader.readAsText(file);
+            filePreview.value = ''; // Reset so same file can be triggered again
+        });
+    }
+
+    // JSON Error Handlers (v0.36)
+    document.getElementById('btn-copy-error')?.addEventListener('click', () => {
+        navigator.clipboard.writeText(lastJsonErrorText);
+        showToast("Error report copied to clipboard.");
+    });
+    
+    document.getElementById('btn-download-error')?.addEventListener('click', () => {
+        const blob = new Blob([lastJsonErrorText], {type: 'text/plain'});
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = `json_import_error_${new Date().toISOString().split('T')[0]}.txt`;
+        a.click();
+        URL.revokeObjectURL(a.href);
+    });
 
     const btnExportCSV = document.getElementById('btn-export-csv');
     if(btnExportCSV) {

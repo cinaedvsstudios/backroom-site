@@ -1,5 +1,5 @@
 // --- Application State ---
-const APP_VERSION = "v0.35";
+const APP_VERSION = "v0.36";
 const APP_DATE = "May 14, 2026";
 
 let systemInfo = {}, designTheme = {}, venues = [], events = [];
@@ -84,7 +84,6 @@ function getDistanceFromLatLonInKm(lat1, lon1, lat2, lon2) {
     return R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a))); 
 }
 
-// Profile Bundle Logic
 function loadActiveProfileData() {
     if (userProfile.name && savedProfiles[userProfile.name]) {
         const bundle = savedProfiles[userProfile.name];
@@ -534,7 +533,6 @@ function initLeafletMap(lat, lng) {
     setTimeout(() => leafletMap.invalidateSize(), 150);
 }
 
-// FIXED: Explicitly target the new crop-container div to toggle visibility correctly
 function updateProfileDisplay() {
     const topAvatarContainer = document.getElementById('top-profile-container');
     const topAvatar = document.getElementById('top-profile-avatar');
@@ -906,10 +904,58 @@ function renderProfileAvatars() {
     });
 }
 
+function renderProfileStats() {
+    const container = document.getElementById('profile-stats-container');
+    if(!container) return;
+    
+    const favCount = userFavorites.length;
+    const eventCount = userEvents.length;
+    const shortCount = Object.keys(userShortlists).length;
+    const travelCount = userTravel.length;
+    
+    let html = `
+        <hr style="border: 0; height: 2px; background: var(--bright-red-orange); margin: 20px 0;">
+        <h3 style="color: var(--primary-blue); margin-bottom: 15px; font-size: 1.2rem;" class="display-font">YOUR PROFILE CONTAINS</h3>
+        <div style="display: flex; flex-direction: column; gap: 10px;">
+    `;
+
+    const createStatHtml = (title, count, items, icon) => {
+        let itemsHtml = items.length > 0 ? `<div class="hidden meta-text" style="padding-left:30px; margin-top:8px; font-size:0.95rem; line-height: 1.4;">${items.join('<br>')}</div>` : '';
+        return `
+            <div style="background: var(--panel-dark); border: 1px solid var(--panel-mid); padding: 12px; border-radius: var(--radius-card); cursor: pointer;" onclick="const d=this.querySelector('.meta-text'); if(d) d.classList.toggle('hidden');">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <strong style="font-size: 1.05rem;">${icon} ${title}</strong>
+                    <span style="background:var(--primary-blue); color:#fff; padding:3px 10px; border-radius:var(--radius-pill); font-size:0.9rem; font-weight: bold;">${count}</span>
+                </div>
+                ${itemsHtml}
+            </div>
+        `;
+    };
+
+    const favNames = userFavorites.map(id => {
+        const v = venues.find(v => v.Venue_ID === id);
+        return v ? v.Name : id;
+    });
+    const eventNames = userEvents.map(id => {
+        const e = events.find(e => e.Event_ID === id);
+        return e ? e.Event_Name : id;
+    });
+    const shortNames = Object.keys(userShortlists);
+    
+    html += createStatHtml('Saved Locations', travelCount, userTravel, '🚄');
+    html += createStatHtml('Shortlists', shortCount, shortNames, '📑');
+    html += createStatHtml('Saved Events', eventCount, eventNames, '💖');
+    html += createStatHtml('Saved Venues', favCount, favNames, '⚜️');
+    
+    html += `</div>`;
+    container.innerHTML = html;
+}
+
 function openProfileMenu() {
     const pName = document.getElementById('profile-name');
     if(pName) pName.value = userProfile.name || '';
     renderProfileAvatars();
+    renderProfileStats();
     profileModal?.classList.remove('hidden');
 }
 
@@ -1124,15 +1170,21 @@ function getRatingCells(val, type) {
         const op = i <= val ? '1' : '0.25';
         let asset = '';
         
+        // v0.36 - +20% size increase for Age and Popularity
+        let iconSize = '26px';
+        if (type === 'Age' || type === 'Popularity') {
+            iconSize = '31.2px';
+        }
+        
+        // v0.36 - Replaced hand emojis with size01-05.png
         if (type === 'Size') {
-            const hands = ['🤏', '👍', '✌️', '🖐️', '🤲'];
-            asset = `<span style="font-size: 26px; line-height:1;">${hands[i-1]}</span>`;
+            asset = `<img src="Emoji/size0${i}.png" style="width:${iconSize}; height:${iconSize}; vertical-align:middle; object-fit:contain;">`;
         } else if (type === 'Age') {
-            asset = `<img src="Emoji/age0${i}.png" style="width:26px; height:26px; vertical-align:middle; object-fit:contain;">`;
+            asset = `<img src="Emoji/age0${i}.png" style="width:${iconSize}; height:${iconSize}; vertical-align:middle; object-fit:contain;">`;
         } else {
             const map = { 'General': 'eggplant', 'Darkroom': 'water', 'Cost': 'money', 'Location': 'peach', 'Popularity': 'busy' };
             const prefix = map[type] || 'eggplant';
-            asset = `<img src="Emoji/${prefix}0${i}.png" style="width:26px; height:26px; vertical-align:middle; object-fit:contain;">`;
+            asset = `<img src="Emoji/${prefix}0${i}.png" style="width:${iconSize}; height:${iconSize}; vertical-align:middle; object-fit:contain;">`;
         }
         
         html += `<div style="opacity:${op}; display:flex; align-items:center; justify-content:center;">${asset}</div>`;
@@ -1173,6 +1225,16 @@ function openVenueModal(venue) {
     ];
 
     let ratingsTableHtml = `<div style="display: grid; grid-template-columns: 1fr repeat(5, 30px); gap: 8px 2px; align-items: center; background-color: var(--near-black); padding: 15px; border-radius: var(--radius-card); border: 1px solid var(--panel-mid);">`;
+    
+    // v0.36 - Ratings Header Row
+    ratingsTableHtml += `
+        <div style="font-size: 0.9rem; color: var(--primary-blue); font-weight: bold; text-align: left; padding-right: 10px;">FEATURE</div>
+        <div style="font-size: 0.9rem; color: var(--primary-blue); font-weight: bold; text-align: center;">1</div>
+        <div style="font-size: 0.9rem; color: var(--primary-blue); font-weight: bold; text-align: center;">2</div>
+        <div style="font-size: 0.9rem; color: var(--primary-blue); font-weight: bold; text-align: center;">3</div>
+        <div style="font-size: 0.9rem; color: var(--primary-blue); font-weight: bold; text-align: center;">4</div>
+        <div style="font-size: 0.9rem; color: var(--primary-blue); font-weight: bold; text-align: center;">5</div>
+    `;
     
     ratingTypes.forEach(r => {
         const val = venue[r.key] || 0;

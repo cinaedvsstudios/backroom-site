@@ -253,7 +253,7 @@ body { background-color: var(--bg-color); color: #fff; font-family: 'Barlow Cond
 .admin-main th:nth-child(2), .admin-main td:nth-child(2) { position: sticky; left: 50px; z-index: 6; background: var(--panel-dark); }
 .admin-main thead th:nth-child(1), .admin-main thead th:nth-child(2) { z-index: 10; }
 
-/* FIXED ADMIN COLUMN COLLAPSE: Shrinks width, hides text, but keeps the eye icon visible */
+/* ADMIN COLUMN COLLAPSE */
 th.hidden-col { min-width: 40px !important; width: 40px !important; max-width: 40px !important; padding: 8px 4px !important; text-align: center; overflow: hidden; }
 th.hidden-col .col-title, th.hidden-col .filter-header-input { display: none !important; }
 th.hidden-col .eye-btn { margin: 0 auto; opacity: 0.4; display: block; text-align: center; }
@@ -263,3 +263,18 @@ td.hidden-col * { display: none !important; }
 
 .edited-cell { background-color: var(--dark-red) !important; color: #fff !important; }
 .eye-btn { cursor:pointer; color:#fff; font-size:1rem; margin-right:5px; }
+
+/* Admin WYSIWYG Editor Styles (v0.36) */
+.editor-container { display: flex; flex-direction: column; background: var(--panel-standard); border: 1px solid var(--panel-mid); border-radius: var(--radius-card); flex-grow: 1; overflow: hidden; min-height: 500px; }
+.editor-toolbar { background: var(--panel-dark); padding: 10px; display: flex; gap: 8px; flex-wrap: wrap; border-bottom: 1px solid var(--panel-mid); align-items: center; }
+.editor-toolbar button { background: var(--panel-standard); border: 1px solid var(--panel-mid); color: #fff; padding: 6px 12px; cursor: pointer; border-radius: var(--radius-btn); font-family: 'Barlow Condensed', sans-serif; font-size: 1rem; }
+.editor-toolbar button:hover { background: var(--primary-blue); border-color: var(--primary-blue); }
+.editor-content { flex-grow: 1; padding: 25px; background: var(--near-black); color: #fff; outline: none; overflow-y: auto; font-family: 'Barlow Condensed', sans-serif; font-size: 1.15rem; line-height: 1.6; }
+.editor-content h1 { color: var(--primary-blue); font-family: 'Antonio', sans-serif; text-transform: uppercase; margin-bottom: 15px; font-size: 2.2rem; }
+.editor-content h2 { color: var(--primary-blue); font-family: 'Antonio', sans-serif; text-transform: uppercase; margin-top: 20px; margin-bottom: 10px; font-size: 1.6rem; }
+.editor-content a { color: var(--primary-blue); text-decoration: underline; }
+
+.color-picker-wrap { position: relative; display: inline-block; }
+.color-picker-dropdown { position: absolute; top: 100%; left: 0; background: var(--panel-dark); border: 1px solid var(--panel-mid); padding: 8px; display: flex; gap: 8px; z-index: 10; border-radius: var(--radius-btn); margin-top: 5px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
+.color-swatch { width: 24px; height: 24px; cursor: pointer; border-radius: 4px; border: 1px solid rgba(255,255,255,0.2); }
+.color-swatch:hover { transform: scale(1.1); border-color: #fff; }
