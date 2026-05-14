@@ -534,9 +534,12 @@ function initLeafletMap(lat, lng) {
     setTimeout(() => leafletMap.invalidateSize(), 150);
 }
 
+// FIXED: Explicitly target the new crop-container div to toggle visibility correctly
 function updateProfileDisplay() {
+    const topAvatarContainer = document.getElementById('top-profile-container');
     const topAvatar = document.getElementById('top-profile-avatar');
     const topName = document.getElementById('top-profile-name');
+    
     if(!topName || !topAvatar) return;
 
     if(userProfile.name) topName.innerText = userProfile.name;
@@ -544,10 +547,13 @@ function updateProfileDisplay() {
 
     if(userProfile.avatar) {
         topAvatar.src = `Profile_images/${userProfile.avatar}`;
-        topAvatar.style.display = 'inline-block';
+        if(topAvatarContainer) topAvatarContainer.style.display = 'block'; 
+        else topAvatar.style.display = 'inline-block';
+        
         if(!userProfile.name) topName.style.display = 'none'; 
     } else {
-        topAvatar.style.display = 'none';
+        if(topAvatarContainer) topAvatarContainer.style.display = 'none';
+        else topAvatar.style.display = 'none';
         topName.style.display = 'inline-block';
     }
 }
