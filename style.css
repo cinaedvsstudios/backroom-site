@@ -76,10 +76,10 @@ body { background-color: var(--bg-color); color: #fff; font-family: 'Barlow Cond
 
 .profile-btn-wrap { padding: 4px 8px !important; }
 #top-profile-avatar { 
-    width: 50px; 
-    height: 50px; 
+    width: 36px; 
+    height: 36px; 
     object-fit: none; 
-    object-position: center 10%; 
+    object-position: center top; 
     border-radius: 4px; 
     margin-right: 5px; 
     display: none; 
@@ -178,7 +178,7 @@ body { background-color: var(--bg-color); color: #fff; font-family: 'Barlow Cond
 .rating-item { display: flex; justify-content: space-between; font-size: 1rem; color: var(--text-light); align-items: center; }
 
 /* Full-width About/Events Modal areas */
-.full-width-about { background-color: var(--near-black); padding: 20px; border-radius: var(--radius-card); margin-bottom: 15px; }
+.full-width-about { background-color: var(--near-black); padding: 20px; border-radius: var(--radius-card); margin-bottom: 15px; width: 100%; }
 .events-block { margin-top: 10px; width: 100%; }
 .events-block h3 { margin-bottom: 10px; color: var(--primary-blue); }
 .event-card { background-color: var(--near-black); padding: 12px; border: 1px solid var(--panel-mid); border-left: 3px solid var(--primary-blue); border-radius: 0 var(--radius-card) var(--radius-card) 0; margin-bottom: 10px; display: flex; flex-direction: column; }

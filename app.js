@@ -1,5 +1,5 @@
 // --- Application State ---
-const APP_VERSION = "v0.31";
+const APP_VERSION = "v0.32";
 const APP_DATE = "May 14, 2026";
 
 let systemInfo = {}, designTheme = {}, venues = [], events = [];
@@ -1113,7 +1113,17 @@ function renderListings(data, isContextView = false) {
 }
 
 function getRatingHtml(val, type) {
+    if (type === 'Size') {
+        let html = '';
+        for(let i=1; i<=5; i++) {
+            const op = i <= val ? '1' : '0.25';
+            html += `<span style="opacity:${op}; font-size: 22px; margin-right:2px;">🖐️</span>`;
+        }
+        return html;
+    }
+    
     const map = {
+        'Age': 'age',
         'General': 'eggplant',
         'Darkroom': 'water',
         'Cost': 'money',
@@ -1124,7 +1134,7 @@ function getRatingHtml(val, type) {
     let html = '';
     for(let i=1; i<=5; i++) {
         const op = i <= val ? '1' : '0.25';
-        html += `<img src="Emoji/${prefix}0${i}.png" class="rating-png" style="opacity:${op}; width:22px; height:22px; vertical-align:middle; margin-right:2px;">`;
+        html += `<img src="Emoji/${prefix}0${i}.png" class="rating-png" style="opacity:${op}; width:26px; height:26px; vertical-align:middle; margin-right:2px;">`;
     }
     return html;
 }
@@ -1153,6 +1163,8 @@ function openVenueModal(venue) {
     
     const ratingsHtml = `
         <div class="ratings-grid" id="modal-ratings">
+            <div class="rating-item"><span>Age Range</span><span>${getRatingHtml(venue.Rating_Age_Range || 0, 'Age')}</span></div>
+            <div class="rating-item"><span>Size</span><span>${getRatingHtml(venue.Rating_Size || 0, 'Size')}</span></div>
             <div class="rating-item"><span>General</span><span>${getRatingHtml(venue.Rating_General || 0, 'General')}</span></div>
             <div class="rating-item"><span>Darkroom</span><span>${getRatingHtml(venue.Rating_Darkroom || 0, 'Darkroom')}</span></div>
             <div class="rating-item"><span>Cost</span><span>${getRatingHtml(venue.Rating_Cost || 0, 'Cost')}</span></div>
@@ -1262,7 +1274,12 @@ function openVenueModal(venue) {
     if(mapBtn) {
         mapBtn.onclick = () => {
             const query = encodeURIComponent(venue.Address || venue.City || venue.Name);
-            window.open(`http://googleusercontent.com/maps.google.com/maps?q=${query}`, '_blank');
+            const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+            if (isIOS) {
+                window.open(`http://maps.apple.com/?q=${query}`, '_blank');
+            } else {
+                window.open(`https://www.google.com/maps/search/?api=1&query=?q=${query}`, '_blank');
+            }
         };
     }
 
