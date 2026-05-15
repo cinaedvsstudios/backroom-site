@@ -21,9 +21,9 @@
     <div id="toast-container" class="toast-container hidden"></div>
 
     <div id="tutorial-modal" class="tutorial-float hidden">
-        <div class="modal-content small-modal" style="border: 2px solid var(--bright-red-orange);">
+        <div class="modal-content small-modal" style="border: 2px solid var(--primary-blue);">
             <div class="modal-header">
-                <h2 class="display-font" style="color: var(--bright-red-orange);">TUTORIAL</h2>
+                <h2 class="display-font" style="color: var(--primary-blue);">TUTORIAL</h2>
             </div>
             <p id="tutorial-text" class="meta-text" style="font-size: 1.1rem; margin-bottom: 20px; color: #fff; text-align: center;"></p>
             <div style="display: flex; gap: 10px;">
@@ -35,7 +35,7 @@
 
     <div id="age-gate" class="age-gate">
         <div class="age-gate-content">
-            <img src="Logo.png" alt="Backroom Logo" style="width: 80px; margin-bottom: 20px;" onerror="this.style.display='none';">
+            <img src="colorpallette.png" alt="Backdoor Logo" style="width: 80px; margin-bottom: 20px;">
             <h1 class="display-font" style="font-size: 2.5rem; margin-bottom: 10px;">BACKROOM</h1>
             <p id="ag-text" style="margin-bottom: 30px; font-size: 1.2rem;"></p>
             <button id="btn-enter" class="btn primary-btn pill-btn" style="font-size: 1.3rem; padding: 15px 40px; width: 100%;">I AM 18 OR OLDER</button>
@@ -45,28 +45,23 @@
 
     <div id="app-shell" class="hidden">
         
-        <header id="top-bar" style="display: flex; justify-content: space-between; align-items: center; padding: 10px 20px; background: var(--bg-color); border-bottom: 1px solid var(--panel-mid); position: sticky; top: 0; z-index: 1000;">
+        <header id="top-bar" style="display: flex; justify-content: space-between; align-items: center; padding: 10px 20px; background: var(--near-black); border-bottom: 1px solid var(--panel-mid); position: sticky; top: 0; z-index: 1000;">
             <div style="display: flex; align-items: center; gap: 10px; cursor: pointer;" onclick="window.location.hash=''; searchInput.value=''; handleRouting();" title="Go to Home">
-                <img src="Logo.png" alt="Backroom Logo" style="height: 30px;" onerror="this.style.display='none';">
+                <img src="colorpallette.png" alt="Backdoor Logo" style="height: 30px;">
                 <h1 class="display-font" style="font-size: 1.5rem; color: #fff; margin: 0;">BACKROOM</h1>
             </div>
             <div style="display: flex; align-items: center; gap: 15px;">
-                <button id="btn-language" class="icon-btn" title="Translate Text"><img src="translate.png" style="width: 24px;" onerror="this.outerHTML='🌐';"></button>
-                <button id="btn-location" class="icon-btn" title="Set Location"><img src="location.png" style="width: 24px;" onerror="this.outerHTML='📍';"></button>
-                <button id="btn-shortlists-menu" class="icon-btn" title="View Shortlists"><img src="shortlist.png" style="width: 24px;" onerror="this.outerHTML='📑';"></button>
+                <button id="btn-language" class="icon-btn" title="Translate Text"><img src="translate.png" style="width: 24px;" onerror="this.style.display='none';"></button>
+                <button id="btn-location" class="icon-btn" title="Set Location"><img src="location.png" style="width: 24px;" onerror="this.style.display='none';">📍</button>
+                <button id="btn-shortlists-menu" class="icon-btn" title="View Shortlists"><img src="shortlist.png" style="width: 24px;" onerror="this.style.display='none';">📑</button>
                 <button id="btn-favorites" class="icon-btn" title="View Favorites" style="font-size: 1.5rem;">⚜️</button>
-                <button id="btn-profile-menu" class="icon-btn profile-btn-wrap" title="My Profile">
-                    <div id="top-profile-container" style="width: 32px; height: 32px; border-radius: 50%; overflow: hidden; border: 2px solid var(--primary-blue); display: none;">
-                        <img id="top-profile-avatar" src="" style="width: 100%; height: 100%; object-fit: cover;">
-                    </div>
-                    <span id="top-profile-name" class="display-font" style="font-size: 1.1rem; font-weight: bold;">👤</span>
-                </button>
             </div>
         </header>
 
         <div id="sidebar-hit-area"></div>
         <nav id="sidebar" class="sidebar">
             <div class="sidebar-header" style="padding: 20px; text-align: center; border-bottom: 1px solid var(--panel-mid);">
+                <img src="colorpallette.png" style="height: 40px; margin-bottom: 10px;">
                 <h2 class="display-font">BACKROOM</h2>
                 <div id="sidebar-version-display" class="meta-text" style="font-size: 0.8rem; margin-top: 5px;"></div>
             </div>
@@ -119,24 +114,19 @@
             <button class="close-modal-btn">✖</button>
             <h2 class="display-font" style="color: var(--primary-blue); margin-bottom: 15px;">LOCATION</h2>
             <p class="meta-text" style="margin-bottom: 15px;">Set your location to find nearby venues and events.</p>
-            
             <button id="btn-gps" class="btn primary-btn pill-btn" style="width: 100%; margin-bottom: 15px;">📍 Use My Current Location</button>
-            
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px;">
                 <input type="text" id="loc-country" class="form-input pill-input" placeholder="Country" style="margin:0;">
                 <input type="text" id="loc-city" class="form-input pill-input" placeholder="City" style="margin:0;">
             </div>
-            
             <div style="display: flex; gap: 10px; margin-bottom: 15px;">
                 <input type="text" id="loc-postcode" class="form-input pill-input" placeholder="Postcode / Zip" style="margin:0; flex-grow:1;">
                 <button id="btn-search-map" class="btn secondary-btn pill-btn">🔍 Map</button>
             </div>
-            
             <div style="height: 150px; background: var(--panel-dark); border-radius: var(--radius-card); border: 1px solid var(--panel-mid); margin-bottom: 15px; position: relative; overflow: hidden;">
                 <div id="map-preview-placeholder" style="position: absolute; top:0; left:0; width:100%; height:100%; display:flex; align-items:center; justify-content:center; color: var(--label-grey);">Map Preview</div>
                 <div id="loc-map" style="width: 100%; height: 100%; display: none;"></div>
             </div>
-            
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px;">
                 <button id="btn-save-location" class="btn primary-btn pill-btn">Load Location</button>
                 <button id="btn-save-travel" class="btn secondary-btn pill-btn">Save 🚄</button>
@@ -162,7 +152,7 @@
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px;">
                 <button class="btn secondary-btn pill-btn" onclick="window.location.hash='#mytravel'; document.getElementById('settings-modal').classList.add('hidden');">🚄 Travel</button>
                 <button class="btn secondary-btn pill-btn" onclick="window.location.hash='#favorites'; document.getElementById('settings-modal').classList.add('hidden');">⚜️ Favourites</button>
-                <button class="btn secondary-btn pill-btn" onclick="document.getElementById('settings-modal').classList.add('hidden'); openProfileMenu();">👤 Profile</button>
+                <button class="btn secondary-btn pill-btn" id="btn-profile-menu" onclick="document.getElementById('settings-modal').classList.add('hidden'); openProfileMenu();">👤 Profile</button>
                 <button class="btn secondary-btn pill-btn" onclick="window.location.hash='#myshortlists'; document.getElementById('settings-modal').classList.add('hidden');">📑 Shortlists</button>
             </div>
             
@@ -198,8 +188,8 @@
                     <div id="avatar-filters" style="margin-bottom: 15px; display: flex; flex-wrap: wrap; gap: 8px;"></div>
                     
                     <div id="selected-avatar-preview" style="text-align: center; margin-bottom: 15px; background: var(--panel-dark); padding: 20px; border-radius: var(--radius-card); border: 1px solid var(--panel-mid);">
-                        <div id="top-profile-container-large" style="width: 140px; height: 140px; border-radius: 50%; overflow: hidden; border: 3px solid var(--primary-blue); margin: 0 auto 10px auto;">
-                            <img id="top-profile-avatar-large" src="Profile_images/noavatar01.png" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.src='placeholder_venue.jpg'">
+                        <div id="top-profile-container" style="width: 140px; height: 140px; border-radius: 50%; overflow: hidden; border: 3px solid var(--primary-blue); margin: 0 auto 10px auto;">
+                            <img id="top-profile-avatar-large" src="Profile_images/noavatar01.png" style="width: 100%; height: 100%; object-fit: cover;">
                         </div>
                     </div>
                     <div id="avatar-grid" class="avatar-grid" style="flex-grow: 1; max-height: none;"></div>
@@ -216,7 +206,6 @@
                     </select>
                     
                     <button id="btn-save-profile" class="btn primary-btn pill-btn" style="margin-top: 5px; font-size: 1rem;">💾 Save Active Profile</button>
-                    
                     <button id="btn-new-profile" class="btn secondary-btn pill-btn" style="margin-top: 10px; font-size: 1rem;">Make a new blank profile</button>
                     <button id="btn-wipe-profile-only" class="btn secondary-btn pill-btn" style="margin-top: 10px; font-size: 1rem;">Make a copy of this profile</button>
                     
@@ -255,8 +244,8 @@
             <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; padding-right: 30px;">
                 <h2 id="modal-title" class="display-font" style="margin-bottom: 0;"></h2>
                 <div style="display: flex; gap: 10px;">
-                    <button id="modal-share" class="icon-btn">🔗</button>
-                    <button id="modal-shortlist" class="icon-btn">📑</button>
+                    <button id="modal-share" class="icon-btn"></button>
+                    <button id="modal-shortlist" class="icon-btn"></button>
                     <button id="modal-star" class="icon-btn" style="font-size: 1.8rem; line-height: 1;">⚜️</button>
                 </div>
             </div>

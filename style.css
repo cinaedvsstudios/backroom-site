@@ -26,6 +26,7 @@ body { background-color: var(--bg-color); color: #fff; font-family: 'Barlow Cond
 ::-webkit-scrollbar-thumb:hover { background: #1f85aa; }
 
 .display-font { font-family: 'Antonio', sans-serif; text-transform: uppercase; letter-spacing: 0.5px; }
+
 .hidden { display: none !important; }
 
 /* FIX: V0.41 Red Flash Highlight for Tutorial */
@@ -107,7 +108,6 @@ select.form-input { appearance: none; background-image: url('data:image/svg+xml;
 .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.85); z-index: 3000; display: flex; justify-content: center; align-items: center; padding: 20px; backdrop-filter: blur(5px); }
 .modal-content { background-color: var(--panel-standard); border-radius: var(--radius-window); width: 100%; max-width: 900px; max-height: 90vh; overflow-y: auto; position: relative; padding: 25px; border: 1px solid var(--panel-mid); box-shadow: 0 10px 30px rgba(0,0,0,0.8); }
 .small-modal { max-width: 400px; }
-.modal-header { display: flex; align-items: center; margin-bottom: 15px; border-bottom: 1px solid var(--panel-mid); padding-bottom: 10px; }
 .close-modal-btn { position: absolute; top: 15px; right: 15px; background: none; border: none; color: var(--label-grey); font-size: 1.5rem; cursor: pointer; z-index: 10; transition: color 0.2s; }
 .close-modal-btn:hover { color: #fff; }
 
@@ -159,6 +159,7 @@ select.form-input { appearance: none; background-image: url('data:image/svg+xml;
 .admin-table tr.selected { background-color: rgba(44, 168, 212, 0.15); border-left: 3px solid var(--primary-blue); }
 .admin-table tr.row-mismatch { background-color: rgba(213, 80, 54, 0.15) !important; border-left: 3px solid var(--bright-red-orange); }
 
+/* FIX: V.41 blank cell dark red highlight */
 .empty-cell { background-color: var(--dark-red) !important; color: white !important; text-align: center; }
 
 .editor-toolbar { display: flex; gap: 5px; padding: 10px; background: var(--panel-dark); border-bottom: 1px solid var(--panel-mid); flex-wrap: wrap; }
