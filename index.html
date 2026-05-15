@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Backroom - v0.54</title>
+    <title>Backroom - v0.55</title>
     
     <meta name="description" content="Backroom - The comprehensive local guide to gay venues, cruise clubs, and events.">
     <meta name="keywords" content="gay guide, cruising, gay clubs, darkroom, fetish, gay events, queer venues">
@@ -13,7 +13,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Antonio:wght@400;700&family=Barlow+Condensed:wght@400;500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
-    <link rel="stylesheet" href="style.css?v=0.54">
+    <link rel="stylesheet" href="style.css?v=0.55">
 </head>
 <body>
 
@@ -255,40 +255,53 @@
             <button class="btn-close close-modal-btn">❌</button>
             <div class="modal-header"><h2 class="display-font">MY PROFILE</h2></div>
             
-            <div class="modal-body body-font" style="display: flex; gap: 30px; flex-wrap: wrap-reverse;">
+            <div class="modal-body body-font">
                 
-                <div style="flex: 1; min-width: 300px; display: flex; flex-direction: column;">
-                    <div class="avatar-grid" id="avatar-grid"></div>
-                    <div id="profile-stats-container" style="margin-top: 15px;"></div>
+                <div id="profile-mobile-tabs" class="mobile-only" style="display:none; justify-content:center; align-items:center; background:var(--panel-dark); padding:10px; border-radius:var(--radius-pill); margin-bottom:20px; border:1px solid var(--panel-mid);">
+                    <div id="ptab-1" onclick="switchProfileTab(1)" style="font-size:1.8rem; cursor:pointer; padding:5px; border-radius:50%; transition:all 0.2s;" class="tutorial-highlight">🤗</div>
+                    <div id="parr-1" style="color:var(--primary-blue); font-weight:bold; padding:0 5px; font-family:'Antonio', sans-serif; font-size:1.2rem;" class="tutorial-highlight">&gt;&gt;&gt;</div>
+                    <div id="ptab-2" onclick="switchProfileTab(2)" style="font-size:1.8rem; cursor:pointer; padding:5px; border-radius:50%; transition:all 0.2s;">🤔</div>
+                    <div id="parr-2" style="color:var(--primary-blue); font-weight:bold; padding:0 5px; font-family:'Antonio', sans-serif; font-size:1.2rem;">&gt;&gt;&gt;</div>
+                    <div id="ptab-3" onclick="switchProfileTab(3)" style="font-size:1.8rem; cursor:pointer; padding:5px; border-radius:50%; transition:all 0.2s;">😎</div>
                 </div>
 
-                <div style="width: 280px; display: flex; flex-direction: column; gap: 15px; align-items: center; flex-shrink: 0; background: var(--panel-dark); padding: 25px; border-radius: var(--radius-card); border: 1px solid var(--panel-mid); margin: 0 auto;">
+                <div class="profile-desktop-wrapper">
                     
-                    <div id="preview-img-wrapper" class="hidden" style="width: 100%; display: flex; justify-content: center;">
-                        <img id="profile-avatar-preview" src="" style="width: 105px; height: 210px; border-radius: 12px; object-fit: cover; border: 3px solid var(--primary-blue); margin-bottom: 10px; box-shadow: 0 0 15px rgba(44, 168, 212, 0.4);">
+                    <div id="profile-mob-view-1" class="profile-view-section">
+                        <div style="background: var(--panel-dark); padding: 25px; border-radius: var(--radius-card); border: 1px solid var(--panel-mid);">
+                            <div id="preview-img-wrapper" class="hidden" style="width: 100%; display: flex; justify-content: center;">
+                                <img id="profile-avatar-preview" src="" style="width: 105px; height: 210px; border-radius: 12px; object-fit: cover; border: 3px solid var(--primary-blue); margin-bottom: 10px; box-shadow: 0 0 15px rgba(44, 168, 212, 0.4);">
+                            </div>
+                            <div style="width: 100%;">
+                                <label class="meta-text" style="font-size: 0.9rem; margin-bottom: 5px; display: block; text-align: center;">Profile Name</label>
+                                <input type="text" id="profile-name" class="form-input pill-input" placeholder="Enter your name" style="color:var(--primary-blue); font-weight:bold; text-align: center;">
+                            </div>
+                            <div style="width: 100%;">
+                                <label class="meta-text" style="font-size: 0.9rem; margin-bottom: 5px; display: block; text-align: center;">Switch Profile</label>
+                                <select id="profile-switcher" class="form-input pill-input" style="text-align: center; font-size: 1rem;">
+                                    <option value="">Switch Profile...</option>
+                                </select>
+                            </div>
+                        </div>
                     </div>
 
-                    <div style="width: 100%;">
-                        <label class="meta-text" style="font-size: 0.9rem; margin-bottom: 5px; display: block; text-align: center;">Profile Name</label>
-                        <input type="text" id="profile-name" class="form-input pill-input" placeholder="Enter your name" style="color:var(--primary-blue); font-weight:bold; text-align: center;">
+                    <div id="profile-mob-view-2" class="profile-view-section mobile-hidden-tab">
+                        <div class="avatar-grid" id="avatar-grid"></div>
                     </div>
 
-                    <div style="width: 100%;">
-                        <label class="meta-text" style="font-size: 0.9rem; margin-bottom: 5px; display: block; text-align: center;">Switch Profile</label>
-                        <select id="profile-switcher" class="form-input pill-input" style="text-align: center; font-size: 1rem;">
-                            <option value="">Switch Profile...</option>
-                        </select>
+                    <div id="profile-mob-view-3" class="profile-view-section mobile-hidden-tab">
+                        <div id="view-3-stats">
+                            <div id="profile-stats-container"></div>
+                        </div>
+                        <div id="view-3-buttons" style="background: var(--panel-dark); padding: 25px; border-radius: var(--radius-card); border: 1px solid var(--panel-mid); display:flex; flex-direction:column; gap:10px;">
+                            <button id="btn-save-profile" class="btn primary-btn pill-btn" style="width: 100%; font-size: 1.1rem; padding: 12px;">Save changes</button>
+                            <button id="btn-new-profile" class="btn secondary-btn pill-btn" style="width: 100%; font-size: 1rem;">Create New Profile</button>
+                            <button id="btn-profile-download-data" class="btn secondary-btn pill-btn btn-export-trigger" style="width: 100%; font-size: 1rem;">💾 Download My Data</button>
+                            <button id="btn-delete-profile" class="btn pill-btn" style="width: 100%; font-size: 1rem; background: var(--dark-red); color: #fff; margin-top: 5px;">Delete Profile</button>
+                            <button id="btn-profile-tutorial" class="btn secondary-btn pill-btn tooltip" style="width: 100%; font-size: 0.9rem; margin-top: 5px;">💡 Profile Tutorial</button>
+                        </div>
                     </div>
 
-                    <button id="btn-save-profile" class="btn primary-btn pill-btn" style="width: 100%; font-size: 1.1rem; padding: 12px; margin-top: 5px;">Save changes</button>
-                    
-                    <button id="btn-new-profile" class="btn secondary-btn pill-btn" style="width: 100%; font-size: 1rem;">Create New Profile</button>
-                    
-                    <button id="btn-profile-download-data" class="btn secondary-btn pill-btn btn-export-trigger" style="width: 100%; font-size: 1rem;">💾 Download My Data</button>
-
-                    <button id="btn-delete-profile" class="btn pill-btn" style="width: 100%; font-size: 1rem; background: var(--dark-red); color: #fff; margin-top: 5px;">Delete Profile</button>
-
-                    <button id="btn-profile-tutorial" class="btn secondary-btn pill-btn tooltip" style="width: 100%; font-size: 0.9rem; margin-top: 5px;">💡 Profile Tutorial</button>
                 </div>
             </div>
         </div>
@@ -369,6 +382,6 @@
     </div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
-    <script src="app.js?v=0.54"></script>
+    <script src="app.js?v=0.55"></script>
 </body>
 </html>

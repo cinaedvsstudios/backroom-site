@@ -1,6 +1,6 @@
 // --- Application State ---
-const APP_VERSION = "v0.54";
-const APP_DATE = "May 20, 2026";
+const APP_VERSION = "v0.55";
+const APP_DATE = "May 22, 2026";
 
 let systemInfo = {}, designTheme = {}, venues = [], events = [];
 let activeFilter = 'All';
@@ -15,6 +15,7 @@ let savedProfiles = JSON.parse(localStorage.getItem('br_saved_profiles')) || {};
 // Globals swapped per profile
 let userFavorites = [];
 let userShortlists = {};
+let userShortlistEmojis = {}; 
 let userEvents = [];
 let userTravel = [];
 
@@ -43,6 +44,7 @@ const hitArea = document.getElementById('sidebar-hit-area');
 let sidebarTimeout;
 
 const MASTER_VIBE_TAGS = ["Cruise", "Darkroom", "Fetish", "Leather", "Rubber", "Gear", "Sportswear", "Sneakers", "Naked", "Underwear", "Dresscode", "Men Only", "Bear", "Mature", "Young Crowd", "Queer", "Drag", "Karaoke", "Pop/Dance", "Techno", "Sauna", "Puppy"];
+const SHORTLIST_EMOJIS = ['🤠','🚄','👑','🥂','🦄','🫦','💪','🪇','🔥','🍆','🍑','💄','🛁','✈️','💥','💦','🗝️','🧿','🎧','🧭','⛓️','🎼'];
 
 function showToast(message) {
     const container = document.getElementById('toast-container');
@@ -130,7 +132,7 @@ function formatAboutText(text) {
 }
 
 function buildSocialBar(venue) {
-    let html = '<div class="social-bar" style="display:flex; gap:12px; margin-top:10px; align-items:center;">';
+    let html = '<div class="social-bar" style="display:flex; gap:16px; margin-top:10px; align-items:center;">';
     const buildIcon = (url, iconName, platformName) => {
         const hasUrl = url && url.trim() !== '';
         const opacity = hasUrl ? '1' : '0.6';
@@ -153,11 +155,13 @@ function loadActiveProfileData() {
         const bundle = savedProfiles[userProfile.name];
         userFavorites = bundle.favorites || [];
         userShortlists = bundle.shortlists || {};
+        userShortlistEmojis = bundle.shortlistEmojis || {};
         userEvents = bundle.events || [];
         userTravel = bundle.travel || [];
     } else {
         userFavorites = JSON.parse(localStorage.getItem('br_favorites')) || [];
         userShortlists = JSON.parse(localStorage.getItem('br_shortlists')) || {};
+        userShortlistEmojis = JSON.parse(localStorage.getItem('br_shortlist_emojis')) || {};
         userEvents = JSON.parse(localStorage.getItem('br_events')) || [];
         userTravel = JSON.parse(localStorage.getItem('br_travel')) || [];
     }
@@ -169,6 +173,7 @@ function saveCurrentToBundle() {
             ...userProfile,
             favorites: userFavorites,
             shortlists: userShortlists,
+            shortlistEmojis: userShortlistEmojis,
             events: userEvents,
             travel: userTravel
         };
@@ -176,6 +181,7 @@ function saveCurrentToBundle() {
     }
     localStorage.setItem('br_favorites', JSON.stringify(userFavorites));
     localStorage.setItem('br_shortlists', JSON.stringify(userShortlists));
+    localStorage.setItem('br_shortlist_emojis', JSON.stringify(userShortlistEmojis));
     localStorage.setItem('br_events', JSON.stringify(userEvents));
     localStorage.setItem('br_travel', JSON.stringify(userTravel));
     localStorage.setItem('br_profile', JSON.stringify(userProfile));
@@ -489,6 +495,7 @@ function setupTutorialDrag() {
         isDragging = true; startX = e.clientX; startY = e.clientY;
         const rect = windowEl.getBoundingClientRect();
         windowEl.style.transform = 'none'; 
+        windowEl.style.bottom = 'auto'; // FIX: Clears bottom to prevent vertical stretching
         initialLeft = rect.left; initialTop = rect.top;
         windowEl.style.left = initialLeft + 'px';
         windowEl.style.top = initialTop + 'px';
@@ -651,6 +658,7 @@ function setupEventListeners() {
         const name = nameInp.value.trim();
         if(name && currentTargetVenue) { 
             userShortlists[name] = [currentTargetVenue.Venue_ID]; 
+            userShortlistEmojis[name] = SHORTLIST_EMOJIS[Math.floor(Math.random() * SHORTLIST_EMOJIS.length)]; 
             saveCurrentToBundle(); 
             addShortlistModal?.classList.add('hidden');
             showToast(`Added to shortlist: ${name}`);
@@ -659,7 +667,6 @@ function setupEventListeners() {
         }
     });
     
-    // v0.54 - Profile Actions
     addEvt('btn-save-profile', 'click', () => {
         const nameInp = document.getElementById('profile-name');
         if(nameInp) userProfile.name = nameInp.value.trim();
@@ -1075,13 +1082,32 @@ function renderTravelFullView() {
     });
 }
 
+window.openEmojiPicker = function(listName) {
+    const listHtml = SHORTLIST_EMOJIS.map(e => `<span style="font-size:1.5rem; cursor:pointer; padding:5px;" onclick="userShortlistEmojis['${listName}']='${e}'; saveCurrentToBundle(); renderShortlistsFullView(); document.getElementById('emoji-picker-modal').classList.add('hidden');">${e}</span>`).join('');
+    let modal = document.getElementById('emoji-picker-modal');
+    if(!modal) {
+        modal = document.createElement('div');
+        modal.id = 'emoji-picker-modal';
+        modal.className = 'modal hidden';
+        modal.style.zIndex = '4000';
+        modal.innerHTML = `
+            <div class="modal-content small-modal" style="background:var(--panel-dark); max-width: 300px;">
+                <div class="modal-header"><h3 class="display-font" style="margin:0; font-size:1.2rem;">Pick Icon</h3><button class="btn-close" onclick="document.getElementById('emoji-picker-modal').classList.add('hidden');" style="position:relative; right:auto; top:auto;">❌</button></div>
+                <div class="modal-body" style="display:flex; flex-wrap:wrap; justify-content:center; gap:5px;"></div>
+            </div>`;
+        document.body.appendChild(modal);
+    }
+    modal.querySelector('.modal-body').innerHTML = listHtml;
+    modal.classList.remove('hidden');
+}
+
 function renderShortlistsFullView() {
     document.getElementById('main-filters')?.classList.add('hidden');
     contextHeader?.classList.remove('hidden');
     
     const cTitle = document.getElementById('context-title');
     const cDesc = document.getElementById('context-desc');
-    if(cTitle) cTitle.innerHTML = `<img src="shortlist.png" style="width:40px; vertical-align:bottom; margin-right:8px;"> MY SHORTLISTS`;
+    if(cTitle) cTitle.innerHTML = `<img src="shortlist.png" style="width:55px; vertical-align:bottom; margin-right:8px;"> MY SHORTLISTS`;
     if(cDesc) cDesc.innerText = "Your named venue collections.";
     
     const newBtn = document.getElementById('btn-new-shortlist-view');
@@ -1091,6 +1117,7 @@ function renderShortlistsFullView() {
             const name = prompt("Enter new shortlist name:");
             if(name && name.trim() !== '') {
                 userShortlists[name.trim()] = [];
+                userShortlistEmojis[name.trim()] = SHORTLIST_EMOJIS[Math.floor(Math.random() * SHORTLIST_EMOJIS.length)];
                 saveCurrentToBundle();
                 renderShortlistsFullView();
             }
@@ -1107,11 +1134,13 @@ function renderShortlistsFullView() {
 
     lists.forEach(name => {
         const count = userShortlists[name].length;
+        const eIcon = userShortlistEmojis[name] || '📑';
         const card = document.createElement('div');
         card.className = 'card';
         card.style.cursor = 'pointer';
         card.innerHTML = `
             <div class="card-inner-content" style="flex-direction:row; justify-content:space-between; align-items:center;">
+                <div style="font-size:2rem; margin-right:15px; cursor:pointer;" onclick="event.stopPropagation(); openEmojiPicker('${name}')" title="Tap to change icon">${eIcon}</div>
                 <div onclick="window.location.hash='#shortlist=${encodeURIComponent(name)}';" style="flex-grow:1;">
                     <h3 class="card-title display-font" style="color:var(--primary-blue);">${name}</h3>
                     <p class="meta-text" style="margin-top:5px;">${count} venue${count === 1 ? '' : 's'}</p>
@@ -1124,6 +1153,48 @@ function renderShortlistsFullView() {
         `;
         if(resultsContainer) resultsContainer.appendChild(card);
     });
+}
+
+// v0.55 Mobile Face Emoji Progress Handler
+window.switchProfileTab = function(step) {
+    const p1 = document.getElementById('profile-mob-view-1');
+    const p2 = document.getElementById('profile-mob-view-2');
+    const p3 = document.getElementById('profile-mob-view-3');
+    
+    const t1 = document.getElementById('ptab-1');
+    const a1 = document.getElementById('parr-1');
+    const t2 = document.getElementById('ptab-2');
+    const a2 = document.getElementById('parr-2');
+    const t3 = document.getElementById('ptab-3');
+
+    if(p1 && p2 && p3 && t1 && t2 && t3) {
+        // Hide all
+        p1.classList.add('mobile-hidden-tab');
+        p2.classList.add('mobile-hidden-tab');
+        p3.classList.add('mobile-hidden-tab');
+        
+        t1.classList.remove('tutorial-highlight');
+        t2.classList.remove('tutorial-highlight');
+        t3.classList.remove('tutorial-highlight');
+        
+        if(a1) a1.classList.remove('tutorial-highlight');
+        if(a2) a2.classList.remove('tutorial-highlight');
+
+        if(step === 1) { 
+            p1.classList.remove('mobile-hidden-tab'); 
+            t1.classList.add('tutorial-highlight');
+            if(a1) a1.classList.add('tutorial-highlight');
+        }
+        else if(step === 2) { 
+            p2.classList.remove('mobile-hidden-tab'); 
+            t2.classList.add('tutorial-highlight');
+            if(a2) a2.classList.add('tutorial-highlight');
+        }
+        else if(step === 3) { 
+            p3.classList.remove('mobile-hidden-tab'); 
+            t3.classList.add('tutorial-highlight');
+        }
+    }
 }
 
 function renderProfileAvatars() {
@@ -1154,11 +1225,13 @@ function renderProfileAvatars() {
     const ageTags = ['Young', 'Prime', 'Mature'];
     const fetishTags = ['Ink', 'Leather', 'Rubber', 'Puppy'];
     
-    let html = `<button class="chip pill-btn ${activeAvatarCategories.length === 0 ? 'active' : ''}" style="padding: 4px 10px; font-size: 0.85rem; flex-shrink:0;" data-val="All">All</button>`;
-    
+    let html = `<div class="tag-row-blue" style="display:flex; justify-content:center; gap:8px;">`;
+    html += `<button class="chip pill-btn ${activeAvatarCategories.length === 0 ? 'active' : ''}" style="padding: 4px 10px; font-size: 0.85rem; flex-shrink:0;" data-val="All">All</button>`;
     html += ageTags.map(c => `<button class="chip pill-btn ${activeAvatarCategories.includes(c) ? 'active' : ''}" style="padding: 4px 10px; font-size: 0.85rem; color: var(--primary-blue); border-color: var(--primary-blue); flex-shrink:0;" data-val="${c}">${c}</button>`).join('');
+    html += `</div><div class="tag-row-red" style="display:flex; justify-content:center; gap:8px;">`;
     html += fetishTags.map(c => `<button class="chip pill-btn ${activeAvatarCategories.includes(c) ? 'active' : ''}" style="padding: 4px 10px; font-size: 0.85rem; color: var(--bright-red-orange); border-color: var(--bright-red-orange); flex-shrink:0;" data-val="${c}">${c}</button>`).join('');
-    
+    html += `</div>`;
+
     filterContainer.innerHTML = html;
     
     filterContainer.querySelectorAll('.chip').forEach(btn => {
@@ -1179,10 +1252,10 @@ function renderProfileAvatars() {
         displayData.unshift({ file: 'noavatar01.png', label: 'Default', category: [] });
     }
 
-    // v0.54 - ANY match logic for Fetish/Age tags
+    // v0.55 - STRICT AND LOGIC (.every instead of .some)
     const filteredData = activeAvatarCategories.length === 0 ? displayData : displayData.filter(a => {
         let cats = Array.isArray(a.category) ? a.category : [a.category];
-        return cats.some(cat => activeAvatarCategories.includes(cat));
+        return activeAvatarCategories.every(cat => cats.includes(cat));
     });
 
     filteredData.forEach(avatar => {
@@ -1198,6 +1271,10 @@ function renderProfileAvatars() {
                 previewImg.src = `Profile_images/${avatar.file}`;
                 previewImg.parentElement.classList.remove('hidden');
             }
+            
+            // Highlight selected tile visually
+            document.querySelectorAll('.avatar-item').forEach(el => el.classList.remove('selected'));
+            item.classList.add('selected');
         });
         grid.appendChild(item);
     });
@@ -1266,6 +1343,11 @@ function openProfileMenu() {
     renderProfileAvatars();
     renderProfileStats();
     
+    // v0.55 - Reset Mobile Face Emoji Tabs to Step 1 on open
+    if(window.innerWidth <= 768) {
+        window.switchProfileTab(1);
+    }
+    
     const profileWipeToast = document.getElementById('profile-wipe-toast');
     if(profileWipeToast) {
         const wipeAllBtn = profileWipeToast.querySelector('#btn-wipe-all');
@@ -1324,6 +1406,7 @@ function exportUserData() {
         saved_profiles: savedProfiles,
         favorites: userFavorites,
         shortlists: userShortlists,
+        shortlistEmojis: userShortlistEmojis,
         events: userEvents,
         travel: userTravel,
         location: JSON.parse(localStorage.getItem('br_location') || 'null')
@@ -1347,6 +1430,7 @@ function importUserData(e) {
             if(data.saved_profiles) { savedProfiles = data.saved_profiles; localStorage.setItem('br_saved_profiles', JSON.stringify(savedProfiles)); }
             if(data.favorites) { userFavorites = data.favorites; localStorage.setItem('br_favorites', JSON.stringify(userFavorites)); }
             if(data.shortlists) { userShortlists = data.shortlists; localStorage.setItem('br_shortlists', JSON.stringify(userShortlists)); }
+            if(data.shortlistEmojis) { userShortlistEmojis = data.shortlistEmojis; localStorage.setItem('br_shortlist_emojis', JSON.stringify(userShortlistEmojis)); }
             if(data.events) { userEvents = data.events; localStorage.setItem('br_events', JSON.stringify(userEvents)); }
             if(data.travel) { userTravel = data.travel; localStorage.setItem('br_travel', JSON.stringify(userTravel)); }
             if(data.location) { localStorage.setItem('br_location', JSON.stringify(data.location)); updateLocationDisplay(data.location); }
