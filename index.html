@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Backroom - v0.41</title>
+    <title>Backroom - Directory & Travel Guide</title>
     
     <meta name="description" content="Backroom - The ultimate gay nightlife, fetish, darkroom, and travel venue directory. Find cruise clubs, saunas, and events near you.">
     <meta property="og:title" content="Backroom Directory">
@@ -13,270 +13,203 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Antonio:wght@400;700&family=Barlow+Condensed:wght@400;500;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="" />
     <link rel="stylesheet" href="style.css?v=0.41">
 </head>
 <body>
 
     <div id="toast-container" class="toast-container hidden"></div>
 
-    <div id="tutorial-modal" class="tutorial-float hidden" style="z-index: 4000;">
+    <div id="tutorial-modal" class="tutorial-float hidden">
         <div class="modal-content small-modal" style="border: 2px solid var(--primary-blue);">
             <div class="modal-header">
                 <h2 class="display-font" style="color: var(--primary-blue);">TUTORIAL</h2>
             </div>
-            <div class="modal-body">
-                <p id="tutorial-text" class="body-font" style="font-size: 1.2rem; text-align: center; margin-bottom: 20px;">Welcome to Backroom!</p>
-                <div style="display: flex; gap: 10px;">
-                    <button class="btn secondary-btn pill-btn" onclick="endTutorial()">Skip</button>
-                    <button class="btn primary-btn pill-btn" onclick="nextTutorialStep()">Next ➡️</button>
-                </div>
+            <p id="tutorial-text" class="meta-text" style="font-size: 1.1rem; margin-bottom: 20px; color: #fff; text-align: center;"></p>
+            <div style="display: flex; gap: 10px;">
+                <button class="btn secondary-btn pill-btn" style="flex:1;" onclick="endTutorial()">Skip</button>
+                <button class="btn primary-btn pill-btn" style="flex:2;" onclick="nextTutorialStep()">Next ➡</button>
             </div>
         </div>
     </div>
 
-    <div id="profile-wipe-toast" class="modal hidden" style="z-index: 3000;">
-        <div class="toast show" style="position:relative; transform:none; bottom:auto; left:auto; margin: auto; max-width: 450px; display:flex; flex-direction:column; gap:15px; padding: 25px;">
-            <p style="font-size:1.2rem; font-weight:bold; margin-bottom: 10px;">How would you like to start fresh?</p>
-            <button id="btn-wipe-all" class="btn pill-btn" style="background:var(--dark-red); color:#fff;">Delete Everything (Events, Faves, etc.)</button>
-            <button id="btn-wipe-profile-only" class="btn secondary-btn pill-btn">Keep Data, Just Reset Profile</button>
-            <button class="btn primary-btn pill-btn close-modal-btn">Cancel</button>
-        </div>
-    </div>
-
-    <div id="age-gate" class="fullscreen-overlay">
+    <div id="age-gate" class="age-gate">
         <div class="age-gate-content">
-            <img src="colorpallette.png" alt="Backroom" style="max-width: 150px; margin-bottom: 20px; border-radius: var(--radius-card);">
-            <h1 class="display-font" style="margin-bottom: 10px;">18+ ONLY</h1>
-            <p id="ag-text" class="body-font" style="margin-bottom: 20px; color: var(--text-light);"></p>
-            <button id="btn-enter" class="btn primary-btn pill-btn" style="font-size: 1.5rem; margin-bottom: 15px;">ENTER BACKROOM</button>
-            <p id="ag-disclaimer" class="meta-text"></p>
-            <button id="btn-language" class="btn secondary-btn pill-btn" style="margin-top: 15px;">🌐 English</button>
-        </div>
-    </div>
-
-    <div id="error-panel" class="fullscreen-overlay hidden">
-        <div class="age-gate-content" style="border-color: var(--bright-red-orange);">
-            <h1 class="display-font" style="color: var(--bright-red-orange);">SYSTEM ERROR</h1>
-            <p id="error-text" class="body-font" style="margin-bottom: 20px;"></p>
-            <div id="bypass-container"></div>
+            <img src="colorpallette.png" alt="Backdoor Logo" style="width: 80px; margin-bottom: 20px;">
+            <h1 class="display-font" style="font-size: 2.5rem; margin-bottom: 10px;">BACKROOM</h1>
+            <p id="ag-text" style="margin-bottom: 30px; font-size: 1.2rem;"></p>
+            <button id="btn-enter" class="btn primary-btn pill-btn" style="font-size: 1.3rem; padding: 15px 40px; width: 100%;">I AM 18 OR OLDER</button>
+            <p id="ag-disclaimer" class="meta-text" style="margin-top: 20px; font-size: 0.85rem;"></p>
         </div>
     </div>
 
     <div id="app-shell" class="hidden">
-        <header id="top-bar">
-            <div class="top-bar-left">
-                <div class="top-bar-logo-area" onclick="window.location.hash='';" title="Go to Home">
-                    <img src="colorpallette.png" class="brand-image" alt="Backroom">
-                </div>
+        
+        <header id="top-bar" style="display: flex; justify-content: space-between; align-items: center; padding: 10px 20px; background: var(--near-black); border-bottom: 1px solid var(--panel-mid); position: sticky; top: 0; z-index: 1000;">
+            <div style="display: flex; align-items: center; gap: 10px; cursor: pointer;" onclick="window.location.hash=''; searchInput.value=''; handleRouting();" title="Go to Home">
+                <img src="colorpallette.png" alt="Backdoor Logo" style="height: 30px;">
+                <h1 class="display-font" style="font-size: 1.5rem; color: #fff; margin: 0;">BACKROOM</h1>
             </div>
-            <div class="top-bar-center">
-                <div class="search-wrapper">
-                    <input type="text" id="search-input" class="form-input pill-input" placeholder="Search venues, cities...">
-                </div>
-                <button id="btn-location" class="top-btn icon-only pill-btn" title="Location Settings">📍</button>
-            </div>
-            <div class="top-bar-right">
-                <button id="btn-favorites" class="top-btn icon-only pill-btn" title="My Favorites">⚜️</button>
-                <button id="btn-profile-menu" class="top-btn profile-btn-wrap pill-btn" title="My Profile">
-                    <div id="top-profile-container" class="avatar-crop-container">
-                        <img id="top-profile-avatar" src="" alt="Profile">
-                    </div>
-                    <span id="top-profile-name" class="display-font" style="font-size: 1.1rem; font-weight: bold;">👤</span>
-                </button>
+            <div style="display: flex; align-items: center; gap: 15px;">
+                <button id="btn-language" class="icon-btn" title="Translate Text"><img src="translate.png" style="width: 24px;" onerror="this.style.display='none';"></button>
+                <button id="btn-location" class="icon-btn" title="Set Location"><img src="location.png" style="width: 24px;" onerror="this.style.display='none';">📍</button>
+                <button id="btn-shortlists-menu" class="icon-btn" title="View Shortlists"><img src="shortlist.png" style="width: 24px;" onerror="this.style.display='none';">📑</button>
+                <button id="btn-favorites" class="icon-btn" title="View Favorites" style="font-size: 1.5rem;">⚜️</button>
             </div>
         </header>
 
-        <div id="workspace">
-            <aside id="sidebar">
-                <div class="sidebar-menu">
-                    <div class="sidebar-item" onclick="window.location.hash='';"><span class="icon">📍</span> <span class="sidebar-text">Venues</span></div>
-                    
-                    <div class="sidebar-item" onclick="window.location.hash='#myevents';"><span class="icon">📅</span> <span class="sidebar-text">Events</span></div>
-                    
-                    <div class="sidebar-item" id="btn-sidebar-tutorial"><span class="icon">📖</span> <span class="sidebar-text">Tutorial</span></div>
-
-                    <div style="height: 1px; background: var(--panel-mid); margin: 10px 0;"></div>
-                    
-                    <div class="sidebar-item" id="btn-shortlists-menu"><span class="icon">📑</span> <span class="sidebar-text">Shortlists</span></div>
-                    
-                    <div class="sidebar-item" id="btn-sidebar-travel"><span class="icon">🚄</span> <span class="sidebar-text">Travel</span></div>
-                    <div id="travel-dropdown" class="sidebar-submenu hidden">
-                        <div id="travel-cities-list"></div>
-                        <button class="btn secondary-btn pill-btn" style="font-size: 0.85rem; padding: 4px;" onclick="window.location.hash='#mytravel';">Manage Travel</button>
-                    </div>
-
-                    <div class="sidebar-item" onclick="window.location.hash='#discounts';"><span class="icon">🎟️</span> <span class="sidebar-text">Discounts</span></div>
-                    
-                    <div style="height: 1px; background: var(--panel-mid); margin: 10px 0;"></div>
-                    
-                    <div class="sidebar-item" id="btn-settings"><span class="icon">⚙️</span> <span class="sidebar-text">Settings</span></div>
+        <div id="sidebar-hit-area"></div>
+        <nav id="sidebar" class="sidebar">
+            <div class="sidebar-header" style="padding: 20px; text-align: center; border-bottom: 1px solid var(--panel-mid);">
+                <img src="colorpallette.png" style="height: 40px; margin-bottom: 10px;">
+                <h2 class="display-font">BACKROOM</h2>
+                <div id="sidebar-version-display" class="meta-text" style="font-size: 0.8rem; margin-top: 5px;"></div>
+            </div>
+            <div class="sidebar-menu" style="padding: 10px 0;">
+                <div class="menu-item" onclick="window.location.hash=''; searchInput.value=''; handleRouting();">🏠 Home</div>
+                <div class="menu-item" id="btn-sidebar-travel">🚄 Travel</div>
+                <div id="travel-dropdown" class="submenu hidden">
+                    <div id="travel-cities-list"></div>
+                    <div class="submenu-item add-travel-btn" onclick="document.getElementById('sidebar').classList.remove('visible'); document.getElementById('location-modal').classList.remove('hidden');">+ Add new city</div>
                 </div>
-                <div class="sidebar-footer">
-                    <p id="sidebar-version-display" style="color: var(--primary-blue); font-weight: bold;"></p>
+                <div class="menu-item" onclick="window.location.hash='#favorites';">⚜️ Favourites</div>
+                <div class="menu-item" onclick="window.location.hash='#myshortlists';">📑 Shortlists</div>
+                <div class="menu-item" onclick="window.location.hash='#myevents';">💖 Events</div>
+                <div class="menu-item" id="btn-settings">⚙️ Settings</div>
+                <div class="menu-item" id="btn-sidebar-tutorial">📖 App Tutorial</div>
+            </div>
+        </nav>
+
+        <main class="main-content">
+            <div class="search-bar-container" id="search-bar-container">
+                <input type="text" id="search-input" class="form-input pill-input" placeholder="Search venues, cities, or vibes...">
+            </div>
+
+            <div id="main-filters" class="horizontal-scroll" style="margin-bottom: 15px;"></div>
+
+            <div id="context-header" class="hidden" style="margin-bottom: 15px;">
+                <button id="btn-back-to-results" class="btn secondary-btn pill-btn" style="margin-bottom: 10px;">⬅ Back to Search</button>
+                <h2 id="context-title" class="display-font" style="color: var(--primary-blue);"></h2>
+                <p id="context-desc" class="meta-text"></p>
+                <div id="event-city-filters" class="horizontal-scroll hidden" style="margin-top: 10px;"></div>
+                <button id="btn-new-shortlist-view" class="btn secondary-btn pill-btn hidden" style="margin-top: 10px;">+ Create New Shortlist</button>
+            </div>
+
+            <div id="results-container" class="listings-grid"></div>
+
+            <div id="welcome-screen" class="hidden" style="text-align: center; margin-top: 40px; padding: 20px;">
+                <div style="width: 150px; height: 150px; border-radius: 50%; overflow: hidden; border: 3px solid var(--primary-blue); margin: 0 auto 20px auto; background: var(--panel-dark);">
+                    <img id="welcome-avatar" src="Profile_images/noavatar01.png" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.src='placeholder_venue.jpg'">
                 </div>
-            </aside>
-            <div id="sidebar-hit-area"></div>
-
-            <main id="main-content">
-                <div class="content-wrapper">
-                    
-                    <div id="welcome-screen" class="welcome-card hidden">
-                        <div class="welcome-avatar-container">
-                            <img id="welcome-avatar" src="" onerror="this.src='placeholder_venue.jpg'" style="width: 120px; height: 120px; border-radius: 50%; object-fit: cover; border: 3px solid var(--primary-blue);">
-                        </div>
-                        <div class="welcome-content-container">
-                            <h2 class="display-font" style="font-size: 2.5rem; color: var(--primary-blue);">WELCOME, <span id="welcome-name"></span></h2>
-                            <p class="body-font" style="font-size: 1.2rem; color: var(--text-light); margin-top: 10px;">Select a filter below or search for a city to begin exploring.</p>
-                        </div>
-                    </div>
-
-                    <div id="context-header" class="hidden" style="margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; background: var(--panel-dark); padding: 15px 20px; border-radius: var(--radius-card); border-left: 4px solid var(--primary-blue);">
-                        <div>
-                            <h2 id="context-title" class="display-font" style="color: var(--primary-blue); margin: 0;">TITLE</h2>
-                            <p id="context-desc" class="meta-text" style="margin-top: 5px;"></p>
-                        </div>
-                        <div style="display:flex; gap:10px;">
-                            <button id="btn-new-shortlist-view" class="btn primary-btn pill-btn hidden" style="width: auto; padding: 5px 15px;">+ New</button>
-                            <button id="btn-back-to-results" class="btn secondary-btn pill-btn" style="width: auto; padding: 5px 15px;">Back</button>
-                        </div>
-                    </div>
-
-                    <div id="event-city-filters" class="filter-chips-container hidden">
-                        </div>
-
-                    <div id="main-filters" class="filter-chips-container">
-                        <div class="filter-chips">
-                            <button class="chip active pill-btn" data-filter="All">All</button>
-                            <button class="chip pill-btn" data-filter="Darkroom">Darkroom</button>
-                            <button class="chip pill-btn" data-filter="Men Only">Men Only</button>
-                            
-                            <button class="chip pill-btn" data-filter="Dresscode">Dresscode</button>
-                            <button class="chip pill-btn" data-filter="Smoking Area">Smoking Area</button>
-                            <button class="chip pill-btn" data-filter="Cruising">Cruising</button>
-                            
-                            <button class="chip pill-btn" data-filter="Queer">Queer</button>
-                            <button class="chip pill-btn" data-filter="Sauna">Sauna</button>
-                            <button class="chip pill-btn" data-filter="Shop">Shop</button>
-                            
-                            <button class="chip pill-btn" data-filter="Open Now">Open Now</button>
-                        </div>
-                    </div>
-
-                    <div id="results-container"></div>
-                    <div id="discounts-container" class="hidden" style="background: var(--panel-dark); padding: 20px; border-radius: var(--radius-card);">
-                        <h2 class="display-font" style="color: var(--primary-blue); margin-bottom: 15px;">DISCOUNTS</h2>
-                        <p>Discount partner information will appear here.</p>
-                    </div>
-                </div>
-            </main>
-        </div>
+                <h2 class="display-font" style="font-size: 2.5rem; margin-bottom: 10px;">WELCOME BACK, <br><span id="welcome-name" style="color: var(--primary-blue);"></span></h2>
+                <p class="meta-text" style="font-size: 1.1rem; margin-bottom: 30px;">Ready to explore? Start searching or use the map to find venues near you.</p>
+                <button class="btn primary-btn pill-btn" style="font-size: 1.2rem; padding: 15px 40px;" onclick="document.getElementById('search-input').focus();">START SEARCHING</button>
+            </div>
+            
+        </main>
     </div>
 
     <div id="location-modal" class="modal hidden">
         <div class="modal-content small-modal">
-            <button class="btn-close close-modal-btn">❌</button>
-            <div class="modal-header"><h2 class="display-font">LOCATION</h2></div>
-            <div class="modal-body body-font">
-                <p id="current-location-display" class="meta-text" style="margin-bottom:15px; font-weight:bold;">No location set.</p>
-                <div style="display: flex; gap: 10px; margin-bottom: 15px;">
-                    <button id="btn-gps" class="btn primary-btn pill-btn" style="flex: 1;">📍 Use GPS</button>
-                    <button id="btn-clear-location" class="btn secondary-btn pill-btn" style="flex: 1;">Clear</button>
-                </div>
-                <hr class="divider">
-                <label class="meta-text">Or Search Manually:</label>
-                <input type="text" id="loc-country" class="form-input" placeholder="Country" style="margin-top:5px;">
-                <input type="text" id="loc-city" class="form-input" placeholder="City">
-                <input type="text" id="loc-postcode" class="form-input" placeholder="Postcode / Zip">
-                
-                <button id="btn-search-map" class="btn secondary-btn pill-btn" style="margin-bottom: 10px;">🔍 Search Map</button>
-                
-                <div id="map-preview-placeholder" class="map-preview">Map Preview Area</div>
-                <div id="loc-map" class="map-preview" style="display:none;"></div>
-
-                <div style="display: flex; gap: 10px; margin-top: 15px;">
-                    <button id="btn-save-location" class="btn primary-btn pill-btn">Save Active Location</button>
-                    <button id="btn-save-travel" class="btn secondary-btn pill-btn" style="width: 50px;" title="Add to Travel Pins">📌</button>
-                </div>
+            <button class="close-modal-btn">✖</button>
+            <h2 class="display-font" style="color: var(--primary-blue); margin-bottom: 15px;">LOCATION</h2>
+            <p class="meta-text" style="margin-bottom: 15px;">Set your location to find nearby venues and events.</p>
+            <button id="btn-gps" class="btn primary-btn pill-btn" style="width: 100%; margin-bottom: 15px;">📍 Use My Current Location</button>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px;">
+                <input type="text" id="loc-country" class="form-input pill-input" placeholder="Country" style="margin:0;">
+                <input type="text" id="loc-city" class="form-input pill-input" placeholder="City" style="margin:0;">
             </div>
-        </div>
-    </div>
-
-    <div id="venue-modal" class="modal hidden">
-        <div class="modal-content venue-modal-style">
-            <button class="btn-close close-modal-btn" style="background: rgba(0,0,0,0.5); padding: 5px 10px; border-radius: 50%;">❌</button>
-            <div class="modal-header" style="border-bottom: none; padding-bottom: 0;">
-                <h2 id="modal-title" class="display-font" style="font-size: 2.5rem; color: var(--primary-blue);">VENUE NAME</h2>
-                <div class="modal-actions" style="margin-right: 20px;">
-                    <button id="modal-star" class="icon-btn fav-btn" title="Favorite" style="font-size: 2rem;">⚜️</button>
-                    <button id="modal-shortlist" class="icon-btn fav-btn" title="Add to Shortlist"><img src="shortlist.png" style="width:24px;"></button>
-                    <button id="modal-share" class="icon-btn" title="Share"><img src="link.png" style="width:24px;"></button>
-                </div>
+            <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+                <input type="text" id="loc-postcode" class="form-input pill-input" placeholder="Postcode / Zip" style="margin:0; flex-grow:1;">
+                <button id="btn-search-map" class="btn secondary-btn pill-btn">🔍 Map</button>
             </div>
-            <div class="modal-body" id="modal-dynamic-layout" style="padding-top: 10px;">
-                </div>
+            <div style="height: 150px; background: var(--panel-dark); border-radius: var(--radius-card); border: 1px solid var(--panel-mid); margin-bottom: 15px; position: relative; overflow: hidden;">
+                <div id="map-preview-placeholder" style="position: absolute; top:0; left:0; width:100%; height:100%; display:flex; align-items:center; justify-content:center; color: var(--label-grey);">Map Preview</div>
+                <div id="loc-map" style="width: 100%; height: 100%; display: none;"></div>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px;">
+                <button id="btn-save-location" class="btn primary-btn pill-btn">Load Location</button>
+                <button id="btn-save-travel" class="btn secondary-btn pill-btn">Save 🚄</button>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                <button id="btn-edit-travel" class="btn secondary-btn pill-btn" onclick="window.location.hash='#mytravel'; document.getElementById('location-modal').classList.add('hidden');">Edit Travel</button>
+                <button id="btn-clear-location" class="btn secondary-btn pill-btn" style="color: var(--bright-red-orange); border-color: var(--bright-red-orange);">Clear</button>
+            </div>
         </div>
     </div>
 
     <div id="settings-modal" class="modal hidden">
         <div class="modal-content small-modal">
-            <button class="btn-close close-modal-btn">❌</button>
-            <div class="modal-header"><h2 class="display-font">SETTINGS</h2></div>
-            <div class="modal-body body-font">
-                <div id="import-preview-info" class="hidden" style="background: var(--primary-blue); color: #000; padding: 10px; border-radius: var(--radius-btn); margin-bottom: 15px; font-size: 0.9rem;"></div>
-                
-                <button class="btn primary-btn pill-btn btn-export-trigger" style="margin-bottom:10px;">💾 Export User Data</button>
-                <div style="position: relative; margin-bottom: 10px;">
-                    <label class="btn secondary-btn pill-btn" style="display: block; text-align: center; cursor: pointer;">
-                        📂 Import User Data
-                        <input type="file" id="import-data-file" class="hidden" accept=".json">
-                    </label>
-                </div>
-                
-                <hr class="divider">
-                <button id="btn-reset-age" class="btn secondary-btn pill-btn" style="margin-bottom:10px;">Reset 18+ Age Gate</button>
-                <button id="btn-clear-data" class="btn pill-btn" style="background-color: var(--dark-red); color: #fff;">Delete All Local Data</button>
+            <button class="close-modal-btn">✖</button>
+            <h2 class="display-font" style="color: var(--primary-blue); margin-bottom: 15px;">SETTINGS & HELP</h2>
+            
+            <div style="background: var(--panel-dark); padding: 15px; border-radius: var(--radius-card); margin-bottom: 15px;">
+                <p class="meta-text" style="margin-bottom: 10px; color: #fff;"><strong>Help & Privacy</strong></p>
+                <p class="meta-text" style="font-size: 0.85rem; line-height: 1.4;">All favorites, shortlists, profiles, and travel locations are stored LOCALLY on your device. We do not use servers. If you clear your browser cache, your data will be lost. Use the export tool below to backup your data.</p>
             </div>
-        </div>
-    </div>
-
-    <div id="add-to-shortlist-modal" class="modal hidden">
-        <div class="modal-content small-modal">
-            <button class="btn-close close-modal-btn">❌</button>
-            <div class="modal-header"><h2 class="display-font">ADD TO SHORTLIST</h2></div>
-            <div class="modal-body body-font">
-                <p id="add-shortlist-target-name" class="meta-text" style="margin-bottom:15px; font-weight:bold;"></p>
-                <div id="add-shortlist-options" style="display:flex; flex-direction:column; gap:10px; margin-bottom:15px;"></div>
-                <hr class="divider">
-                <input type="text" id="add-new-shortlist-name" class="form-input pill-input" placeholder="Create new shortlist...">
-                <button id="btn-add-create-shortlist" class="btn primary-btn pill-btn">Create & Add</button>
+            
+            <h3 class="display-font" style="margin-bottom: 10px; font-size: 1.1rem; color: var(--text-light);">QUICK EDIT</h3>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px;">
+                <button class="btn secondary-btn pill-btn" onclick="window.location.hash='#mytravel'; document.getElementById('settings-modal').classList.add('hidden');">🚄 Travel</button>
+                <button class="btn secondary-btn pill-btn" onclick="window.location.hash='#favorites'; document.getElementById('settings-modal').classList.add('hidden');">⚜️ Favourites</button>
+                <button class="btn secondary-btn pill-btn" id="btn-profile-menu" onclick="document.getElementById('settings-modal').classList.add('hidden'); openProfileMenu();">👤 Profile</button>
+                <button class="btn secondary-btn pill-btn" onclick="window.location.hash='#myshortlists'; document.getElementById('settings-modal').classList.add('hidden');">📑 Shortlists</button>
             </div>
+            
+            <button class="btn primary-btn pill-btn" style="width: 100%; margin-bottom: 15px;" onclick="window.open('https://instagram.com', '_blank')">📱 Follow us on Instagram</button>
+            
+            <hr style="border:0; height:1px; background:var(--panel-mid); margin: 15px 0;">
+            
+            <button class="btn secondary-btn btn-export-trigger pill-btn" style="width: 100%; margin-bottom: 10px;">💾 Export Data Backup</button>
+            <label class="btn secondary-btn pill-btn" style="width: 100%; display: block; text-align: center; margin-bottom: 15px; cursor: pointer;">
+                📥 Import Data Backup
+                <input type="file" id="import-data-file" class="hidden" accept=".json">
+            </label>
+            
+            <div id="import-preview-info" class="hidden" style="background: var(--panel-dark); padding: 10px; font-size: 0.85rem; color: var(--text-light); margin-bottom: 15px; border-radius: var(--radius-card);"></div>
+            
+            <hr style="border:0; height:1px; background:var(--panel-mid); margin: 15px 0;">
+            
+            <button id="btn-reset-age" class="btn secondary-btn pill-btn" style="width: 100%; margin-bottom: 10px; color: var(--bright-red-orange); border-color: var(--bright-red-orange);">Reset 18+ Verification</button>
+            <button id="btn-clear-data" class="btn secondary-btn pill-btn" style="width: 100%; color: var(--bright-red-orange); border-color: var(--bright-red-orange);">Delete All Local Data</button>
         </div>
     </div>
 
     <div id="profile-modal" class="modal hidden">
-        <div class="modal-content" style="max-width: 900px; height: 90vh;">
-            <button class="btn-close close-modal-btn">❌</button>
-            <div class="modal-header">
-                <h2 class="display-font">MY PROFILE</h2>
-                <div class="modal-actions">
-                    <select id="profile-switcher" class="form-input pill-input" style="width: 150px; margin: 0;"></select>
-                </div>
+        <div class="modal-content" style="max-width: 800px; display: flex; flex-direction: column; height: 85vh; padding: 0; overflow: hidden;">
+            <div style="padding: 15px 20px; border-bottom: 1px solid var(--panel-mid); display: flex; justify-content: space-between; align-items: center; flex-shrink: 0;">
+                <h2 class="display-font" style="color: var(--primary-blue); margin: 0;">MY PROFILE</h2>
+                <button class="close-modal-btn" style="position: static;">✖</button>
             </div>
-            <div class="modal-body" style="display: flex; gap: 20px; overflow: hidden; padding: 0;">
+            
+            <div style="display: flex; flex-direction: row; flex-grow: 1; overflow: hidden; flex-wrap: wrap;">
                 
-                <div style="flex: 2; display: flex; flex-direction: column; overflow-y: auto; padding: 20px; background: var(--near-black);">
+                <div style="flex: 2; min-width: 300px; display: flex; flex-direction: column; padding: 20px; overflow-y: auto; background: var(--near-black);">
+                    <div id="avatar-filters" style="margin-bottom: 15px; display: flex; flex-wrap: wrap; gap: 8px;"></div>
+                    
+                    <div id="selected-avatar-preview" style="text-align: center; margin-bottom: 15px; background: var(--panel-dark); padding: 20px; border-radius: var(--radius-card); border: 1px solid var(--panel-mid);">
+                        <div id="top-profile-container" style="width: 140px; height: 140px; border-radius: 50%; overflow: hidden; border: 3px solid var(--primary-blue); margin: 0 auto 10px auto;">
+                            <img id="top-profile-avatar-large" src="Profile_images/noavatar01.png" style="width: 100%; height: 100%; object-fit: cover;">
+                        </div>
+                    </div>
                     <div id="avatar-grid" class="avatar-grid" style="flex-grow: 1; max-height: none;"></div>
                 </div>
                 
                 <div style="flex: 1; min-width: 250px; background: var(--panel-standard); padding: 20px; border-left: 1px solid var(--panel-mid); overflow-y: auto; display: flex; flex-direction: column;">
-                    <label class="meta-text" style="margin-bottom: 5px; display: block; font-weight: bold;">Profile Name (Local Only)</label>
-                    <input type="text" id="profile-name" class="form-input pill-input" placeholder="Enter your name...">
                     
-                    <button id="btn-save-profile" class="btn primary-btn pill-btn" style="margin-top: 10px;">💾 Save Active Profile</button>
-                    <button id="btn-new-profile" class="btn secondary-btn pill-btn" style="margin-top: 10px;">+ Start New Profile</button>
+                    <label class="meta-text" style="margin-bottom: 5px; display: block; font-weight: bold; font-size: 1rem;">Profile Name</label>
+                    <input type="text" id="profile-name" class="form-input pill-input" placeholder="Enter your name..." style="font-size: 1rem;">
                     
-                    <button id="btn-profile-tutorial" class="btn pill-btn" style="margin-top: 10px; background: var(--primary-blue); color: #fff; font-weight: bold;">📖 Backup Tutorial</button>
+                    <label class="meta-text" style="margin-top: 15px; margin-bottom: 5px; display: block; font-weight: bold; font-size: 1rem;">Switch Profile</label>
+                    <select id="profile-switcher" class="form-input pill-input" style="font-size: 1rem; margin-bottom: 15px;">
+                        <option value="">Switch Profile...</option>
+                    </select>
+                    
+                    <button id="btn-save-profile" class="btn primary-btn pill-btn" style="margin-top: 5px; font-size: 1rem;">💾 Save Active Profile</button>
+                    <button id="btn-new-profile" class="btn secondary-btn pill-btn" style="margin-top: 10px; font-size: 1rem;">Make a new blank profile</button>
+                    <button id="btn-wipe-profile-only" class="btn secondary-btn pill-btn" style="margin-top: 10px; font-size: 1rem;">Make a copy of this profile</button>
+                    
+                    <button id="btn-profile-tutorial" class="btn pill-btn" style="margin-top: 20px; background: var(--primary-blue); color: #fff; font-weight: bold; font-size: 1rem;">📖 Backup Tutorial</button>
                     
                     <div id="profile-stats-container"></div>
                 </div>
@@ -284,7 +217,51 @@
         </div>
     </div>
 
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
-    <script src="app.js"></script>
+    <div id="profile-wipe-toast" class="hidden" style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: var(--panel-dark); padding: 20px; border: 2px solid var(--bright-red-orange); border-radius: var(--radius-card); z-index: 5000; text-align: center; width: 90%; max-width: 400px;">
+        <h3 class="display-font" style="color: var(--bright-red-orange); margin-bottom: 15px;">START NEW PROFILE?</h3>
+        <p class="meta-text" style="margin-bottom: 20px;">Wiping lists deletes your local favourites. Cancel if unsure.</p>
+        <div style="display: flex; flex-direction: column; gap: 10px;">
+            <button id="btn-wipe-all" class="btn secondary-btn pill-btn" style="color: var(--bright-red-orange); border-color: var(--bright-red-orange);">Start Blank (Wipe Lists)</button>
+            <button class="btn secondary-btn pill-btn" onclick="document.getElementById('profile-wipe-toast').classList.add('hidden')">Cancel</button>
+        </div>
+    </div>
+
+    <div id="add-to-shortlist-modal" class="modal hidden">
+        <div class="modal-content small-modal">
+            <button class="close-modal-btn">✖</button>
+            <h2 class="display-font" style="color: var(--primary-blue); margin-bottom: 10px;">ADD TO SHORTLIST</h2>
+            <p id="add-shortlist-target-name" style="margin-bottom: 15px; font-weight: bold;"></p>
+            <div id="add-shortlist-options" style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 15px; max-height: 200px; overflow-y: auto;"></div>
+            <hr style="border:0; height:1px; background:var(--panel-mid); margin: 15px 0;">
+            <input type="text" id="add-new-shortlist-name" class="form-input pill-input" placeholder="New shortlist name...">
+            <button id="btn-add-create-shortlist" class="btn primary-btn pill-btn" style="width: 100%; margin-top: 5px;">Create & Add</button>
+        </div>
+    </div>
+
+    <div id="venue-modal" class="modal hidden">
+        <div class="modal-content">
+            <button class="close-modal-btn">✖</button>
+            <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; padding-right: 30px;">
+                <h2 id="modal-title" class="display-font" style="margin-bottom: 0;"></h2>
+                <div style="display: flex; gap: 10px;">
+                    <button id="modal-share" class="icon-btn"></button>
+                    <button id="modal-shortlist" class="icon-btn"></button>
+                    <button id="modal-star" class="icon-btn" style="font-size: 1.8rem; line-height: 1;">⚜️</button>
+                </div>
+            </div>
+            <div id="modal-dynamic-layout" style="margin-top: 15px;"></div>
+        </div>
+    </div>
+
+    <div id="error-panel" class="modal hidden">
+        <div class="modal-content small-modal">
+            <h2 class="display-font" style="color: var(--bright-red-orange);">DATA LOAD ERROR</h2>
+            <p id="error-text" style="margin: 20px 0; font-family: monospace; font-size: 0.9rem; background: var(--panel-dark); padding: 10px; border-radius: 4px;"></p>
+            <div id="bypass-container" style="text-align: center;"></div>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+    <script src="app.js?v=0.41"></script>
 </body>
 </html>
