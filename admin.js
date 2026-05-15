@@ -531,9 +531,7 @@ function renderAdminAvatars() {
             else if(c) fetishes.add(c);
         });
     });
-    const ageSel = document.getElementById('ac-age');
     const fetSel = document.getElementById('ac-fetish');
-    if(ageSel) { ageSel.innerHTML = '<option value="">None</option>' + Array.from(ages).map(a => `<option value="${a}">${a}</option>`).join(''); }
     if(fetSel) { fetSel.innerHTML = '<option value="">None</option>' + Array.from(fetishes).map(f => `<option value="${f}">${f}</option>`).join(''); }
 }
 
@@ -572,8 +570,22 @@ function selectAvatarForEditing(idx) {
     }
     
     const cats = Array.isArray(av.category) ? av.category : [av.category];
-    const ageSel = document.getElementById('ac-age');
-    if(ageSel) ageSel.value = cats.find(c => ['Young', 'Prime', 'Mature'].includes(c)) || '';
+    
+    // v0.53 - Age Pill Selection Logic
+    const selectedAge = cats.find(c => ['Young', 'Prime', 'Mature'].includes(c)) || '';
+    document.querySelectorAll('.age-pill').forEach(p => {
+        if(p.dataset.val === selectedAge) {
+            p.classList.remove('secondary-btn');
+            p.style.backgroundColor = 'var(--bright-red-orange)';
+            p.style.borderColor = 'var(--bright-red-orange)';
+            p.classList.add('active-age');
+        } else {
+            p.classList.add('secondary-btn');
+            p.style.backgroundColor = '';
+            p.style.borderColor = '';
+            p.classList.remove('active-age');
+        }
+    });
     
     renderFetishPills();
 }
@@ -606,7 +618,10 @@ window.removeActiveFetish = function(fetish) {
 window.saveActiveAvatarEdits = function() {
     if(activeAvatarIndex === -1) return;
     const name = document.getElementById('ac-name')?.value || '';
-    const age = document.getElementById('ac-age')?.value || '';
+    
+    // v0.53 - Read Age from Pills
+    const activeAgePill = document.querySelector('.age-pill.active-age');
+    const age = activeAgePill ? activeAgePill.dataset.val : '';
     
     const av = avatarAdminData[activeAvatarIndex];
     let cats = Array.isArray(av.category) ? av.category : [av.category];
@@ -823,6 +838,24 @@ window.downloadEditorHTML = function() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+
+    // v0.53 - Age Pill Listeners
+    document.querySelectorAll('.age-pill').forEach(pill => {
+        pill.addEventListener('click', (e) => {
+            document.querySelectorAll('.age-pill').forEach(p => {
+                p.classList.add('secondary-btn');
+                p.style.backgroundColor = '';
+                p.style.borderColor = '';
+                p.classList.remove('active-age');
+            });
+            e.target.classList.remove('secondary-btn');
+            e.target.style.backgroundColor = 'var(--bright-red-orange)';
+            e.target.style.borderColor = 'var(--bright-red-orange)';
+            e.target.classList.add('active-age');
+            saveActiveAvatarEdits();
+        });
+    });
+
     const colorDropdown = document.getElementById('editor-color-dropdown');
     if(colorDropdown) {
         const SITE_PALETTE = ['#2CA8D4', '#0B0F19', '#111725', '#1F2535', '#212530', '#313748', '#53596B', '#969CAE', '#D55036', '#871300', '#000000', '#ffffff'];

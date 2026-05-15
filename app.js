@@ -1,5 +1,5 @@
 // --- Application State ---
-const APP_VERSION = "v0.52";
+const APP_VERSION = "v0.53";
 const APP_DATE = "May 15, 2026";
 
 let systemInfo = {}, designTheme = {}, venues = [], events = [];
@@ -20,7 +20,7 @@ let userTravel = [];
 
 let importInfo = JSON.parse(localStorage.getItem('br_import_info')) || null;
 let avatarData = [];
-let activeAvatarCategory = 'All';
+let activeAvatarCategories = [];
 
 let leafletMap = null;
 let leafletMarker = null;
@@ -133,18 +133,19 @@ function formatAboutText(text) {
 // --- Social Icons Builder ---
 function buildSocialBar(venue) {
     let html = '<div class="social-bar" style="display:flex; gap:12px; margin-top:10px; align-items:center;">';
-    const buildIcon = (url, iconName) => {
+    const buildIcon = (url, iconName, platformName) => {
         const hasUrl = url && url.trim() !== '';
         const opacity = hasUrl ? '1' : '0.6';
         const cursor = hasUrl ? 'pointer' : 'default';
         const clickAction = hasUrl ? `onclick="window.open('${url}', '_blank')"` : '';
-        return `<img src="Emoji/${iconName}" style="width:24px; height:24px; opacity:${opacity}; cursor:${cursor}; transition: opacity 0.2s;" ${clickAction} alt="${iconName}">`;
+        const titleText = hasUrl ? `Open ${platformName}` : `This link is not available`;
+        return `<img src="Emoji/${iconName}" title="${titleText}" style="width:24px; height:24px; opacity:${opacity}; cursor:${cursor}; transition: opacity 0.2s;" ${clickAction} alt="${iconName}">`;
     };
-    html += buildIcon(venue.Instagram_URL, 'instagram_url.png');
-    html += buildIcon(venue.Facebook_URL, 'facebook_url.png');
-    html += buildIcon(venue.Website_URL, 'website_url.png');
-    html += buildIcon(venue.Emoji_Override, 'xicon.png'); 
-    html += buildIcon(venue.Other_URL, 'link.png');
+    html += buildIcon(venue.Instagram_URL, 'instagram_url.png', 'Instagram');
+    html += buildIcon(venue.Facebook_URL, 'facebook_url.png', 'Facebook');
+    html += buildIcon(venue.Website_URL, 'website_url.png', 'Website');
+    html += buildIcon(venue.Emoji_Override, 'xicon.png', 'X (Twitter)'); 
+    html += buildIcon(venue.Other_URL, 'link.png', 'Link');
     html += '</div>';
     return html;
 }
@@ -379,15 +380,29 @@ function startTutorial(type) {
     if (type === 'general') {
         currentTutorialSteps = [
             { target: '#search-input', text: 'Search for venues by name, city, or specific tags.' },
-            { target: '#filter-chips', text: 'Use these dynamic filter pills to quickly sort results.' },
-            { target: '#btn-location', text: 'Click here to set your location and see venues closest to you.' },
-            { target: '#sidebar', text: 'Access your saved Favourites, Travel pins, and upcoming Events from the menu.' }
+            { target: '#btn-location', text: 'Set your location and see venues closest to you.' },
+            { target: '#filter-chips', text: 'Use dynamic filter pills to sort results.' },
+            { target: '#btn-favorites', text: 'View your locally saved Favourite venues.' },
+            { target: '#btn-shortlists-menu', text: 'Create and view named venue collections.' },
+            { target: '.card', text: 'Click any venue card to select it.' },
+            { target: '.card.selected', text: 'Double tap a selected card to open its full profile.' },
+            { target: '#modal-star', text: 'Use these buttons to favourite, shortlist, report, or share.' },
+            { target: '.ratings-table', text: 'Check out detailed venue ratings.' },
+            { target: '.social-bar', text: 'Quickly access the venue\'s social media and websites.' },
+            { target: '.full-width-about', text: 'Read detailed descriptions and opening hours.' },
+            { target: '.events-block', text: 'Scroll down to see upcoming events hosted here.' },
+            { target: '.event-card .fav-btn', text: 'Click the heart to save events to your personal list.' },
+            { target: '#btn-profile-tutorial', text: 'Do you want to go to the Profile tutorial now? Click here!' }
         ];
     } else if (type === 'profile') {
         currentTutorialSteps = [
             { target: '#profile-name', text: 'Enter your custom profile name here.' },
+            { target: '#avatar-grid', text: 'Choose your avatar from the grid.' },
+            { target: '#avatar-filters', text: 'Select filter tags to find the perfect avatar.' },
             { target: '#btn-save-profile', text: 'Click this to save your current active profile to this browser.' },
-            { target: '#btn-profile-download-data', text: 'You are in control of your own data. We do not store any information online so there is no risk of data breaches. If you clear your cache you will lose your profile, so we strongly recommend you download your data and back it up to Google Drive or Apple Drive.' }
+            { target: '#profile-switcher', text: 'Switch between your saved profiles easily.' },
+            { target: '#btn-new-profile', text: 'Create a new profile from scratch.' },
+            { target: '#btn-profile-download-data', text: 'You are in control of your own data. We do not store any information online so there is no risk of data breaches. If you clear your cache in your browser everything you have saved will be gone unless you download your data and then import it all. We recommend you store this on your online Google Drive or Apple Drive.' }
         ];
     }
     
@@ -440,12 +455,27 @@ function runTutorial() {
 }
 
 // --- Flagging/Reporting System ---
-window.flagListing = function(id, name) {
-    navigator.clipboard.writeText(`ID: ${id} | Name: ${name}`);
-    showToast("Listing ID copied! Prepare to paste in email...");
-    setTimeout(() => {
-        window.location.href = `mailto:backroom.site@gmail.com?subject=Report%20Listing%20[${id}]&body=Hello,%20I%20want%20to%20report%20an%20issue%20with%20listing:%0A%0A(Paste%20ID%20here)%0A%0AThe%20issue%20is:%20`;
-    }, 1500);
+window.flagListing = function(id, name, type="Venue/Event") {
+    const modal = document.getElementById('formsubmit-modal');
+    if(modal) {
+        const fsId = document.getElementById('fs-id');
+        const fsName = document.getElementById('fs-name');
+        const fsType = document.getElementById('fs-type');
+        const fsUrl = document.getElementById('fs-url');
+        
+        if(fsId) fsId.value = id;
+        if(fsName) fsName.value = name;
+        if(fsType) fsType.value = type;
+        if(fsUrl) fsUrl.value = window.location.href;
+        
+        modal.classList.remove('hidden');
+    } else {
+        navigator.clipboard.writeText(`ID: ${id} | Name: ${name}`);
+        showToast("Listing ID copied! Prepare to paste in email...");
+        setTimeout(() => {
+            window.location.href = `mailto:backroom.site@gmail.com?subject=Report%20Listing%20[${id}]&body=Hello,%20I%20want%20to%20report%20an%20issue%20with%20listing:%0A%0A(Paste%20ID%20here)%0A%0AThe%20issue%20is:%20`;
+        }, 1500);
+    }
 };
 
 function setupEventListeners() {
@@ -611,7 +641,6 @@ function setupEventListeners() {
         updateProfileDisplay();
         document.getElementById('profile-wipe-toast')?.classList.add('hidden');
         showToast("Started fresh blank profile.");
-        handleRouting();
     });
 
     addEvt('btn-wipe-profile-only', 'click', () => {
@@ -623,6 +652,26 @@ function setupEventListeners() {
         updateProfileDisplay();
         document.getElementById('profile-wipe-toast')?.classList.add('hidden');
         showToast("Profile copied. Choose a new name.");
+    });
+    
+    addEvt('btn-delete-profile', 'click', () => {
+        if(!userProfile.name) {
+            showToast("No active profile to delete.");
+            return;
+        }
+        if(confirm("WARNING: Are you sure you want to delete this profile? You will lose all saved venues and events associated with it.")) {
+            delete savedProfiles[userProfile.name];
+            localStorage.setItem('br_saved_profiles', JSON.stringify(savedProfiles));
+            userProfile = { name: '', avatar: '' };
+            userFavorites = []; userShortlists = {}; userEvents = []; userTravel = [];
+            saveCurrentToBundle();
+            const pName = document.getElementById('profile-name');
+            if(pName) pName.value = '';
+            renderProfileAvatars();
+            updateProfileDisplay();
+            showToast("Profile deleted.");
+            if(window.location.hash === '' && searchInput?.value === '') renderWelcomeScreen();
+        }
     });
 
     addEvt('profile-switcher', 'change', (e) => {
@@ -684,7 +733,7 @@ function updateProfileDisplay() {
     if(userProfile.name) topName.innerText = userProfile.name;
     else topName.innerText = '👤';
 
-    // v0.52 - Hide top preview if it's the noavatar blank image
+    // v0.52/0.53 - Hide top preview if it's the noavatar blank image
     if(userProfile.avatar && userProfile.avatar !== 'noavatar01.png') {
         topAvatar.src = `Profile_images/${userProfile.avatar}`;
         if(topAvatarContainer) topAvatarContainer.style.display = 'block'; 
@@ -714,7 +763,6 @@ function renderTravelDropdown() {
         list.appendChild(item);
     });
 }
-
 
 // =================== part 2 ================
 
@@ -937,7 +985,7 @@ function renderMyEventsView() {
                     <div><h3 class="card-title display-font">${ev.Event_Name}</h3><div class="card-meta">${formatDateToDDMMYYYY(ev.Event_Date)} | @ ${venueName}</div></div>
                     <div style="display:flex; gap:10px; align-items:center;">
                         <span class="icon-btn" onclick="event.stopPropagation(); shareURL('${window.location.origin}${window.location.pathname}?event=${ev.Event_ID}#myevents', '${ev.Event_Name.replace(/'/g, "\\'")}')" title="Share" style="font-size:1.5rem;">📣</span>
-                        <span class="icon-btn" onclick="event.stopPropagation(); window.flagListing('${ev.Event_ID}', '${ev.Event_Name.replace(/'/g, "\\'")}')" title="Report" style="font-size:1.1rem; border:2px solid var(--bright-red-orange); border-radius:50%; width:26px; height:26px; display:flex; align-items:center; justify-content:center;">⚠️</span>
+                        <span class="icon-btn" onclick="event.stopPropagation(); window.flagListing('${ev.Event_ID}', '${ev.Event_Name.replace(/'/g, "\\'")}', 'Event Report')" title="Report" style="display:flex; align-items:center; justify-content:center;"><img src="report.png" style="width:24px; height:24px; object-fit:contain;"></span>
                         <button class="icon-btn fav-btn active-star" style="font-size:1.5rem;" onclick="toggleEventFavorite('${ev.Event_ID}', null, true)">❌</button>
                     </div>
                 </div>
@@ -986,7 +1034,7 @@ function renderShortlistsFullView() {
     
     const cTitle = document.getElementById('context-title');
     const cDesc = document.getElementById('context-desc');
-    if(cTitle) cTitle.innerHTML = "📑 MY SHORTLISTS";
+    if(cTitle) cTitle.innerHTML = `<img src="shortlist.png" style="width:24px; vertical-align:bottom; margin-right:8px;"> MY SHORTLISTS`;
     if(cDesc) cDesc.innerText = "Your named venue collections.";
     
     const newBtn = document.getElementById('btn-new-shortlist-view');
@@ -1031,21 +1079,6 @@ function renderShortlistsFullView() {
     });
 }
 
-function renderSingleShortlist(listName) {
-    if(!userShortlists[listName]) { window.location.hash=''; return; }
-    document.getElementById('main-filters')?.classList.add('hidden');
-    contextHeader?.classList.remove('hidden');
-    
-    const cTitle = document.getElementById('context-title');
-    const cDesc = document.getElementById('context-desc');
-    if(cTitle) cTitle.innerText = listName.toUpperCase();
-    if(cDesc) cDesc.innerText = "Saved Shortlist";
-    
-    const ids = userShortlists[listName];
-    const shortVenues = (venues||[]).filter(v => ids.includes(v.Venue_ID));
-    renderListings(shortVenues, true);
-}
-
 function renderProfileAvatars() {
     const grid = document.getElementById('avatar-grid');
     if(!grid) return;
@@ -1075,26 +1108,36 @@ function renderProfileAvatars() {
     const ageTags = ['Young', 'Prime', 'Mature'];
     const fetishTags = ['Ink', 'Leather', 'Rubber', 'Puppy'];
     
-    let html = `<button class="chip pill-btn ${activeAvatarCategory === 'All' ? 'active' : ''}" style="padding: 4px 10px; font-size: 0.85rem; flex-shrink:0;" data-val="All">All</button>`;
+    let html = `<button class="chip pill-btn ${activeAvatarCategories.length === 0 ? 'active' : ''}" style="padding: 4px 10px; font-size: 0.85rem; flex-shrink:0;" data-val="All">All</button>`;
     
-    html += ageTags.map(c => `<button class="chip pill-btn ${activeAvatarCategory === c ? 'active' : ''}" style="padding: 4px 10px; font-size: 0.85rem; color: var(--primary-blue); border-color: var(--primary-blue); flex-shrink:0;" data-val="${c}">${c}</button>`).join('');
-    html += fetishTags.map(c => `<button class="chip pill-btn ${activeAvatarCategory === c ? 'active' : ''}" style="padding: 4px 10px; font-size: 0.85rem; color: var(--bright-red-orange); border-color: var(--bright-red-orange); flex-shrink:0;" data-val="${c}">${c}</button>`).join('');
+    html += ageTags.map(c => `<button class="chip pill-btn ${activeAvatarCategories.includes(c) ? 'active' : ''}" style="padding: 4px 10px; font-size: 0.85rem; color: var(--primary-blue); border-color: var(--primary-blue); flex-shrink:0;" data-val="${c}">${c}</button>`).join('');
+    html += fetishTags.map(c => `<button class="chip pill-btn ${activeAvatarCategories.includes(c) ? 'active' : ''}" style="padding: 4px 10px; font-size: 0.85rem; color: var(--bright-red-orange); border-color: var(--bright-red-orange); flex-shrink:0;" data-val="${c}">${c}</button>`).join('');
     
     filterContainer.innerHTML = html;
     
     filterContainer.querySelectorAll('.chip').forEach(btn => {
-        btn.onclick = () => { activeAvatarCategory = btn.getAttribute('data-val'); renderProfileAvatars(); };
+        btn.onclick = () => { 
+            const val = btn.getAttribute('data-val');
+            if(val === 'All') activeAvatarCategories = [];
+            else {
+                const idx = activeAvatarCategories.indexOf(val);
+                if(idx > -1) activeAvatarCategories.splice(idx, 1);
+                else activeAvatarCategories.push(val);
+            }
+            renderProfileAvatars(); 
+        };
     });
 
     let displayData = [...avatarData];
-    // Add default no avatar option
-    if (activeAvatarCategory === 'All') {
+    if (activeAvatarCategories.length === 0) {
         displayData.unshift({ file: 'noavatar01.png', label: 'Default', category: [] });
     }
 
-    const filteredData = activeAvatarCategory === 'All' ? displayData : displayData.filter(a => {
-        if (Array.isArray(a.category)) return a.category.includes(activeAvatarCategory);
-        return a.category === activeAvatarCategory;
+    const filteredData = activeAvatarCategories.length === 0 ? displayData : displayData.filter(a => {
+        if (Array.isArray(a.category)) {
+            return activeAvatarCategories.some(cat => a.category.includes(cat));
+        }
+        return activeAvatarCategories.includes(a.category);
     });
 
     filteredData.forEach(avatar => {
@@ -1107,17 +1150,14 @@ function renderProfileAvatars() {
         item.innerHTML = `<img src="Profile_images/${avatar.file}" onerror="this.parentElement.style.display='none';" alt="${avatar.label}"><span>${avatar.label}</span>`;
         
         item.addEventListener('click', () => {
-            if (item.classList.contains('selected')) {
-                document.querySelectorAll('.avatar-item').forEach(el => el.classList.remove('selected', 'hidden'));
-                userProfile.avatar = '';
-            } else {
-                document.querySelectorAll('.avatar-item').forEach(el => {
-                    el.classList.remove('selected');
-                    if (el !== item) el.classList.add('hidden');
-                });
-                item.classList.add('selected');
-                userProfile.avatar = avatar.file;
-                showToast("Click the avatar again to go back to the list");
+            document.querySelectorAll('.avatar-item').forEach(el => el.classList.remove('selected'));
+            item.classList.add('selected');
+            userProfile.avatar = avatar.file;
+            
+            const previewImg = document.getElementById('profile-avatar-preview');
+            if(previewImg) {
+                previewImg.src = `Profile_images/${avatar.file}`;
+                previewImg.parentElement.classList.remove('hidden');
             }
         });
         grid.appendChild(item);
@@ -1370,7 +1410,7 @@ function renderListings(data, isContextView = false) {
                     <span>🌈 ${systemInfo.labels?.rated_by_gays || 'Rated by gays'}</span><span>👁️ ${venue.Views || 0}</span>
                     <div style="margin-left:auto; display:flex; gap:10px; align-items:center;">
                         <span class="icon-btn" onclick="event.stopPropagation(); shareURL('${window.location.origin}${window.location.pathname}?venue=${venue.Venue_ID}#venue=${venue.Venue_ID}', '${venue.Name.replace(/'/g, "\\'")}')" title="Share" style="font-size:1.5rem;">📣</span>
-                        <span class="icon-btn" onclick="event.stopPropagation(); window.flagListing('${venue.Venue_ID}', '${venue.Name.replace(/'/g, "\\'")}')" title="Report" style="font-size:1.1rem; border:2px solid var(--bright-red-orange); border-radius:50%; width:26px; height:26px; display:flex; align-items:center; justify-content:center;">⚠️</span>
+                        <span class="icon-btn" onclick="event.stopPropagation(); window.flagListing('${venue.Venue_ID}', '${venue.Name.replace(/'/g, "\\'")}', 'Venue Report')" title="Report" style="display:flex; align-items:center; justify-content:center;"><img src="report.png" style="width:24px; height:24px; object-fit:contain;"></span>
                         <span class="star-btn icon-btn fav-btn ${isFav ? 'active-star' : ''}" style="font-size:1.8rem; line-height:1;">⚜️</span>
                     </div>
                 </div>
@@ -1398,6 +1438,21 @@ function renderListings(data, isContextView = false) {
     });
 }
 
+function getRatingTooltip(type, val) {
+    if(!val) return '';
+    const tooltips = {
+        'Age': ['Young Crowd', 'Mixed Young', 'Mixed', 'Mixed Mature', 'Mature Crowd'],
+        'Size': ['Tiny', 'Small', 'Medium', 'Large', 'Huge'],
+        'Overall': ['Poor', 'Fair', 'Good', 'Very Good', 'Excellent'],
+        'Darkroom': ['Basic', 'Standard', 'Good', 'Extensive', 'Maze'],
+        'Cost': ['Cheap', 'Reasonable', 'Average', 'Expensive', 'Very Expensive'],
+        'Location': ['Poorly Connected', 'Okay', 'Good', 'Great', 'Perfectly Located'],
+        'Popularity': ['Quiet', 'Moderate', 'Busy', 'Very Busy', 'Packed']
+    };
+    if(tooltips[type] && tooltips[type][val-1]) return `${val}/5: ${tooltips[type][val-1]}`;
+    return `${val}/5`;
+}
+
 function getRatingCells(val, type) {
     if (val === 'NA' || val === 'N/A' || val === null || val === undefined || val === 0) {
         return `<div style="grid-column: span 5; text-align: center; color: var(--label-grey); font-style: italic; font-size: 0.9rem;">Not yet rated</div>`;
@@ -1413,17 +1468,19 @@ function getRatingCells(val, type) {
             iconSize = '31.2px';
         }
         
+        const tooltip = getRatingTooltip(type, i);
+        
         if (type === 'Size') {
-            asset = `<img src="Emoji/size0${i}.png" style="width:${iconSize}; height:${iconSize}; vertical-align:middle; object-fit:contain;">`;
+            asset = `<img src="Emoji/size0${i}.png" title="${tooltip}" style="width:${iconSize}; height:${iconSize}; vertical-align:middle; object-fit:contain;">`;
         } else if (type === 'Age') {
-            asset = `<img src="Emoji/age0${i}.png" style="width:${iconSize}; height:${iconSize}; vertical-align:middle; object-fit:contain;">`;
+            asset = `<img src="Emoji/age0${i}.png" title="${tooltip}" style="width:${iconSize}; height:${iconSize}; vertical-align:middle; object-fit:contain;">`;
         } else {
             const map = { 'Overall': 'eggplant', 'General': 'eggplant', 'Darkroom': 'water', 'Cost': 'money', 'Location': 'peach', 'Popularity': 'busy' };
             const prefix = map[type] || 'eggplant';
-            asset = `<img src="Emoji/${prefix}0${i}.png" style="width:${iconSize}; height:${iconSize}; vertical-align:middle; object-fit:contain;">`;
+            asset = `<img src="Emoji/${prefix}0${i}.png" title="${tooltip}" style="width:${iconSize}; height:${iconSize}; vertical-align:middle; object-fit:contain;">`;
         }
         
-        html += `<div style="opacity:${op}; display:flex; align-items:center; justify-content:center;">${asset}</div>`;
+        html += `<div style="opacity:${op}; display:flex; align-items:center; justify-content:center; cursor:help;">${asset}</div>`;
     }
     return html;
 }
@@ -1461,7 +1518,7 @@ function openVenueModal(venue) {
         { label: 'Popularity', key: 'Rating_Busyness', type: 'Popularity' }
     ];
 
-    let ratingsTableHtml = `<div style="display: grid; grid-template-columns: 1fr repeat(5, 30px); gap: 8px 2px; align-items: center; background-color: var(--near-black); padding: 15px; border-radius: var(--radius-card); border: 1px solid var(--panel-mid);">`;
+    let ratingsTableHtml = `<div class="ratings-table" style="display: grid; grid-template-columns: 1fr repeat(5, 30px); gap: 12px 2px; align-items: center; background-color: var(--near-black); padding: 15px; border-radius: var(--radius-card); border: 1px solid var(--panel-mid);">`;
     
     ratingsTableHtml += `
         <div style="font-size: 0.9rem; color: var(--primary-blue); font-weight: bold; text-align: left; padding-right: 10px;">FEATURE</div>
@@ -1513,7 +1570,7 @@ function openVenueModal(venue) {
                                 </div>
                                 <div style="display:flex; gap:8px; align-items:center;">
                                     <span class="icon-btn" onclick="event.stopPropagation(); shareURL('${window.location.origin}${window.location.pathname}?event=${ev.Event_ID}', '${ev.Event_Name.replace(/'/g, "\\'")}')" title="Share" style="font-size:1.2rem;">📣</span>
-                                    <span class="icon-btn" onclick="event.stopPropagation(); window.flagListing('${ev.Event_ID}', '${ev.Event_Name.replace(/'/g, "\\'")}')" title="Report" style="font-size:0.9rem; border:2px solid var(--bright-red-orange); border-radius:50%; padding:2px; width:22px; height:22px; display:flex; align-items:center; justify-content:center;">⚠️</span>
+                                    <span class="icon-btn" onclick="event.stopPropagation(); window.flagListing('${ev.Event_ID}', '${ev.Event_Name.replace(/'/g, "\\'")}', 'Event Report')" title="Report" style="display:flex; align-items:center; justify-content:center;"><img src="report.png" style="width:20px; height:20px; object-fit:contain;"></span>
                                     <button class="icon-btn fav-btn ${isSaved ? 'active-star' : ''}" style="font-size: 1.5rem;" onclick="toggleEventFavorite('${ev.Event_ID}', this)">💖</button>
                                 </div>
                             </div>
@@ -1554,9 +1611,9 @@ function openVenueModal(venue) {
                 <div style="display:flex; align-items:flex-start; gap:8px; margin-bottom:10px; flex-direction: column;">
                     <div style="display:flex; align-items:center; gap:8px;">
                         <button id="btn-map" class="btn secondary-btn pill-btn" style="padding: 2px 8px; font-size: 0.75rem; width: auto; flex-shrink: 0;">🗺️ Directions</button>
-                        <p class="meta-text" style="margin:0;"><strong>${venue.Address || ''}</strong></p>
+                        <p class="meta-text" style="margin:0; color:#fff;"><strong>${venue.Address || ''}</strong></p>
                     </div>
-                    ${venue.Nearest_Station ? `<p class="meta-text" style="margin:0; padding-left: 5px;">🚄 Station: ${venue.Nearest_Station}</p>` : ''}
+                    ${venue.Nearest_Station ? `<p class="meta-text" style="margin:0; padding-left: 5px; color:#fff;">🚄 Station: ${venue.Nearest_Station}</p>` : ''}
                 </div>
                 
                 <div class="mobile-stats">
@@ -1600,10 +1657,9 @@ function openVenueModal(venue) {
         shareBtn.onclick = () => shareURL(`${window.location.origin}${window.location.pathname}?venue=${venue.Venue_ID}#venue=${venue.Venue_ID}`, venue.Name);
     }
     
-    // Check if report button exists (we need to dynamically add it since we didn't rewrite index.html header yet, but we will in step 2. We can ensure the listener works when the file is updated).
     const reportBtn = document.getElementById('modal-report');
     if(reportBtn) {
-        reportBtn.onclick = () => window.flagListing(venue.Venue_ID, venue.Name);
+        reportBtn.onclick = () => window.flagListing(venue.Venue_ID, venue.Name, 'Venue Report');
     }
     
     const mapBtn = document.getElementById('btn-map');
@@ -1619,7 +1675,6 @@ function openVenueModal(venue) {
                 return;
             }
             
-            // Fallback Native Query
             const mapQuery = venue.Native_Map_Query || venue.Address || venue.Name || '';
             const queryPlus = encodeURIComponent(mapQuery.trim()).replace(/%20/g, '+');
             if (isIOS) {
