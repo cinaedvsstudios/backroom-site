@@ -247,19 +247,17 @@ function renderFilters() {
     });
 }
 
-// v0.40 - Updated Preview Table Generation with specific Frozen column classes
+// v0.38 - Support Deep Compares and Badges in the Preview Window
 function generatePreviewTableHTML(dataObj) {
     if (!dataObj || dataObj.length === 0) return "<p style='padding:20px;'>No data available.</p>";
 
     const columns = Object.keys(dataObj[0] || {});
-    let html = `<div class="preview-table-container"><table><thead id="preview-thead"><tr>`;
-    html += `<th class="trash-col" style="min-width:60px; width:60px;">🗑️</th>`; 
+    let html = `<table><thead id="preview-thead"><tr>`;
+    html += `<th style="min-width:40px;">🗑️</th>`; 
     
     columns.forEach((col, idx) => {
         const displayName = headerMapping[col] || col;
-        // Assign id-col class to the ID column so it can freeze correctly in CSS
-        const thClass = (col === 'Venue_ID' || col === 'Event_ID') ? 'id-col' : '';
-        html += `<th class="col-idx-${idx} ${thClass}">${displayName}</th>`;
+        html += `<th class="col-idx-${idx}">${displayName}</th>`;
     });
     
     html += `</tr></thead><tbody>`;
@@ -269,41 +267,44 @@ function generatePreviewTableHTML(dataObj) {
         const idField = currentMode === 'venues' ? 'Venue_ID' : 'Event_ID';
         const id = row[idField] || String(rowIndex);
         
-        let isNew = false, isMismatched = false;
+        // Deep compare against draftData for tags
+        let isNew = false;
+        let isMismatched = false;
+        
         if (draftData.length > 0) {
             const existingRow = draftData.find(d => d[idField] === id);
             if (!existingRow) isNew = true;
             else if (JSON.stringify(existingRow) !== JSON.stringify(row)) isMismatched = true;
-        } else isNew = true;
+        } else {
+            isNew = true; // If draft is empty, everything is new
+        }
 
         let rowClass = isNew ? 'row-new' : (isMismatched ? 'row-mismatch-merge' : 'row-existing');
-        let statusBadge = isNew ? '<br><span style="color: #28a745; font-size: 0.6rem;">NEW</span>' 
-                        : (isMismatched ? '<br><span style="color: var(--bright-red-orange); font-size: 0.6rem;">CHG</span>' 
-                        : '<br><span style="color: var(--label-grey); font-size: 0.6rem;">EX</span>');
+        let statusBadge = isNew ? '<br><span style="color: #28a745; font-weight: bold; font-size: 0.75rem;">NEW</span>' 
+                        : (isMismatched ? '<br><span style="color: var(--bright-red-orange); font-weight: bold; font-size: 0.75rem;">CHANGES</span>' 
+                        : '<br><span style="color: var(--label-grey); font-size: 0.75rem;">EXISTING</span>');
 
         html += `<tr data-id="${id}" class="${rowClass}" id="preview-row-${rowIndex}">`;
         
-        // 50% larger trash icon container handled in CSS, just keeping class here
-        html += `<td class="trash-col" onclick="removePreviewRow(${rowIndex})">🗑️${statusBadge}</td>`;
+        html += `<td style="text-align:center; cursor:pointer;" onclick="removePreviewRow(${rowIndex})">🗑️${statusBadge}</td>`;
         
         columns.forEach((col, idx) => {
-            const tdClass = (col === 'Venue_ID' || col === 'Event_ID') ? 'id-col' : 'preview-editable-cell';
-            html += `<td class="col-idx-${idx} ${tdClass}" ${tdClass.includes('editable') ? `contenteditable="true" onblur="updatePreviewData(${rowIndex}, '${col}', this)"` : ''}>${String(row[col] || '')}</td>`;
+            html += `<td class="col-idx-${idx} preview-editable-cell" contenteditable="true" onblur="updatePreviewData(${rowIndex}, '${col}', this)">${String(row[col] || '')}</td>`;
         });
         html += `</tr>`;
     });
     
-    html += `</tbody></table></div>`;
+    html += `</tbody></table>`;
     return html;
 }
 
 function generateTableHTML(dataObj, isMainTable) {
-    if (!isMainTable) return generatePreviewTableHTML(dataObj);
+    if (!isMainTable) return generatePreviewTableHTML(dataObj); // Route to specialized v0.38 preview generator
 
     if (!dataObj || dataObj.length === 0) return "<p style='padding:20px;'>No data available.</p>";
 
     const columns = Object.keys(dataObj[0] || {});
-    let html = `<table><thead id="admin-thead"><tr>`;
+    let html = `<table><thead id="admin-thead"><tr>`; // Added ID for listener
     
     if(isMainTable) html += `<th style="min-width:70px;">Review</th>`; 
         
@@ -382,6 +383,7 @@ function renderTable() {
 
     tableContainer.innerHTML = generateTableHTML(filteredData, true);
     
+    // v0.38 - Horizontal header scroll listener
     const thead = document.getElementById('admin-thead');
     if (thead) {
         thead.addEventListener('wheel', (e) => {
@@ -504,104 +506,58 @@ async function loadAdminAvatars() {
     renderAdminAvatars();
 }
 
-
-// =================== part 2 ================
-
-
-// v0.40 - Redesigned Avatar Master Control Logic
-let selectedAdminAvatarIndex = -1;
-
+// v0.38 - Redesigned Grid renderer
 function renderAdminAvatars() {
     const list = document.getElementById('avatar-manager-list');
     if(!list) return;
     list.innerHTML = '';
     
     avatarAdminData.forEach((av, idx) => {
-        const imgWrap = document.createElement('div');
-        imgWrap.style.cursor = 'pointer';
-        imgWrap.style.borderRadius = '8px';
-        imgWrap.style.overflow = 'hidden';
-        imgWrap.style.border = (idx === selectedAdminAvatarIndex) ? '3px solid var(--primary-blue)' : '3px solid transparent';
+        const card = document.createElement('div');
+        card.className = 'avatar-admin-card';
         
-        imgWrap.innerHTML = `<img src="Profile_images/${av.file}" style="width:80px; height:160px; object-fit:cover; display:block;" onerror="this.src='placeholder_venue.jpg'">`;
-        
-        imgWrap.onclick = () => {
-            selectedAdminAvatarIndex = idx;
-            renderAdminAvatars(); // Re-render to update the red border
-            loadMasterAvatarControl();
-        };
-        
-        list.appendChild(imgWrap);
-    });
-}
-
-function loadMasterAvatarControl() {
-    const preview = document.getElementById('master-avatar-preview');
-    const labelInp = document.getElementById('master-avatar-label');
-    const ageSel = document.getElementById('master-avatar-age');
-    const fetishInp = document.getElementById('master-avatar-fetish');
-    
-    const btnL = document.getElementById('master-btn-left');
-    const btnR = document.getElementById('master-btn-right');
-    const btnD = document.getElementById('master-btn-delete');
-    
-    if(selectedAdminAvatarIndex === -1 || !avatarAdminData[selectedAdminAvatarIndex]) {
-        preview.innerHTML = '<span class="meta-text" style="text-align: center;">Select an<br>Avatar</span>';
-        [labelInp, ageSel, fetishInp, btnL, btnR, btnD].forEach(el => el.disabled = true);
-        return;
-    }
-    
-    const av = avatarAdminData[selectedAdminAvatarIndex];
-    preview.innerHTML = `<img src="Profile_images/${av.file}" style="width:100%; height:100%; object-fit:cover;" onerror="this.src='placeholder_venue.jpg'">`;
-    
-    [labelInp, ageSel, fetishInp, btnL, btnR, btnD].forEach(el => el.disabled = false);
-    
-    labelInp.value = av.label;
-    
-    // Parse tags back into Age and Fetish
-    let age = ""; let fetishes = [];
-    let catArray = Array.isArray(av.category) ? av.category : (av.category ? [av.category] : []);
-    
-    catArray.forEach(c => {
-        if(['Young', 'Prime', 'Mature'].includes(c)) age = c;
-        else fetishes.push(c);
-    });
-    
-    ageSel.value = age;
-    fetishInp.value = fetishes.join(', ');
-    
-    // Set listeners to instantly save back to array
-    labelInp.oninput = () => avatarAdminData[selectedAdminAvatarIndex].label = labelInp.value;
-    
-    const saveTags = () => {
-        let newTags = [];
-        if(ageSel.value) newTags.push(ageSel.value);
-        let typedFetishes = fetishInp.value.split(',').map(s => s.trim()).filter(s => s !== '');
-        newTags = newTags.concat(typedFetishes);
-        avatarAdminData[selectedAdminAvatarIndex].category = newTags;
-    };
-    
-    ageSel.onchange = saveTags;
-    fetishInp.oninput = saveTags;
-    
-    btnL.onclick = () => moveAvatar(selectedAdminAvatarIndex, -1);
-    btnR.onclick = () => moveAvatar(selectedAdminAvatarIndex, 1);
-    btnD.onclick = () => {
-        if(confirm("Delete this avatar?")) {
-            avatarAdminData.splice(selectedAdminAvatarIndex, 1);
-            selectedAdminAvatarIndex = -1;
-            renderAdminAvatars();
-            loadMasterAvatarControl();
+        let tagsInputHTML = '';
+        if (Array.isArray(av.category)) {
+            tagsInputHTML = `<input type="text" value="${av.category.join(', ')}" onblur="updateAvatarCatArray(${idx}, this.value)" placeholder="Tags (comma sep)">`;
+        } else {
+            tagsInputHTML = `
+                <select onchange="updateAvatarCat(${idx}, this.value)">
+                    <option value="Young" ${av.category === 'Young' ? 'selected' : ''}>Young</option>
+                    <option value="Prime" ${av.category === 'Prime' ? 'selected' : ''}>Prime</option>
+                    <option value="Mature" ${av.category === 'Mature' ? 'selected' : ''}>Mature</option>
+                </select>
+            `;
         }
-    };
+
+        card.innerHTML = `
+            <img src="Profile_images/${av.file}" onerror="this.src='placeholder_venue.jpg'">
+            <input type="text" value="${av.label}" onblur="updateAvatarLabel(${idx}, this.value)" placeholder="Label">
+            ${tagsInputHTML}
+            <div class="avatar-admin-controls">
+                <button class="btn secondary-btn" style="padding:4px; font-size:0.8rem; flex:1;" onclick="moveAvatar(${idx}, -1)">◀ Shift</button>
+                <button class="btn secondary-btn" style="padding:4px; font-size:0.8rem; flex:1;" onclick="moveAvatar(${idx}, 1)">Shift ▶</button>
+                <button class="btn" style="background:var(--dark-red); color:#fff; padding:4px; font-size:0.8rem; flex:0.5;" onclick="deleteAvatar(${idx})">❌</button>
+            </div>
+        `;
+        list.appendChild(card);
+    });
 }
 
-function moveAvatar(idx, dir) {
+window.updateAvatarLabel = (idx, val) => { avatarAdminData[idx].label = val; }
+window.updateAvatarCat = (idx, val) => { avatarAdminData[idx].category = val; }
+window.updateAvatarCatArray = (idx, val) => {
+    // Splits comma separated string into array and trims whitespace
+    avatarAdminData[idx].category = val.split(',').map(s => s.trim()).filter(s => s !== '');
+}
+window.moveAvatar = (idx, dir) => {
     if(idx + dir < 0 || idx + dir >= avatarAdminData.length) return;
     const temp = avatarAdminData[idx];
     avatarAdminData[idx] = avatarAdminData[idx + dir];
     avatarAdminData[idx + dir] = temp;
-    selectedAdminAvatarIndex = idx + dir; 
+    renderAdminAvatars();
+}
+window.deleteAvatar = (idx) => {
+    avatarAdminData.splice(idx, 1);
     renderAdminAvatars();
 }
 
@@ -609,6 +565,7 @@ document.getElementById('btn-add-avatar')?.addEventListener('change', (e) => {
     const file = e.target.files[0];
     if(file) {
         const name = file.name;
+        // Default to array support for v0.38
         avatarAdminData.push({ file: name, label: "New Avatar", category: ["Prime"] });
         renderAdminAvatars();
         e.target.value = '';
@@ -641,6 +598,7 @@ wysiwygContent?.addEventListener('input', () => {
     window.editorSaveTimer = setTimeout(saveEditorState, 500);
 });
 
+// v0.38 Fix - Ensure content editor has focus before formatting and fixes color
 window.editorAction = function(action, val, event) {
     if(event) event.preventDefault(); 
     if(wysiwygSource && !wysiwygSource.classList.contains('hidden')) return alert("Switch to Visual Editor first.");
@@ -660,6 +618,7 @@ window.editorAction = function(action, val, event) {
     } else if(action === 'bold') {
         document.execCommand('bold', false, null);
     } else if(action === 'color') {
+        // v0.38 - Uses passed hardcoded theme color from HTML button
         document.execCommand('foreColor', false, val);
     } else if(action === 'insertTable') {
         document.execCommand('insertHTML', false, '<table border="1" style="width:100%; border-collapse:collapse; margin: 15px 0;"><tr><td style="padding:8px;">Cell</td><td style="padding:8px;">Cell</td></tr><tr><td style="padding:8px;">Cell</td><td style="padding:8px;">Cell</td></tr></table><p><br></p>');
@@ -730,6 +689,7 @@ window.downloadEditorHTML = function() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+    // v0.38 Setup Text Size controls
     document.getElementById('btn-text-size-up')?.addEventListener('click', () => {
         if(currentAdminTextSize < 1.5) currentAdminTextSize += 0.1;
         document.documentElement.style.setProperty('--admin-font-size', `${currentAdminTextSize}rem`);
@@ -763,6 +723,7 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('sidebar-old-list').classList.toggle('hidden');
     });
     
+    // v0.38 Format Guide Modal Toggle
     document.getElementById('btn-formatting-guide')?.addEventListener('click', () => {
         document.getElementById('formatting-guide-modal').classList.remove('hidden');
     });
