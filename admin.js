@@ -238,16 +238,6 @@ const headerMapping = {
     "Description": "Desc", "Event_Description": "Desc", "Rating_General": "Gen", "Rating_Darkroom": "Dark"
 };
 
-function renderFilters() {
-    const container = document.getElementById('active-filters');
-    if(!container) return;
-    container.innerHTML = '';
-    Object.keys(activeTableFilters).forEach(col => {
-        container.innerHTML += `<div class="filter-pill">${col}: ${activeTableFilters[col]} <span onclick="removeFilter('${col}')">✕</span></div>`;
-    });
-}
-
-// v0.40 - Updated Preview Table Generation with specific Frozen column classes
 function generatePreviewTableHTML(dataObj) {
     if (!dataObj || dataObj.length === 0) return "<p style='padding:20px;'>No data available.</p>";
 
@@ -257,7 +247,6 @@ function generatePreviewTableHTML(dataObj) {
     
     columns.forEach((col, idx) => {
         const displayName = headerMapping[col] || col;
-        // Assign id-col class to the ID column so it can freeze correctly in CSS
         const thClass = (col === 'Venue_ID' || col === 'Event_ID') ? 'id-col' : '';
         html += `<th class="col-idx-${idx} ${thClass}">${displayName}</th>`;
     });
@@ -283,7 +272,6 @@ function generatePreviewTableHTML(dataObj) {
 
         html += `<tr data-id="${id}" class="${rowClass}" id="preview-row-${rowIndex}">`;
         
-        // 50% larger trash icon container handled in CSS, just keeping class here
         html += `<td class="trash-col" onclick="removePreviewRow(${rowIndex})">🗑️${statusBadge}</td>`;
         
         columns.forEach((col, idx) => {
@@ -352,8 +340,12 @@ function generateTableHTML(dataObj, isMainTable) {
                 if (lRow && String(lRow[col]) !== String(row[col])) isEdited = true;
             }
             
+            // v0.41 - Empty Cell Highlight Logic
+            let val = row[col];
+            const emptyClass = (val === null || val === undefined || String(val).trim() === '') ? 'empty-cell' : '';
             const editedClass = isEdited ? 'edited-cell' : '';
-            html += `<td class="col-idx-${idx} ${editedClass}" onclick="editCell(this, ${rowIndex}, '${col}')">${String(row[col] || '')}</td>`;
+            
+            html += `<td class="col-idx-${idx} ${editedClass} ${emptyClass}" onclick="editCell(this, ${rowIndex}, '${col}')">${String(val || '')}</td>`;
         });
         html += `</tr>`;
     });
@@ -444,6 +436,8 @@ window.editCell = function(td, rowIndex, col) {
                 if(String(draftData[rowIndex][col]) !== newVal) {
                     draftData[rowIndex][col] = newVal;
                     td.classList.add('edited-cell');
+                    // Remove empty cell highlight if user entered data
+                    if(newVal !== '') td.classList.remove('empty-cell'); 
                     saveDraftsToLocal();
                 }
             });
@@ -463,6 +457,7 @@ window.saveCell = function(selectEl, rowIndex, col) {
     draftData[rowIndex][col] = finalVal;
     selectEl.parentElement.innerText = newVal;
     selectEl.parentElement.classList.add('edited-cell');
+    if(newVal !== '') selectEl.parentElement.classList.remove('empty-cell');
     saveDraftsToLocal();
 };
 
@@ -498,17 +493,47 @@ window.updatePreviewData = function(idx, col, el) {
 async function loadAdminAvatars() {
     try {
         const res = await fetch('Profile_images/avatar_list.json?v=' + Date.now());
-        if(res.ok) avatarAdminData = await res.json();
-        else avatarAdminData = [];
+        if(res.ok) {
+            avatarAdminData = await res.json();
+            populateAvatarDropdowns(); // v0.41 Add dynamically loaded options
+        } else {
+            avatarAdminData = [];
+        }
     } catch(e) { avatarAdminData = []; }
     renderAdminAvatars();
 }
 
+// v0.41 Populate Age & Fetish dynamically
+function populateAvatarDropdowns() {
+    let ageTags = new Set();
+    let fetishTags = new Set();
+    
+    avatarAdminData.forEach(av => {
+        if (Array.isArray(av.category)) {
+            if (av.category[0]) ageTags.add(av.category[0]);
+            if (av.category[1]) fetishTags.add(av.category[1]);
+        } else if (av.category) {
+            ageTags.add(av.category);
+        }
+    });
+
+    const ageSelect = document.getElementById('master-avatar-age');
+    const fetishSelect = document.getElementById('master-avatar-fetish');
+    if(!ageSelect || !fetishSelect) return;
+
+    ageSelect.innerHTML = '<option value="">None</option>';
+    fetishSelect.innerHTML = '<option value="">None</option>';
+
+    Array.from(ageTags).sort().forEach(tag => {
+        ageSelect.innerHTML += `<option value="${tag}">${tag}</option>`;
+    });
+    Array.from(fetishTags).sort().forEach(tag => {
+        fetishSelect.innerHTML += `<option value="${tag}">${tag}</option>`;
+    });
+}
 
 // =================== part 2 ================
 
-
-// v0.40 - Redesigned Avatar Master Control Logic
 let selectedAdminAvatarIndex = -1;
 
 function renderAdminAvatars() {
@@ -527,7 +552,7 @@ function renderAdminAvatars() {
         
         imgWrap.onclick = () => {
             selectedAdminAvatarIndex = idx;
-            renderAdminAvatars(); // Re-render to update the red border
+            renderAdminAvatars(); 
             loadMasterAvatarControl();
         };
         
@@ -539,7 +564,7 @@ function loadMasterAvatarControl() {
     const preview = document.getElementById('master-avatar-preview');
     const labelInp = document.getElementById('master-avatar-label');
     const ageSel = document.getElementById('master-avatar-age');
-    const fetishInp = document.getElementById('master-avatar-fetish');
+    const fetishSel = document.getElementById('master-avatar-fetish'); // v0.41 Now a select
     
     const btnL = document.getElementById('master-btn-left');
     const btnR = document.getElementById('master-btn-right');
@@ -547,42 +572,45 @@ function loadMasterAvatarControl() {
     
     if(selectedAdminAvatarIndex === -1 || !avatarAdminData[selectedAdminAvatarIndex]) {
         preview.innerHTML = '<span class="meta-text" style="text-align: center;">Select an<br>Avatar</span>';
-        [labelInp, ageSel, fetishInp, btnL, btnR, btnD].forEach(el => el.disabled = true);
+        [labelInp, ageSel, fetishSel, btnL, btnR, btnD].forEach(el => el.disabled = true);
         return;
     }
     
     const av = avatarAdminData[selectedAdminAvatarIndex];
     preview.innerHTML = `<img src="Profile_images/${av.file}" style="width:100%; height:100%; object-fit:cover;" onerror="this.src='placeholder_venue.jpg'">`;
     
-    [labelInp, ageSel, fetishInp, btnL, btnR, btnD].forEach(el => el.disabled = false);
+    [labelInp, ageSel, fetishSel, btnL, btnR, btnD].forEach(el => el.disabled = false);
     
     labelInp.value = av.label;
     
-    // Parse tags back into Age and Fetish
-    let age = ""; let fetishes = [];
+    let age = ""; let fetish = "";
     let catArray = Array.isArray(av.category) ? av.category : (av.category ? [av.category] : []);
     
-    catArray.forEach(c => {
-        if(['Young', 'Prime', 'Mature'].includes(c)) age = c;
-        else fetishes.push(c);
-    });
+    if (catArray.length > 0) age = catArray[0] || "";
+    if (catArray.length > 1) fetish = catArray[1] || "";
     
+    // v0.41 Make sure the option exists, if not, append it dynamically so UI doesn't break
+    if(age && !Array.from(ageSel.options).some(opt => opt.value === age)) {
+        ageSel.innerHTML += `<option value="${age}">${age}</option>`;
+    }
+    if(fetish && !Array.from(fetishSel.options).some(opt => opt.value === fetish)) {
+        fetishSel.innerHTML += `<option value="${fetish}">${fetish}</option>`;
+    }
+
     ageSel.value = age;
-    fetishInp.value = fetishes.join(', ');
+    fetishSel.value = fetish;
     
-    // Set listeners to instantly save back to array
     labelInp.oninput = () => avatarAdminData[selectedAdminAvatarIndex].label = labelInp.value;
     
     const saveTags = () => {
         let newTags = [];
         if(ageSel.value) newTags.push(ageSel.value);
-        let typedFetishes = fetishInp.value.split(',').map(s => s.trim()).filter(s => s !== '');
-        newTags = newTags.concat(typedFetishes);
+        if(fetishSel.value) newTags.push(fetishSel.value);
         avatarAdminData[selectedAdminAvatarIndex].category = newTags;
     };
     
     ageSel.onchange = saveTags;
-    fetishInp.oninput = saveTags;
+    fetishSel.onchange = saveTags;
     
     btnL.onclick = () => moveAvatar(selectedAdminAvatarIndex, -1);
     btnR.onclick = () => moveAvatar(selectedAdminAvatarIndex, 1);

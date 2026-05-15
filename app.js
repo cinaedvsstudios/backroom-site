@@ -1,5 +1,5 @@
 // --- Application State ---
-const APP_VERSION = "v0.40";
+const APP_VERSION = "v0.41";
 const APP_DATE = "May 20, 2026";
 
 let systemInfo = {}, designTheme = {}, venues = [], events = [];
@@ -121,7 +121,6 @@ function formatAboutText(text) {
             continue;
         }
         
-        // Normal text line
         if (inList) { out.push('</ul>'); inList = false; }
         if (line !== '') {
             line = line.replace(/!!(.*?)!!/g, '<strong>$1</strong>');
@@ -375,7 +374,7 @@ function renderDiscountsView() {
     document.getElementById('discounts-container')?.classList.remove('hidden');
 }
 
-// v0.40 - Tutorial System Functions
+// v0.41 - Tutorial System Functions with Red Border Highlight
 window.startMainTutorial = function() {
     tutorialSteps = [
         { target: 'search-input', text: 'Search by city, venue name, or vibe here.' },
@@ -393,7 +392,7 @@ window.startProfileTutorial = function() {
     tutorialSteps = [
         { target: 'profile-name', text: 'Your profile settings and shortlists are stored LOCALLY on this device only.' },
         { target: 'btn-settings', text: 'We do not have a server. If you clear your browser cache, you will lose everything.' },
-        { target: 'btn-export-trigger', text: 'To backup your data, use the Export feature. Save the file to your Google Drive or iCloud so you can import it later!' }
+        { target: 'btn-export-trigger', text: 'To backup your data, use the Export feature in settings. Save the file to your cloud drive so you can import it later!' }
     ];
     currentTutorialStep = 0;
     profileModal?.classList.add('hidden'); 
@@ -452,7 +451,6 @@ function setupEventListeners() {
     addEvt('btn-favorites', 'click', () => window.location.hash = '#favorites');
     addEvt('btn-shortlists-menu', 'click', () => window.location.hash = '#myshortlists');
     
-    // v0.40 - Tutorial Buttons
     addEvt('btn-sidebar-tutorial', 'click', () => { 
         document.getElementById('sidebar')?.classList.remove('visible'); 
         window.startMainTutorial(); 
@@ -634,7 +632,7 @@ function setupEventListeners() {
         searchInput.addEventListener('input', () => { recordUserInteraction(); window.location.hash=''; handleRouting(); });
     }
     
-    // v0.40 - Dynamic click handling for filter chips (allows hijacked pills to work)
+    // Allows dynamically generated pills to work
     document.addEventListener('click', (e) => {
         if(e.target.classList.contains('chip') && e.target.closest('#main-filters')) {
             recordUserInteraction();
@@ -708,6 +706,7 @@ function renderTravelDropdown() {
 }
 
 // =================== part 2 ================
+// =================== part 2 ================
 
 function updateTravelSidebarHighlight() {
     const query = searchInput?.value.trim().toLowerCase() || '';
@@ -729,35 +728,78 @@ window.removeTravel = function(city) {
     else renderTravelDropdown();
 }
 
+// v0.41 - Dynamic Tags Generator based on current results
+function renderDynamicFilters(baseVenues) {
+    const filterContainer = document.getElementById('main-filters');
+    if (!filterContainer) return;
+
+    const masterList = ["Cruise", "Darkroom", "Fetish", "Leather", "Rubber", "Gear", "Sportswear", "Sneakers", "Naked", "Underwear", "Dresscode", "Men Only", "Bear", "Mature", "Young Crowd", "Queer", "Drag", "Karaoke", "Pop/Dance", "Techno", "Sauna", "Puppy"];
+    const featureMap = {
+        "Feature_Darkroom": "Darkroom",
+        "Feature_Men_Only": "Men Only",
+        "Feature_Dresscode": "Dresscode",
+        "Feature_Smoking_Area": "Smoking Area",
+        "Feature_Cruise_Focused": "Cruising",
+        "Feature_Dancefloor": "Dancefloor",
+        "Feature_Sauna": "Sauna"
+    };
+
+    let availableTags = new Set();
+    baseVenues.forEach(v => {
+        if (v.Vibe_Tags) {
+            masterList.forEach(tag => {
+                if (v.Vibe_Tags.toLowerCase().includes(tag.toLowerCase())) availableTags.add(tag);
+            });
+        }
+        Object.keys(featureMap).forEach(key => {
+            if (v[key]) availableTags.add(featureMap[key]);
+        });
+    });
+
+    let html = `<button class="chip pill-btn ${activeFilter === 'All' ? 'active' : ''}" data-filter="All">All</button>
+                <button class="chip pill-btn ${activeFilter === 'Open Now' ? 'active' : ''}" data-filter="Open Now">Open Now</button>`;
+
+    const orderedTags = masterList.concat(Object.values(featureMap)).filter((item, pos, self) => self.indexOf(item) === pos);
+    orderedTags.forEach(tag => {
+        if (availableTags.has(tag)) {
+            html += `<button class="chip pill-btn ${activeFilter === tag ? 'active' : ''}" data-filter="${tag}">${tag}</button>`;
+        }
+    });
+
+    filterContainer.innerHTML = html;
+}
+
 function applyFilters() {
     const query = searchInput?.value || '';
-    let filteredVenues = venues || [];
+    let baseVenues = venues || [];
     selectedCardId = null;
 
+    if(query.trim() !== '') {
+        baseVenues = baseVenues.filter(v => fuzzyMatch(v.Name + " " + v.Description + " " + (v.Vibe_Tags||'') + " " + v.City, query));
+    }
+
+    renderDynamicFilters(baseVenues);
+
+    let filteredVenues = baseVenues;
     if(activeFilter !== 'All') {
         filteredVenues = filteredVenues.filter(v => {
-            if(activeFilter === 'Darkroom') return v.Feature_Darkroom;
-            if(activeFilter === 'Men Only') return v.Feature_Men_Only;
             if(activeFilter === 'Open Now') return v.Status === 'Live';
             
-            // v0.40 - Hijacked/Repurposed Fields
+            // Feature Booleans
+            if(activeFilter === 'Darkroom') return v.Feature_Darkroom;
+            if(activeFilter === 'Men Only') return v.Feature_Men_Only;
             if(activeFilter === 'Dresscode') return v.Feature_Dresscode;
             if(activeFilter === 'Smoking Area') return v.Feature_Smoking_Area;
             if(activeFilter === 'Cruising') return v.Feature_Cruise_Focused;
+            if(activeFilter === 'Dancefloor') return v.Feature_Dancefloor;
+            if(activeFilter === 'Sauna') return v.Feature_Sauna;
             
-            if(['Queer', 'Sauna', 'Shop'].includes(activeFilter)) {
-                if(v.Feature_Playroom && typeof v.Feature_Playroom === 'string') {
-                    return v.Feature_Playroom.toLowerCase().includes(activeFilter.toLowerCase());
-                }
-                return false;
+            // Vibe_Tags
+            if(v.Vibe_Tags && typeof v.Vibe_Tags === 'string') {
+                return v.Vibe_Tags.toLowerCase().includes(activeFilter.toLowerCase());
             }
-            
-            return true;
+            return false;
         });
-    }
-
-    if(query.trim() !== '') {
-        filteredVenues = filteredVenues.filter(v => fuzzyMatch(v.Name + " " + v.Description + " " + v.Vibe_Tags + " " + v.City, query));
     }
 
     renderListings(filteredVenues);
@@ -1035,7 +1077,6 @@ function renderProfileAvatars() {
         grid.parentNode.insertBefore(filterContainer, grid);
     }
     
-    // v0.38 - Updated Array of Tags
     const cats = ['All', 'Young', 'Prime', 'Mature', 'Ink', 'Leather', 'Rubber', 'Puppy'];
     filterContainer.innerHTML = '';
     cats.forEach(c => {
@@ -1048,14 +1089,13 @@ function renderProfileAvatars() {
         filterContainer.appendChild(btn);
     });
 
-    // v0.38 - Support Array Filtering for Dual Tags
     const filteredData = activeAvatarCategory === 'All' ? avatarData : avatarData.filter(a => {
         if (Array.isArray(a.category)) return a.category.includes(activeAvatarCategory);
         return a.category === activeAvatarCategory;
     });
 
     filteredData.forEach(avatar => {
-        // v0.40 - Hide default avatar unless specifically viewing All
+        // Hide default avatar unless specifically viewing All
         if(activeAvatarCategory !== 'All' && avatar.file === 'noavatar01.png') return;
 
         const item = document.createElement('div');
@@ -1064,25 +1104,12 @@ function renderProfileAvatars() {
         let avToMatch = userProfile.avatar || 'noavatar01.png';
         if(avToMatch === avatar.file) item.classList.add('selected');
         
-        // v0.40 - Split tags into Blue (Age) and Red (Fetish) lines
-        let ageTags = []; let fetishTags = [];
-        let catArray = Array.isArray(avatar.category) ? avatar.category : (avatar.category ? [avatar.category] : []);
-        catArray.forEach(c => {
-            if(['Young', 'Prime', 'Mature'].includes(c)) ageTags.push(c);
-            else fetishTags.push(c);
-        });
-
-        let tagsHtml = '';
-        if(ageTags.length > 0) tagsHtml += `<span class="age-tag" style="color:var(--primary-blue); display:block; font-weight:bold;">${ageTags.join(', ')}</span>`;
-        if(fetishTags.length > 0) tagsHtml += `<span class="fetish-tag" style="color:var(--bright-red-orange); display:block;">${fetishTags.join(', ')}</span>`;
-        if(avatar.file === 'noavatar01.png') tagsHtml = `<span style="color:var(--label-grey); display:block;">Default</span>`;
-
+        // v0.41 - Removed tagsHtml to only show avatar names
         item.innerHTML = `
             <div class="avatar-image-wrap">
                 <img src="Profile_images/${avatar.file}" onerror="this.parentElement.style.display='none';" alt="${avatar.label}">
             </div>
             <span class="avatar-label">${avatar.label}</span>
-            <div class="avatar-tags">${tagsHtml}</div>
         `;
         
         item.addEventListener('click', () => {
@@ -1413,10 +1440,11 @@ function openVenueModal(venue) {
         <div class="feature-chips" style="margin-top: 15px;">${featureHtml}</div>
     `;
     
+    // v0.41 - Renamed General to Overall, moved to top
     const ratingTypes = [
+        { label: 'Overall', key: 'Rating_General', type: 'General' },
         { label: 'Age Range', key: 'Rating_Age_Range', type: 'Age' },
         { label: 'Size', key: 'Rating_Size', type: 'Size' },
-        { label: 'General', key: 'Rating_General', type: 'General' },
         { label: 'Darkroom', key: 'Rating_Darkroom', type: 'Darkroom' },
         { label: 'Cost', key: 'Rating_Cost', type: 'Cost' },
         { label: 'Location', key: 'Rating_Location', type: 'Location' },
@@ -1435,11 +1463,19 @@ function openVenueModal(venue) {
     `;
     
     ratingTypes.forEach(r => {
-        const val = venue[r.key] || 0;
-        ratingsTableHtml += `
-            <div style="font-size: 1rem; color: var(--text-light); text-transform: uppercase; letter-spacing: 0.5px; text-align: left; padding-right: 10px;">${r.label}</div>
-            ${getRatingCells(val, r.type)}
-        `;
+        const val = venue[r.key];
+        // v0.41 - NA check using grid-column span 5
+        if(val === 'NA' || val === 'N/A' || val == null) {
+            ratingsTableHtml += `
+                <div style="font-size: 1rem; color: var(--text-light); text-transform: uppercase; letter-spacing: 0.5px; text-align: left; padding-right: 10px;">${r.label}</div>
+                <div style="grid-column: span 5; font-size: 0.95rem; color: var(--label-grey); text-align: center; font-style: italic;">Not yet rated</div>
+            `;
+        } else {
+            ratingsTableHtml += `
+                <div style="font-size: 1rem; color: var(--text-light); text-transform: uppercase; letter-spacing: 0.5px; text-align: left; padding-right: 10px;">${r.label}</div>
+                ${getRatingCells(Number(val), r.type)}
+            `;
+        }
     });
     
     ratingsTableHtml += `</div>`;
