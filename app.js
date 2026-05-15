@@ -1,5 +1,5 @@
 // --- Application State ---
-const APP_VERSION = "v0.38";
+const APP_VERSION = "v0.50";
 const APP_DATE = "May 15, 2026";
 
 let systemInfo = {}, designTheme = {}, venues = [], events = [];
@@ -31,7 +31,6 @@ const errorPanel = document.getElementById('error-panel');
 const btnEnter = document.getElementById('btn-enter');
 const resultsContainer = document.getElementById('results-container');
 const searchInput = document.getElementById('search-input');
-const filterChips = document.querySelectorAll('.chip');
 const contextHeader = document.getElementById('context-header');
 const welcomeScreen = document.getElementById('welcome-screen');
 const venueModal = document.getElementById('venue-modal');
@@ -42,6 +41,8 @@ const profileModal = document.getElementById('profile-modal');
 const sidebar = document.getElementById('sidebar');
 const hitArea = document.getElementById('sidebar-hit-area');
 let sidebarTimeout;
+
+const MASTER_VIBE_TAGS = ["Cruise", "Darkroom", "Fetish", "Leather", "Rubber", "Gear", "Sportswear", "Sneakers", "Naked", "Underwear", "Dresscode", "Men Only", "Bear", "Mature", "Young Crowd", "Queer", "Drag", "Karaoke", "Pop/Dance", "Techno", "Sauna", "Puppy"];
 
 function showToast(message) {
     const container = document.getElementById('toast-container');
@@ -369,6 +370,11 @@ function renderDiscountsView() {
     document.getElementById('discounts-container')?.classList.remove('hidden');
 }
 
+function runTutorial() {
+    alert("Tutorial Placeholder: A pulsing red highlight will guide you through the features here shortly.");
+    // In full implementation, this triggers .tutorial-highlight on specific selectors step-by-step.
+}
+
 function setupEventListeners() {
     const addEvt = (id, evt, func) => {
         const el = document.getElementById(id);
@@ -569,16 +575,16 @@ function setupEventListeners() {
         searchInput.addEventListener('input', () => { recordUserInteraction(); window.location.hash=''; handleRouting(); });
     }
     
-    filterChips.forEach(chip => {
-        chip.addEventListener('click', (e) => {
-            recordUserInteraction();
-            filterChips.forEach(c => c.classList.remove('active'));
-            e.target.classList.add('active');
-            activeFilter = e.target.getAttribute('data-filter');
-            window.location.hash=''; 
-            handleRouting();
-        });
-    });
+    const sidebarMenu = document.querySelector('.sidebar-menu');
+    if (sidebarMenu && !document.getElementById('btn-tutorial')) {
+        const tutBtn = document.createElement('div');
+        tutBtn.id = 'btn-tutorial';
+        tutBtn.className = 'sidebar-item tooltip';
+        tutBtn.title = 'Tutorial';
+        tutBtn.innerHTML = `<span class="icon">💡</span><span class="sidebar-text display-font">Tutorial</span>`;
+        tutBtn.onclick = runTutorial;
+        sidebarMenu.appendChild(tutBtn);
+    }
 }
 
 function initLeafletMap(lat, lng) {
@@ -663,6 +669,39 @@ window.removeTravel = function(city) {
     else renderTravelDropdown();
 }
 
+function renderDynamicFilters(filteredData) {
+    const container = document.getElementById('filter-chips');
+    if(!container) return;
+    
+    let activeTags = new Set();
+    filteredData.forEach(v => {
+        if(v.Vibe_Tags) {
+            v.Vibe_Tags.split(',').forEach(t => activeTags.add(t.trim()));
+        }
+        if(v.Feature_Darkroom) activeTags.add('Darkroom');
+        if(v.Feature_Men_Only) activeTags.add('Men Only');
+        if(v.Feature_Dresscode) activeTags.add('Dresscode');
+    });
+    
+    let html = `<button class="chip pill-btn ${activeFilter === 'All' ? 'active' : ''}" data-filter="All">All</button>`;
+    
+    MASTER_VIBE_TAGS.forEach(tag => {
+        if(activeTags.has(tag) || activeFilter === tag) {
+            html += `<button class="chip pill-btn ${activeFilter === tag ? 'active' : ''}" data-filter="${tag}">${tag}</button>`;
+        }
+    });
+    container.innerHTML = html;
+    
+    container.querySelectorAll('.chip').forEach(chip => {
+        chip.addEventListener('click', (e) => {
+            recordUserInteraction();
+            activeFilter = e.target.getAttribute('data-filter');
+            window.location.hash=''; 
+            handleRouting();
+        });
+    });
+}
+
 function applyFilters() {
     const query = searchInput?.value || '';
     let filteredVenues = venues || [];
@@ -672,8 +711,9 @@ function applyFilters() {
         filteredVenues = filteredVenues.filter(v => {
             if(activeFilter === 'Darkroom') return v.Feature_Darkroom;
             if(activeFilter === 'Men Only') return v.Feature_Men_Only;
-            if(activeFilter === 'Open Now') return v.Status === 'Live';
-            return true;
+            if(activeFilter === 'Dresscode') return v.Feature_Dresscode;
+            if(v.Vibe_Tags && v.Vibe_Tags.includes(activeFilter)) return true;
+            return false;
         });
     }
 
@@ -682,6 +722,7 @@ function applyFilters() {
     }
 
     renderListings(filteredVenues);
+    renderDynamicFilters(filteredVenues);
     updateTravelSidebarHighlight();
 }
 
@@ -950,27 +991,34 @@ function renderProfileAvatars() {
         filterContainer = document.createElement('div');
         filterContainer.id = 'avatar-filters';
         filterContainer.style.display = 'flex';
+        filterContainer.style.flexWrap = 'wrap';
         filterContainer.style.gap = '8px';
         filterContainer.style.marginBottom = '15px';
-        filterContainer.style.overflowX = 'auto';
         grid.parentNode.insertBefore(filterContainer, grid);
     }
     
-    // v0.38 - Updated Array of Tags
-    const cats = ['All', 'Young', 'Prime', 'Mature', 'Ink', 'Leather', 'Rubber', 'Puppy'];
-    filterContainer.innerHTML = '';
-    cats.forEach(c => {
-        const btn = document.createElement('button');
-        btn.className = `chip pill-btn ${activeAvatarCategory === c ? 'active' : ''}`;
-        btn.style.padding = '4px 10px';
-        btn.style.fontSize = '0.85rem';
-        btn.innerText = c;
-        btn.onclick = () => { activeAvatarCategory = c; renderProfileAvatars(); };
-        filterContainer.appendChild(btn);
+    const ageTags = ['Young', 'Prime', 'Mature'];
+    const fetishTags = ['Ink', 'Leather', 'Rubber', 'Puppy'];
+    
+    let html = `<button class="chip pill-btn ${activeAvatarCategory === 'All' ? 'active' : ''}" style="padding: 4px 10px; font-size: 0.85rem;" data-val="All">All</button>`;
+    
+    html += ageTags.map(c => `<button class="chip pill-btn ${activeAvatarCategory === c ? 'active' : ''}" style="padding: 4px 10px; font-size: 0.85rem; color: var(--primary-blue); border-color: var(--primary-blue);" data-val="${c}">${c}</button>`).join('');
+    html += '<div style="flex-basis: 100%; height: 0;"></div>'; 
+    html += fetishTags.map(c => `<button class="chip pill-btn ${activeAvatarCategory === c ? 'active' : ''}" style="padding: 4px 10px; font-size: 0.85rem; color: var(--bright-red-orange); border-color: var(--bright-red-orange);" data-val="${c}">${c}</button>`).join('');
+    
+    filterContainer.innerHTML = html;
+    
+    filterContainer.querySelectorAll('.chip').forEach(btn => {
+        btn.onclick = () => { activeAvatarCategory = btn.getAttribute('data-val'); renderProfileAvatars(); };
     });
 
-    // v0.38 - Support Array Filtering for Dual Tags
-    const filteredData = activeAvatarCategory === 'All' ? avatarData : avatarData.filter(a => {
+    let displayData = [...avatarData];
+    // Add default no avatar option
+    if (activeAvatarCategory === 'All') {
+        displayData.unshift({ file: 'noavatar01.png', label: 'Default', category: [] });
+    }
+
+    const filteredData = activeAvatarCategory === 'All' ? displayData : displayData.filter(a => {
         if (Array.isArray(a.category)) return a.category.includes(activeAvatarCategory);
         return a.category === activeAvatarCategory;
     });
@@ -978,7 +1026,9 @@ function renderProfileAvatars() {
     filteredData.forEach(avatar => {
         const item = document.createElement('div');
         item.className = 'avatar-item';
-        if(userProfile.avatar === avatar.file) item.classList.add('selected');
+        if(userProfile.avatar === avatar.file || (userProfile.avatar === '' && avatar.file === 'noavatar01.png')) {
+            item.classList.add('selected');
+        }
         
         item.innerHTML = `<img src="Profile_images/${avatar.file}" onerror="this.parentElement.style.display='none';" alt="${avatar.label}"><span>${avatar.label}</span>`;
         
@@ -1052,6 +1102,15 @@ function openProfileMenu() {
     if(pName) pName.value = userProfile.name || '';
     renderProfileAvatars();
     renderProfileStats();
+    
+    const profileWipeToast = document.getElementById('profile-wipe-toast');
+    if(profileWipeToast) {
+        const wipeAllBtn = profileWipeToast.querySelector('#btn-wipe-all');
+        const copyBtn = profileWipeToast.querySelector('#btn-wipe-profile-only');
+        if(wipeAllBtn) wipeAllBtn.innerText = "Make a new blank profile";
+        if(copyBtn) copyBtn.innerText = "Make a copy of this profile";
+    }
+
     profileModal?.classList.remove('hidden');
 }
 
@@ -1123,9 +1182,9 @@ function importUserData(e) {
             const data = JSON.parse(event.target.result);
             if(data.profile) { userProfile = data.profile; localStorage.setItem('br_profile', JSON.stringify(userProfile)); }
             if(data.saved_profiles) { savedProfiles = data.saved_profiles; localStorage.setItem('br_saved_profiles', JSON.stringify(savedProfiles)); }
-            if(data.favorites) { userFavorites = data.favorites; saveUserFavorites(); }
-            if(data.shortlists) { userShortlists = data.shortlists; saveUserShortlists(); }
-            if(data.events) { userEvents = data.events; saveUserEvents(); }
+            if(data.favorites) { userFavorites = data.favorites; localStorage.setItem('br_favorites', JSON.stringify(userFavorites)); }
+            if(data.shortlists) { userShortlists = data.shortlists; localStorage.setItem('br_shortlists', JSON.stringify(userShortlists)); }
+            if(data.events) { userEvents = data.events; localStorage.setItem('br_events', JSON.stringify(userEvents)); }
             if(data.travel) { userTravel = data.travel; localStorage.setItem('br_travel', JSON.stringify(userTravel)); }
             if(data.location) { localStorage.setItem('br_location', JSON.stringify(data.location)); updateLocationDisplay(data.location); }
             
@@ -1262,6 +1321,10 @@ function renderListings(data, isContextView = false) {
 }
 
 function getRatingCells(val, type) {
+    if (val === 'NA' || val === 'N/A' || val === null || val === undefined || val === 0) {
+        return `<div style="grid-column: span 5; text-align: center; color: var(--label-grey); font-style: italic; font-size: 0.9rem;">Not yet rated</div>`;
+    }
+
     let html = '';
     for(let i=1; i<=5; i++) {
         const op = i <= val ? '1' : '0.25';
@@ -1277,7 +1340,7 @@ function getRatingCells(val, type) {
         } else if (type === 'Age') {
             asset = `<img src="Emoji/age0${i}.png" style="width:${iconSize}; height:${iconSize}; vertical-align:middle; object-fit:contain;">`;
         } else {
-            const map = { 'General': 'eggplant', 'Darkroom': 'water', 'Cost': 'money', 'Location': 'peach', 'Popularity': 'busy' };
+            const map = { 'Overall': 'eggplant', 'General': 'eggplant', 'Darkroom': 'water', 'Cost': 'money', 'Location': 'peach', 'Popularity': 'busy' };
             const prefix = map[type] || 'eggplant';
             asset = `<img src="Emoji/${prefix}0${i}.png" style="width:${iconSize}; height:${iconSize}; vertical-align:middle; object-fit:contain;">`;
         }
@@ -1313,7 +1376,7 @@ function openVenueModal(venue) {
     const ratingTypes = [
         { label: 'Age Range', key: 'Rating_Age_Range', type: 'Age' },
         { label: 'Size', key: 'Rating_Size', type: 'Size' },
-        { label: 'General', key: 'Rating_General', type: 'General' },
+        { label: 'Overall', key: 'Rating_General', type: 'Overall' },
         { label: 'Darkroom', key: 'Rating_Darkroom', type: 'Darkroom' },
         { label: 'Cost', key: 'Rating_Cost', type: 'Cost' },
         { label: 'Location', key: 'Rating_Location', type: 'Location' },
@@ -1332,7 +1395,7 @@ function openVenueModal(venue) {
     `;
     
     ratingTypes.forEach(r => {
-        const val = venue[r.key] || 0;
+        const val = venue[r.key];
         ratingsTableHtml += `
             <div style="font-size: 1rem; color: var(--text-light); text-transform: uppercase; letter-spacing: 0.5px; text-align: left; padding-right: 10px;">${r.label}</div>
             ${getRatingCells(val, r.type)}
@@ -1380,6 +1443,17 @@ function openVenueModal(venue) {
         eventsHtml += `</div>`;
     }
 
+    let openingHtml = '';
+    if (venue.Opening_Days || venue.Opening_Open_Time) {
+        openingHtml = `
+            <div style="margin-bottom: 15px; color: var(--text-light); line-height: 1.5;">
+                <strong style="color: #fff;">Hours:</strong> ${venue.Opening_Days || ''} ${venue.Opening_Open_Time || ''} - ${venue.Opening_Close_Time || ''}<br>
+                ${venue.Opening_Notes ? `<em>${venue.Opening_Notes}</em>` : ''}
+            </div>
+            <hr style="border: 0; height: 1px; background: var(--bright-red-orange); margin: 15px 0;">
+        `;
+    }
+
     dynamicLayout.innerHTML = `
         <div class="modal-top-split">
             <div class="modal-left-col">
@@ -1395,9 +1469,12 @@ function openVenueModal(venue) {
             </div>
 
             <div class="modal-right-col">
-                <div style="display:flex; align-items:center; gap:8px; margin-bottom:10px;">
-                    <button id="btn-map" class="btn secondary-btn pill-btn" style="padding: 2px 8px; font-size: 0.75rem; width: auto; flex-shrink: 0;">🗺️ Directions</button>
-                    <p class="meta-text" style="margin:0;">${venue.Address || ''}</p>
+                <div style="display:flex; align-items:flex-start; gap:8px; margin-bottom:10px; flex-direction: column;">
+                    <div style="display:flex; align-items:center; gap:8px;">
+                        <button id="btn-map" class="btn secondary-btn pill-btn" style="padding: 2px 8px; font-size: 0.75rem; width: auto; flex-shrink: 0;">🗺️ Directions</button>
+                        <p class="meta-text" style="margin:0;"><strong>${venue.Address || ''}</strong></p>
+                    </div>
+                    ${venue.Nearest_Station ? `<p class="meta-text" style="margin:0; padding-left: 5px;">🚇 Station: ${venue.Nearest_Station}</p>` : ''}
                 </div>
                 
                 <div class="mobile-stats">
@@ -1410,6 +1487,7 @@ function openVenueModal(venue) {
         
         <div class="full-width-about" style="background-color: var(--near-black); padding: 20px; border-radius: var(--radius-card); margin-bottom: 15px; margin-top: 15px;">
             <h3 class="display-font" style="color: var(--primary-blue); margin-bottom:10px;">ABOUT</h3>
+            ${openingHtml}
             <div style="color: #fff; line-height: 1.5;">${formatAboutText(venue.Description)}</div>
         </div>
         
@@ -1443,13 +1521,13 @@ function openVenueModal(venue) {
     const mapBtn = document.getElementById('btn-map');
     if(mapBtn) {
         mapBtn.onclick = () => {
-            const rawAddress = venue.Address || venue.City || venue.Name || '';
-            const queryPlus = encodeURIComponent(rawAddress.trim()).replace(/%20/g, '+');
+            const mapQuery = venue.Native_Map_Query || venue.Address || venue.Name || '';
+            const queryPlus = encodeURIComponent(mapQuery.trim()).replace(/%20/g, '+');
             const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
             if (isIOS) {
                 window.open(`http://maps.apple.com/?q=${queryPlus}`, '_blank');
             } else {
-                window.open(`https://maps.google.com/?q=${queryPlus}`, '_blank');
+                window.open(`http://googleusercontent.com/maps.google.com/maps?q=${queryPlus}`, '_blank');
             }
         };
     }

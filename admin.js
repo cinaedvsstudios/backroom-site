@@ -280,16 +280,17 @@ function generatePreviewTableHTML(dataObj) {
         }
 
         let rowClass = isNew ? 'row-new' : (isMismatched ? 'row-mismatch-merge' : 'row-existing');
-        let statusBadge = isNew ? '<br><span style="color: #28a745; font-weight: bold; font-size: 0.75rem;">NEW</span>' 
-                        : (isMismatched ? '<br><span style="color: var(--bright-red-orange); font-weight: bold; font-size: 0.75rem;">CHANGES</span>' 
-                        : '<br><span style="color: var(--label-grey); font-size: 0.75rem;">EXISTING</span>');
+        let statusBadge = isNew ? '<br><span class="new-badge" style="border:1px solid #00FF00;">NEW</span>' 
+                        : (isMismatched ? '<br><span style="color: var(--bright-red-orange); font-weight: bold; font-size: 0.75rem; border: 1px solid var(--bright-red-orange); padding: 2px 4px; border-radius: 4px; margin-top:5px; display:inline-block;">CHANGES</span>' 
+                        : '<br><span style="color: var(--primary-blue); font-size: 0.75rem; border: 1px solid var(--primary-blue); padding: 2px 4px; border-radius: 4px; margin-top:5px; display:inline-block;">EXISTING</span>');
 
         html += `<tr data-id="${id}" class="${rowClass}" id="preview-row-${rowIndex}">`;
         
-        html += `<td style="text-align:center; cursor:pointer;" onclick="removePreviewRow(${rowIndex})">🗑️${statusBadge}</td>`;
+        html += `<td style="text-align:center; cursor:pointer;" onclick="removePreviewRow(${rowIndex})"><span style="font-size: 1.5em; display:inline-block; margin-bottom:5px;">🗑️</span>${statusBadge}</td>`;
         
         columns.forEach((col, idx) => {
-            html += `<td class="col-idx-${idx} preview-editable-cell" contenteditable="true" onblur="updatePreviewData(${rowIndex}, '${col}', this)">${String(row[col] || '')}</td>`;
+            const emptyClass = (!row[col] || String(row[col]).trim() === '') ? 'empty-cell' : '';
+            html += `<td class="col-idx-${idx} preview-editable-cell ${emptyClass}" contenteditable="true" onblur="updatePreviewData(${rowIndex}, '${col}', this)">${String(row[col] || '')}</td>`;
         });
         html += `</tr>`;
     });
@@ -353,8 +354,9 @@ function generateTableHTML(dataObj, isMainTable) {
                 if (lRow && String(lRow[col]) !== String(row[col])) isEdited = true;
             }
             
+            const emptyClass = (!row[col] || String(row[col]).trim() === '') ? 'empty-cell' : '';
             const editedClass = isEdited ? 'edited-cell' : '';
-            html += `<td class="col-idx-${idx} ${editedClass}" onclick="editCell(this, ${rowIndex}, '${col}')">${String(row[col] || '')}</td>`;
+            html += `<td class="col-idx-${idx} ${editedClass} ${emptyClass}" onclick="editCell(this, ${rowIndex}, '${col}')">${String(row[col] || '')}</td>`;
         });
         html += `</tr>`;
     });
@@ -506,68 +508,109 @@ async function loadAdminAvatars() {
     renderAdminAvatars();
 }
 
-// v0.38 - Redesigned Grid renderer
+// v0.50 - Split Avatar Editor into Image Grid and Master Control Box
+let activeAvatarIndex = -1;
 function renderAdminAvatars() {
     const list = document.getElementById('avatar-manager-list');
     if(!list) return;
     list.innerHTML = '';
     
     avatarAdminData.forEach((av, idx) => {
-        const card = document.createElement('div');
-        card.className = 'avatar-admin-card';
-        
-        let tagsInputHTML = '';
-        if (Array.isArray(av.category)) {
-            tagsInputHTML = `<input type="text" value="${av.category.join(', ')}" onblur="updateAvatarCatArray(${idx}, this.value)" placeholder="Tags (comma sep)">`;
-        } else {
-            tagsInputHTML = `
-                <select onchange="updateAvatarCat(${idx}, this.value)">
-                    <option value="Young" ${av.category === 'Young' ? 'selected' : ''}>Young</option>
-                    <option value="Prime" ${av.category === 'Prime' ? 'selected' : ''}>Prime</option>
-                    <option value="Mature" ${av.category === 'Mature' ? 'selected' : ''}>Mature</option>
-                </select>
-            `;
-        }
-
-        card.innerHTML = `
-            <img src="Profile_images/${av.file}" onerror="this.src='placeholder_venue.jpg'">
-            <input type="text" value="${av.label}" onblur="updateAvatarLabel(${idx}, this.value)" placeholder="Label">
-            ${tagsInputHTML}
-            <div class="avatar-admin-controls">
-                <button class="btn secondary-btn" style="padding:4px; font-size:0.8rem; flex:1;" onclick="moveAvatar(${idx}, -1)">◀ Shift</button>
-                <button class="btn secondary-btn" style="padding:4px; font-size:0.8rem; flex:1;" onclick="moveAvatar(${idx}, 1)">Shift ▶</button>
-                <button class="btn" style="background:var(--dark-red); color:#fff; padding:4px; font-size:0.8rem; flex:0.5;" onclick="deleteAvatar(${idx})">❌</button>
-            </div>
-        `;
-        list.appendChild(card);
+        const imgWrap = document.createElement('div');
+        imgWrap.style = `cursor:pointer; padding:5px; border-radius:8px; border:2px solid ${activeAvatarIndex === idx ? 'var(--bright-red-orange)' : 'transparent'}; text-align:center;`;
+        imgWrap.innerHTML = `<img src="Profile_images/${av.file}" onerror="this.src='placeholder_venue.jpg'" style="width:80px; height:160px; object-fit:cover; border-radius:4px;"><br><span class="meta-text" style="font-size:0.8rem; overflow:hidden; text-overflow:ellipsis; display:block; max-width:80px; margin: 0 auto;">${av.label}</span>`;
+        imgWrap.onclick = () => selectAvatarForEditing(idx);
+        list.appendChild(imgWrap);
     });
+    
+    let ages = new Set();
+    let fetishes = new Set();
+    avatarAdminData.forEach(a => {
+        let cats = Array.isArray(a.category) ? a.category : [a.category];
+        cats.forEach(c => {
+            if(['Young', 'Prime', 'Mature'].includes(c)) ages.add(c);
+            else if(c) fetishes.add(c);
+        });
+    });
+    const ageSel = document.getElementById('ac-age');
+    const fetSel = document.getElementById('ac-fetish');
+    if(ageSel) { ageSel.innerHTML = '<option value="">None</option>' + Array.from(ages).map(a => `<option value="${a}">${a}</option>`).join(''); }
+    if(fetSel) { fetSel.innerHTML = '<option value="">None</option>' + Array.from(fetishes).map(f => `<option value="${f}">${f}</option>`).join(''); }
 }
 
-window.updateAvatarLabel = (idx, val) => { avatarAdminData[idx].label = val; }
-window.updateAvatarCat = (idx, val) => { avatarAdminData[idx].category = val; }
-window.updateAvatarCatArray = (idx, val) => {
-    // Splits comma separated string into array and trims whitespace
-    avatarAdminData[idx].category = val.split(',').map(s => s.trim()).filter(s => s !== '');
+function selectAvatarForEditing(idx) {
+    activeAvatarIndex = idx;
+    renderAdminAvatars(); 
+    const mc = document.getElementById('avatar-master-control');
+    if(mc) { mc.style.opacity = '1'; mc.style.pointerEvents = 'auto'; }
+    
+    const av = avatarAdminData[idx];
+    const nameEl = document.getElementById('ac-name');
+    if(nameEl) nameEl.value = av.label || '';
+    
+    const cats = Array.isArray(av.category) ? av.category : [av.category];
+    const ageSel = document.getElementById('ac-age');
+    const fetSel = document.getElementById('ac-fetish');
+    if(ageSel) ageSel.value = cats.find(c => ['Young', 'Prime', 'Mature'].includes(c)) || '';
+    if(fetSel) fetSel.value = cats.find(c => !['Young', 'Prime', 'Mature'].includes(c)) || '';
 }
-window.moveAvatar = (idx, dir) => {
-    if(idx + dir < 0 || idx + dir >= avatarAdminData.length) return;
-    const temp = avatarAdminData[idx];
-    avatarAdminData[idx] = avatarAdminData[idx + dir];
-    avatarAdminData[idx + dir] = temp;
+
+window.saveActiveAvatarEdits = function() {
+    if(activeAvatarIndex === -1) return;
+    const name = document.getElementById('ac-name')?.value || '';
+    const age = document.getElementById('ac-age')?.value || '';
+    const fetish = document.getElementById('ac-fetish')?.value || '';
+    
+    let newCats = [];
+    if(age) newCats.push(age);
+    if(fetish) newCats.push(fetish);
+    
+    avatarAdminData[activeAvatarIndex].label = name;
+    avatarAdminData[activeAvatarIndex].category = newCats;
     renderAdminAvatars();
-}
-window.deleteAvatar = (idx) => {
-    avatarAdminData.splice(idx, 1);
-    renderAdminAvatars();
-}
+};
+
+document.getElementById('ac-shift-left')?.addEventListener('click', () => {
+    if(activeAvatarIndex > 0) {
+        const temp = avatarAdminData[activeAvatarIndex];
+        avatarAdminData[activeAvatarIndex] = avatarAdminData[activeAvatarIndex - 1];
+        avatarAdminData[activeAvatarIndex - 1] = temp;
+        activeAvatarIndex--;
+        renderAdminAvatars();
+        selectAvatarForEditing(activeAvatarIndex);
+    }
+});
+document.getElementById('ac-shift-right')?.addEventListener('click', () => {
+    if(activeAvatarIndex < avatarAdminData.length - 1 && activeAvatarIndex !== -1) {
+        const temp = avatarAdminData[activeAvatarIndex];
+        avatarAdminData[activeAvatarIndex] = avatarAdminData[activeAvatarIndex + 1];
+        avatarAdminData[activeAvatarIndex + 1] = temp;
+        activeAvatarIndex++;
+        renderAdminAvatars();
+        selectAvatarForEditing(activeAvatarIndex);
+    }
+});
+document.getElementById('ac-delete')?.addEventListener('click', () => {
+    if(activeAvatarIndex > -1 && confirm("Delete avatar?")) {
+        avatarAdminData.splice(activeAvatarIndex, 1);
+        activeAvatarIndex = -1;
+        const mc = document.getElementById('avatar-master-control');
+        if(mc) { mc.style.opacity = '0.5'; mc.style.pointerEvents = 'none'; }
+        const nameEl = document.getElementById('ac-name');
+        if(nameEl) nameEl.value = '';
+        renderAdminAvatars();
+    }
+});
 
 document.getElementById('btn-add-avatar')?.addEventListener('change', (e) => {
     const file = e.target.files[0];
     if(file) {
         const name = file.name;
-        // Default to array support for v0.38
+        // Default to array support for v0.50
         avatarAdminData.push({ file: name, label: "New Avatar", category: ["Prime"] });
+        activeAvatarIndex = avatarAdminData.length - 1;
         renderAdminAvatars();
+        selectAvatarForEditing(activeAvatarIndex);
         e.target.value = '';
     }
 });
@@ -598,7 +641,6 @@ wysiwygContent?.addEventListener('input', () => {
     window.editorSaveTimer = setTimeout(saveEditorState, 500);
 });
 
-// v0.38 Fix - Ensure content editor has focus before formatting and fixes color
 window.editorAction = function(action, val, event) {
     if(event) event.preventDefault(); 
     if(wysiwygSource && !wysiwygSource.classList.contains('hidden')) return alert("Switch to Visual Editor first.");
@@ -618,7 +660,7 @@ window.editorAction = function(action, val, event) {
     } else if(action === 'bold') {
         document.execCommand('bold', false, null);
     } else if(action === 'color') {
-        // v0.38 - Uses passed hardcoded theme color from HTML button
+        // v0.50 - Uses passed hardcoded theme color from HTML dropdown
         document.execCommand('foreColor', false, val);
     } else if(action === 'insertTable') {
         document.execCommand('insertHTML', false, '<table border="1" style="width:100%; border-collapse:collapse; margin: 15px 0;"><tr><td style="padding:8px;">Cell</td><td style="padding:8px;">Cell</td></tr><tr><td style="padding:8px;">Cell</td><td style="padding:8px;">Cell</td></tr></table><p><br></p>');
@@ -689,6 +731,16 @@ window.downloadEditorHTML = function() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+    // v0.50 Set up custom color picker for editor
+    const colorDropdown = document.getElementById('editor-color-dropdown');
+    if(colorDropdown) {
+        const SITE_PALETTE = ['#2CA8D4', '#0B0F19', '#111725', '#1F2535', '#212530', '#313748', '#53596B', '#969CAE', '#D55036', '#871300', '#000000', '#ffffff'];
+        colorDropdown.innerHTML = '';
+        SITE_PALETTE.forEach(c => {
+            colorDropdown.innerHTML += `<button style="background:${c}; width:24px; height:24px; border:1px solid rgba(255,255,255,0.2); cursor:pointer; border-radius:4px;" onclick="editorAction('color', '${c}'); this.parentElement.classList.add('hidden');"></button>`;
+        });
+    }
+
     // v0.38 Setup Text Size controls
     document.getElementById('btn-text-size-up')?.addEventListener('click', () => {
         if(currentAdminTextSize < 1.5) currentAdminTextSize += 0.1;

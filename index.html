@@ -3,12 +3,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Backroom - v0.38</title>
+    <title>Backroom - v0.50</title>
+    
+    <meta name="description" content="Backroom - The comprehensive local guide to gay venues, cruise clubs, and events.">
+    <meta name="keywords" content="gay guide, cruising, gay clubs, darkroom, fetish, gay events, queer venues">
+    <meta name="robots" content="index, follow">
+
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Antonio:wght@400;700&family=Barlow+Condensed:wght@400;500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
-    <link rel="stylesheet" href="style.css?v=0.38">
+    <link rel="stylesheet" href="style.css?v=0.50">
 </head>
 <body>
 
@@ -21,8 +26,8 @@
                 You are creating a new profile. This will not erase your previous profile data. How would you like to start?
             </p>
             <div style="display:flex; flex-direction:column; gap:10px; margin-top:10px;">
-                <button id="btn-wipe-all" class="btn pill-btn secondary-btn" style="font-weight:bold;">Start with a blank profile</button>
-                <button id="btn-wipe-profile-only" class="btn primary-btn pill-btn" style="border:1px solid #fff;">Make a copy of your current profile</button>
+                <button id="btn-wipe-all" class="btn pill-btn secondary-btn" style="font-weight:bold;">Make a new blank profile</button>
+                <button id="btn-wipe-profile-only" class="btn primary-btn pill-btn" style="border:1px solid #fff;">Make a copy of this profile</button>
                 <button onclick="document.getElementById('profile-wipe-toast').classList.add('hidden')" class="btn pill-btn" style="background:transparent; border:1px solid rgba(255,255,255,0.5); color:#fff;">Cancel</button>
             </div>
         </div>
@@ -68,21 +73,21 @@
                     <input type="text" id="search-input" class="body-font pill-input" placeholder="search name or description" autocomplete="off" autocorrect="off">
                 </div>
                 <div class="nav-buttons-wrapper">
-                    <button id="btn-location" class="top-btn pill-btn" title="Location"><img src="location.png" style="width:16px; vertical-align:middle;"> <span class="btn-text"> Location</span></button>
-                    <button id="btn-favorites" class="top-btn pill-btn" title="Favorites"><span class="btn-icon">⚜️</span><span class="btn-text"> Favourites</span></button>
-                    <button id="btn-shortlists-menu" class="top-btn pill-btn" title="Shortlists"><img src="shortlist.png" style="width:16px; vertical-align:middle;"> <span class="btn-text"> Shortlists</span></button>
+                    <button id="btn-location" class="top-btn pill-btn tooltip" title="Set Location"><img src="location.png" style="width:16px; vertical-align:middle;"> <span class="btn-text"> Location</span></button>
+                    <button id="btn-favorites" class="top-btn pill-btn tooltip" title="My Favourites"><span class="btn-icon">⚜️</span><span class="btn-text"> Favourites</span></button>
+                    <button id="btn-shortlists-menu" class="top-btn pill-btn tooltip" title="My Shortlists"><img src="shortlist.png" style="width:16px; vertical-align:middle;"> <span class="btn-text"> Shortlists</span></button>
                 </div>
             </div>
 
             <div class="top-bar-right">
-                <button id="btn-profile-menu" class="top-btn pill-btn profile-btn-wrap" title="Profile">
+                <button id="btn-profile-menu" class="top-btn pill-btn profile-btn-wrap tooltip" title="My Profile">
                     <div id="top-profile-container" class="avatar-crop-container">
                         <img id="top-profile-avatar" src="">
                     </div>
                     <span id="top-profile-name" style="font-weight:bold;">👤</span>
                 </button>
-                <button id="btn-language" class="top-btn icon-only pill-btn" title="Language"><img src="translate.png" style="width:20px;"></button>
-                <button id="btn-settings" class="top-btn icon-only pill-btn" title="Settings">⚙️</button>
+                <button id="btn-language" class="top-btn icon-only pill-btn tooltip" title="Language"><img src="translate.png" style="width:20px;"></button>
+                <button id="btn-settings" class="top-btn icon-only pill-btn tooltip" title="Settings">⚙️</button>
             </div>
         </header>
 
@@ -102,6 +107,9 @@
                     </div>
                     <div class="sidebar-item tooltip" title="Events" onclick="window.location.hash='#myevents';">
                         <span class="icon">💖</span><span class="sidebar-text display-font">Events</span>
+                    </div>
+                    <div class="sidebar-item tooltip" title="Tutorial" id="btn-tutorial">
+                        <span class="icon">💡</span><span class="sidebar-text display-font">Tutorial</span>
                     </div>
                 </div>
                 <div class="sidebar-footer body-font">
@@ -150,11 +158,7 @@
 
                     <div class="filter-chips-container" id="main-filters">
                         <div class="filter-chips" id="filter-chips">
-                            <button class="chip pill-btn active" data-filter="All">All</button>
-                            <button class="chip pill-btn" data-filter="Open Now">Open Now</button>
-                            <button class="chip pill-btn" data-filter="Darkroom">Darkroom</button>
-                            <button class="chip pill-btn" data-filter="Men Only">Men Only</button>
-                        </div>
+                            </div>
                     </div>
 
                     <section id="results-container"></section>
@@ -169,9 +173,9 @@
                 <button id="close-modal" class="btn-close">❌</button>
                 <h2 id="modal-title" class="display-font">VENUE NAME</h2>
                 <div class="modal-actions">
-                    <button id="modal-star" class="icon-btn" title="Toggle Favorite" style="font-size: 1.8rem;">⚜️</button>
-                    <button id="modal-shortlist" class="icon-btn" title="Add to Shortlist"><img src="shortlist.png" style="width:24px;"></button>
-                    <button id="modal-share" class="icon-btn" title="Share"><img src="link.png" style="width:24px;"></button>
+                    <button id="modal-star" class="icon-btn tooltip" title="Toggle Favorite" style="font-size: 1.8rem;">⚜️</button>
+                    <button id="modal-shortlist" class="icon-btn tooltip" title="Add to Shortlist"><img src="shortlist.png" style="width:24px;"></button>
+                    <button id="modal-share" class="icon-btn tooltip" title="Share"><img src="link.png" style="width:24px;"></button>
                 </div>
             </div>
             
@@ -222,25 +226,41 @@
     </div>
 
     <div id="profile-modal" class="modal hidden">
-        <div class="modal-content small-modal">
+        <div class="modal-content large-modal" style="max-width: 900px;">
             <button class="btn-close close-modal-btn">❌</button>
             <div class="modal-header"><h2 class="display-font">MY PROFILE</h2></div>
-            <div class="modal-body body-font">
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 15px; flex-wrap: wrap; gap:10px;">
-                    <button id="btn-new-profile" class="btn secondary-btn pill-btn" style="width:auto; padding: 4px 10px; font-size:0.85rem; color:var(--bright-red-orange);">New Profile</button>
-                    <select id="profile-switcher" class="form-input pill-input" style="width:auto; padding: 4px 10px; font-size:0.85rem; margin:0; flex-grow:1;">
-                        <option value="">Switch Profile...</option>
-                    </select>
-                </div>
-                <input type="text" id="profile-name" class="form-input pill-input" placeholder="Enter your name" style="color:var(--primary-blue); font-weight:bold;">
-                <p class="meta-text" style="margin-top:10px; margin-bottom:5px;">Select an Avatar:</p>
-                <div class="avatar-grid" id="avatar-grid"></div>
+            <div class="modal-body body-font" style="display: flex; flex-direction: row; gap: 30px; flex-wrap: wrap;">
                 
-                <div id="profile-stats-container"></div>
+                <div style="flex: 1; min-width: 300px;">
+                    <p class="meta-text" style="margin-top:0px; margin-bottom:10px;">Select an Avatar:</p>
+                    <div class="avatar-grid" id="avatar-grid"></div>
+                    <div id="profile-stats-container" style="margin-top: 15px;"></div>
+                </div>
 
-                <hr class="divider">
-                <button id="btn-save-profile" class="btn primary-btn pill-btn" style="margin-bottom: 10px;">Save Profile</button>
-                <button class="btn secondary-btn pill-btn btn-export-trigger">💾 Download My Data</button>
+                <div style="width: 280px; display: flex; flex-direction: column; gap: 15px; align-items: center; flex-shrink: 0; background: var(--panel-dark); padding: 25px; border-radius: var(--radius-card); border: 1px solid var(--panel-mid);">
+                    
+                    <div style="width: 100%;">
+                        <label class="meta-text" style="font-size: 0.9rem; margin-bottom: 5px; display: block; text-align: center;">Profile Name</label>
+                        <input type="text" id="profile-name" class="form-input pill-input" placeholder="Enter your name" style="color:var(--primary-blue); font-weight:bold; text-align: center;">
+                    </div>
+
+                    <div style="width: 100%;">
+                        <label class="meta-text" style="font-size: 0.9rem; margin-bottom: 5px; display: block; text-align: center;">Switch Profile</label>
+                        <select id="profile-switcher" class="form-input pill-input" style="text-align: center; font-size: 1rem;">
+                            <option value="">Switch Profile...</option>
+                        </select>
+                    </div>
+
+                    <button id="btn-save-profile" class="btn primary-btn pill-btn" style="width: 100%; font-size: 1.1rem; padding: 12px; margin-top: 5px;">Save Active Profile</button>
+                    
+                    <hr class="divider" style="width: 100%;">
+                    
+                    <button id="btn-new-profile" class="btn secondary-btn pill-btn" style="width: 100%; font-size: 1rem;">Create New Profile</button>
+                    
+                    <button class="btn secondary-btn pill-btn btn-export-trigger" style="width: 100%; font-size: 1rem;">💾 Download My Data</button>
+
+                    <button class="btn secondary-btn pill-btn tooltip" style="width: 100%; font-size: 0.9rem; margin-top: 5px;" onclick="alert('Profile Data is stored locally on your device. To ensure you do not lose your settings, please use the Export feature in Settings to backup to Google Drive, OneDrive, or iCloud.')">💡 Profile Tutorial</button>
+                </div>
             </div>
         </div>
     </div>
@@ -294,6 +314,6 @@
     </div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
-    <script src="app.js?v=0.38"></script>
+    <script src="app.js?v=0.50"></script>
 </body>
 </html>
