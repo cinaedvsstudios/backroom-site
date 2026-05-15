@@ -23,38 +23,28 @@
         
         select.cell-edit { width: 100%; background: var(--panel-dark); color: #fff; border: 1px solid var(--primary-blue); font-size:0.9rem; padding:4px; outline:none; }
         
-        /* v0.37/v0.38 Highlight Animations */
-        @keyframes flashRow {
-            0% { background-color: var(--bright-red-orange); }
-            50% { background-color: var(--primary-blue); }
-            100% { background-color: transparent; }
-        }
+        @keyframes flashRow { 0% { background-color: var(--bright-red-orange); } 50% { background-color: var(--primary-blue); } 100% { background-color: transparent; } }
         .flash-row { animation: flashRow 2s ease-out; }
         
-        /* v0.38 New Entry Workflow CSS */
         .new-entry-row td { border-top: 2px solid #00FF00; border-bottom: 2px solid #00FF00; }
         .new-entry-row td:first-child { border-left: 2px solid #00FF00; }
         .new-entry-row td:last-child { border-right: 2px solid #00FF00; }
         .new-badge { background: #00FF00; color: #000; font-size: 0.75rem; font-weight: bold; padding: 2px 6px; border-radius: 4px; display: inline-block; margin-top: 5px; text-shadow: none; }
 
-        /* Review Sidebar List */
         .sidebar-review-list { padding: 0 20px 10px 35px; font-size: 0.85rem; display: flex; flex-direction: column; gap: 5px; }
         .sidebar-review-list div { cursor: pointer; color: var(--label-grey); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .sidebar-review-list div:hover { color: #fff; text-decoration: underline; }
         
-        /* Avatar Manager Styles */
-        .avatar-admin-row { display: grid; grid-template-columns: 50px 1fr 100px 80px 40px; gap: 10px; align-items: center; background: var(--panel-standard); padding: 10px; border-radius: var(--radius-btn); margin-bottom: 10px; border: 1px solid var(--panel-mid); }
-        .avatar-admin-row img { width: 40px; height: 40px; border-radius: 4px; object-fit: cover; }
-        .avatar-admin-row input, .avatar-admin-row select { background: var(--navy-grey); color: #fff; border: 1px solid var(--panel-mid); padding: 5px; width: 100%; border-radius: 4px; }
-        .up-down-btns { display: flex; flex-direction: column; gap: 2px; }
-        .up-down-btns button { background: var(--panel-mid); border: none; color: #fff; cursor: pointer; font-size: 0.7rem; border-radius: 2px; }
-        .up-down-btns button:hover { background: var(--primary-blue); }
+        /* v0.38 - Redesigned Avatar Grid Style */
+        .avatar-admin-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 15px; margin-top: 15px; }
+        .avatar-admin-card { background: var(--panel-standard); padding: 15px; border-radius: var(--radius-card); border: 1px solid var(--panel-mid); display: flex; flex-direction: column; align-items: center; gap: 10px; }
+        .avatar-admin-card img { width: 80px; height: 160px; object-fit: cover; border-radius: 8px; border: 2px solid var(--primary-blue); }
+        .avatar-admin-card input, .avatar-admin-card select { width: 100%; background: var(--navy-grey); color: #fff; border: 1px solid var(--panel-mid); padding: 6px; border-radius: 4px; font-size: 0.85rem; }
+        .avatar-admin-controls { display: flex; width: 100%; gap: 5px; justify-content: space-between; margin-top: auto; }
         
-        /* Preview Table Editable Styles */
         .preview-editable-cell { border: 1px dashed var(--label-grey); padding: 4px; min-width: 80px; }
         .preview-editable-cell:focus { background: rgba(44, 168, 212, 0.2); outline: 1px solid var(--primary-blue); }
         
-        /* WYSIWYG Source Textarea */
         #wysiwyg-source { width: 100%; flex-grow: 1; background: #000; color: #0f0; font-family: monospace; font-size: 1rem; padding: 20px; border: none; resize: none; outline: none; }
     </style>
 </head>
@@ -82,6 +72,24 @@
                 <button class="btn primary-btn pill-btn" id="btn-login">GO</button>
             </div>
             <p id="pin-error" class="meta-text hidden" style="color:var(--bright-red-orange); margin-top:15px; font-weight:bold;">Incorrect PIN</p>
+        </div>
+    </div>
+
+    <div id="formatting-guide-modal" class="modal hidden" style="z-index:4000;">
+        <div class="modal-content small-modal" style="background:var(--panel-dark); border: 1px solid var(--primary-blue);">
+            <button class="btn-close close-modal-btn">❌</button>
+            <div class="modal-header"><h2 class="display-font">FORMATTING GUIDE</h2></div>
+            <div class="modal-body" style="color: #fff; font-family: 'Barlow Condensed', sans-serif;">
+                <p>Use these shortcuts in any description text area:</p>
+                <ul style="margin-left: 20px; line-height: 1.8; margin-top: 10px;">
+                    <li><strong>==</strong> : Line break</li>
+                    <li><strong>=====</strong> : Draw horizontal line</li>
+                    <li><strong>------</strong> : Hidden marker / ignored</li>
+                    <li><strong>***** Title</strong> : Create a blue H4 heading</li>
+                    <li><strong>-- Item</strong> : Create bullet point list</li>
+                    <li><strong>!!text!!</strong> : Make text <strong>bold</strong></li>
+                </ul>
+            </div>
         </div>
     </div>
 
@@ -138,6 +146,12 @@
     <div id="admin-shell" class="admin-layout hidden">
         <aside class="admin-sidebar">
             <h2 class="display-font" style="color:var(--primary-blue); padding: 0 20px 20px; text-align:center;">BR ADMIN <span style="font-size: 0.9rem; color: var(--label-grey); margin-left: 5px;">v0.38</span></h2>
+            
+            <div style="padding: 0 20px 15px; display:flex; gap:5px; justify-content:center;">
+                <button id="btn-text-size-down" class="btn secondary-btn" style="padding: 4px; font-size:0.9rem;">A-</button>
+                <button id="btn-text-size-up" class="btn secondary-btn" style="padding: 4px; font-size:0.9rem;">A+</button>
+            </div>
+            
             <div class="sidebar-menu" style="flex-grow:1;">
                 
                 <div class="sidebar-item" id="nav-venues"><span class="icon">📍</span> <span class="sidebar-text">Venues</span></div>
@@ -208,6 +222,7 @@
                 <div class="summary-bar" style="margin-bottom: 10px;">
                     <strong class="display-font" style="font-size:1.2rem; color:var(--primary-blue);">HTML PAGE EDITOR</strong>
                     <div style="display:flex; gap:10px; align-items:center;">
+                        <button id="btn-formatting-guide" class="btn secondary-btn pill-btn" style="padding: 4px 10px; width: auto; font-size: 0.9rem;">📖 Formatting Guide</button>
                         <select id="editor-page-select" class="form-input pill-input" style="width:200px; margin:0; padding:4px 10px;">
                             <option value="discounts">Discounts Page</option>
                             <option value="about">About Page</option>
@@ -226,15 +241,7 @@
                         <button onclick="editorAction('h2')">H2</button>
                         <button onclick="editorAction('bold')" style="font-weight:bold;">B</button>
                         
-                        <div class="color-picker-wrap">
-                            <button onclick="this.nextElementSibling.classList.toggle('hidden')">🎨 Color</button>
-                            <div class="color-picker-dropdown hidden">
-                                <div class="color-swatch" style="background:#2CA8D4;" onclick="editorAction('color', '#2CA8D4'); this.parentElement.classList.add('hidden');"></div>
-                                <div class="color-swatch" style="background:#D55036;" onclick="editorAction('color', '#D55036'); this.parentElement.classList.add('hidden');"></div>
-                                <div class="color-swatch" style="background:#969CAE;" onclick="editorAction('color', '#969CAE'); this.parentElement.classList.add('hidden');"></div>
-                                <div class="color-swatch" style="background:#ffffff;" onclick="editorAction('color', '#ffffff'); this.parentElement.classList.add('hidden');"></div>
-                            </div>
-                        </div>
+                        <button onclick="editorAction('color', '#2CA8D4')">🎨 Color</button>
                         
                         <button onclick="const url = prompt('Enter link URL:'); if(url) document.execCommand('createLink', false, url); saveEditorState();">🔗 Link</button>
                         
@@ -263,9 +270,10 @@
             </div>
 
             <div id="view-avatars" class="hidden" style="display:none; flex-direction:column; flex-grow:1;">
-                <div class="summary-bar">
+                <div class="summary-bar" style="margin-bottom:0;">
                     <strong class="display-font" style="font-size:1.2rem; color:var(--primary-blue);">PROFILE AVATAR MANAGER</strong>
                     <div style="display:flex; gap:10px;">
+                        <button id="btn-avatars-live" class="btn secondary-btn pill-btn" style="width:auto; padding:4px 15px;" onclick="loadAdminAvatars()">☁️ Load Live</button>
                         <label class="btn secondary-btn pill-btn" style="cursor:pointer; width:auto; padding:4px 15px;">
                             + Add New Avatar
                             <input type="file" id="btn-add-avatar" class="hidden" accept=".png, .jpg, .jpeg">
@@ -274,11 +282,8 @@
                     </div>
                 </div>
                 
-                <div style="background:var(--panel-dark); padding: 15px; border-radius:var(--radius-card); margin-bottom: 20px;">
-                    <p class="meta-text" style="margin-bottom:15px;">Add, remove, relabel, and reorder avatars. Click Download JSON to save changes and upload <code>avatar_list.json</code> to your repo.</p>
-                    <div id="avatar-manager-list">
-                        </div>
-                </div>
+                <div id="avatar-manager-list" class="avatar-admin-grid">
+                    </div>
             </div>
 
         </main>

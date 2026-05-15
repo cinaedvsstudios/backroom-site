@@ -641,9 +641,7 @@ function renderTravelDropdown() {
     });
 }
 
-
 // =================== part 2 ================
-
 
 function updateTravelSidebarHighlight() {
     const query = searchInput?.value.trim().toLowerCase() || '';
@@ -958,7 +956,8 @@ function renderProfileAvatars() {
         grid.parentNode.insertBefore(filterContainer, grid);
     }
     
-   const cats = ['All', 'Young', 'Prime', 'Mature'];
+    // v0.38 - Updated Array of Tags
+    const cats = ['All', 'Young', 'Prime', 'Mature', 'Ink', 'Leather', 'Rubber', 'Puppy'];
     filterContainer.innerHTML = '';
     cats.forEach(c => {
         const btn = document.createElement('button');
@@ -970,7 +969,11 @@ function renderProfileAvatars() {
         filterContainer.appendChild(btn);
     });
 
-    const filteredData = activeAvatarCategory === 'All' ? avatarData : avatarData.filter(a => a.category === activeAvatarCategory);
+    // v0.38 - Support Array Filtering for Dual Tags
+    const filteredData = activeAvatarCategory === 'All' ? avatarData : avatarData.filter(a => {
+        if (Array.isArray(a.category)) return a.category.includes(activeAvatarCategory);
+        return a.category === activeAvatarCategory;
+    });
 
     filteredData.forEach(avatar => {
         const item = document.createElement('div');
@@ -1446,7 +1449,7 @@ function openVenueModal(venue) {
             if (isIOS) {
                 window.open(`http://maps.apple.com/?q=${queryPlus}`, '_blank');
             } else {
-                window.open(`https://www.google.com/maps/place/Am+Wriezener+bhf,+10243+Berlin-Bezirk+Friedrichshain-Kreuzberg?q=${queryPlus}`, '_blank');
+                window.open(`https://maps.google.com/?q=${queryPlus}`, '_blank');
             }
         };
     }

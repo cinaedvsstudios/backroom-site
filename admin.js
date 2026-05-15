@@ -10,6 +10,9 @@ let tempMergeData = [];
 let editorHistory = [];
 let historyIndex = -1;
 
+// v0.38 - Live Text Size Variable
+let currentAdminTextSize = 0.95;
+
 function showToast(message) {
     const container = document.getElementById('toast-container');
     if(!container) return;
@@ -244,13 +247,65 @@ function renderFilters() {
     });
 }
 
-function generateTableHTML(dataObj, isMainTable) {
+// v0.38 - Support Deep Compares and Badges in the Preview Window
+function generatePreviewTableHTML(dataObj) {
     if (!dataObj || dataObj.length === 0) return "<p style='padding:20px;'>No data available.</p>";
 
     const columns = Object.keys(dataObj[0] || {});
-    let html = `<table><thead><tr>`;
+    let html = `<table><thead id="preview-thead"><tr>`;
+    html += `<th style="min-width:40px;">🗑️</th>`; 
     
-    if(!isMainTable) html += `<th style="min-width:40px;">🗑️</th>`; 
+    columns.forEach((col, idx) => {
+        const displayName = headerMapping[col] || col;
+        html += `<th class="col-idx-${idx}">${displayName}</th>`;
+    });
+    
+    html += `</tr></thead><tbody>`;
+    
+    dataObj.forEach((row, rowIndex) => {
+        if(!row) return;
+        const idField = currentMode === 'venues' ? 'Venue_ID' : 'Event_ID';
+        const id = row[idField] || String(rowIndex);
+        
+        // Deep compare against draftData for tags
+        let isNew = false;
+        let isMismatched = false;
+        
+        if (draftData.length > 0) {
+            const existingRow = draftData.find(d => d[idField] === id);
+            if (!existingRow) isNew = true;
+            else if (JSON.stringify(existingRow) !== JSON.stringify(row)) isMismatched = true;
+        } else {
+            isNew = true; // If draft is empty, everything is new
+        }
+
+        let rowClass = isNew ? 'row-new' : (isMismatched ? 'row-mismatch-merge' : 'row-existing');
+        let statusBadge = isNew ? '<br><span style="color: #28a745; font-weight: bold; font-size: 0.75rem;">NEW</span>' 
+                        : (isMismatched ? '<br><span style="color: var(--bright-red-orange); font-weight: bold; font-size: 0.75rem;">CHANGES</span>' 
+                        : '<br><span style="color: var(--label-grey); font-size: 0.75rem;">EXISTING</span>');
+
+        html += `<tr data-id="${id}" class="${rowClass}" id="preview-row-${rowIndex}">`;
+        
+        html += `<td style="text-align:center; cursor:pointer;" onclick="removePreviewRow(${rowIndex})">🗑️${statusBadge}</td>`;
+        
+        columns.forEach((col, idx) => {
+            html += `<td class="col-idx-${idx} preview-editable-cell" contenteditable="true" onblur="updatePreviewData(${rowIndex}, '${col}', this)">${String(row[col] || '')}</td>`;
+        });
+        html += `</tr>`;
+    });
+    
+    html += `</tbody></table>`;
+    return html;
+}
+
+function generateTableHTML(dataObj, isMainTable) {
+    if (!isMainTable) return generatePreviewTableHTML(dataObj); // Route to specialized v0.38 preview generator
+
+    if (!dataObj || dataObj.length === 0) return "<p style='padding:20px;'>No data available.</p>";
+
+    const columns = Object.keys(dataObj[0] || {});
+    let html = `<table><thead id="admin-thead"><tr>`; // Added ID for listener
+    
     if(isMainTable) html += `<th style="min-width:70px;">Review</th>`; 
         
     columns.forEach((col, idx) => {
@@ -261,58 +316,45 @@ function generateTableHTML(dataObj, isMainTable) {
                 <span class="col-title" style="flex-grow:1;">${displayName}</span>
             </div>`;
         
-        if(isMainTable) {
-            // v0.38 - Dropdowns for specific filter fields
-            if (col === 'Status') {
-                html += `<select class="filter-header-select filter-dropdown" data-col="${col}"><option value="">Filter...</option><option value="Live">Live</option><option value="Closed">Closed</option><option value="Hold">Hold</option><option value="Flag">Flag</option></select>`;
-            } else if (col.startsWith('Feature_')) {
-                html += `<select class="filter-header-select filter-dropdown" data-col="${col}"><option value="">Filter...</option><option value="true">True</option><option value="false">False</option></select>`;
-            } else if (col.startsWith('Rating_')) {
-                html += `<select class="filter-header-select filter-dropdown" data-col="${col}"><option value="">Filter...</option><option value="0">0</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option></select>`;
-            } else {
-                html += `<input type="text" class="filter-header-input" placeholder="Filter..." data-col="${col}">`;
-            }
+        if (col === 'Status') {
+            html += `<select class="filter-header-select filter-dropdown" data-col="${col}"><option value="">Filter...</option><option value="Live">Live</option><option value="Closed">Closed</option><option value="Hold">Hold</option><option value="Flag">Flag</option></select>`;
+        } else if (col.startsWith('Feature_')) {
+            html += `<select class="filter-header-select filter-dropdown" data-col="${col}"><option value="">Filter...</option><option value="true">True</option><option value="false">False</option></select>`;
+        } else if (col.startsWith('Rating_')) {
+            html += `<select class="filter-header-select filter-dropdown" data-col="${col}"><option value="">Filter...</option><option value="0">0</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option></select>`;
+        } else {
+            html += `<input type="text" class="filter-header-input" placeholder="Filter..." data-col="${col}">`;
         }
+        
         html += `</th>`;
     });
     
-    html += `</tr></thead><tbody ${isMainTable ? 'id="admin-tbody"' : ''}>`;
+    html += `</tr></thead><tbody id="admin-tbody">`;
     
     dataObj.forEach((row, rowIndex) => {
         const idField = currentMode === 'venues' ? 'Venue_ID' : 'Event_ID';
         const id = row[idField] || rowIndex;
         
         let isNew = false;
-        if(isMainTable && liveData.length > 0) {
-            isNew = !liveData.some(l => l[idField] === id);
-        }
+        if(liveData.length > 0) isNew = !liveData.some(l => l[idField] === id);
 
-        html += `<tr data-id="${id}" class="${isNew ? 'new-entry-row' : ''}" ${!isMainTable ? `id="preview-row-${rowIndex}"` : ''}>`;
+        html += `<tr data-id="${id}" class="${isNew ? 'new-entry-row' : ''}">`;
         
-        if(!isMainTable) {
-            html += `<td style="text-align:center; cursor:pointer;" onclick="removePreviewRow(${rowIndex})">🗑️</td>`;
-        }
-        if(isMainTable) {
-            const needsReview = (!row.Share_URL || String(row.Share_URL) === 'false' || String(row.Share_URL) === 'PENDING');
-            html += `<td style="text-align:center;">
-                ${needsReview ? `<button onclick="markReviewed('${id}')" style="background:var(--primary-blue); border:none; color:#fff; border-radius:4px; cursor:pointer; padding:2px 5px;" title="Mark Reviewed">✔️</button>` : ''}
-                ${isNew ? `<br><span class="new-badge">NEW</span>` : ''}
-            </td>`;
-        }
+        const needsReview = (!row.Share_URL || String(row.Share_URL) === 'false' || String(row.Share_URL) === 'PENDING');
+        html += `<td style="text-align:center;">
+            ${needsReview ? `<button onclick="markReviewed('${id}')" style="background:var(--primary-blue); border:none; color:#fff; border-radius:4px; cursor:pointer; padding:2px 5px;" title="Mark Reviewed">✔️</button>` : ''}
+            ${isNew ? `<br><span class="new-badge">NEW</span>` : ''}
+        </td>`;
         
         columns.forEach((col, idx) => {
             let isEdited = false;
-            if (isMainTable && liveData.length > 0 && !isNew) {
+            if (liveData.length > 0 && !isNew) {
                 const lRow = liveData.find(l => l[idField] === row[idField]);
                 if (lRow && String(lRow[col]) !== String(row[col])) isEdited = true;
             }
             
             const editedClass = isEdited ? 'edited-cell' : '';
-            if(isMainTable) {
-                html += `<td class="col-idx-${idx} ${editedClass}" onclick="editCell(this, ${rowIndex}, '${col}')">${String(row[col] || '')}</td>`;
-            } else {
-                html += `<td class="col-idx-${idx} preview-editable-cell" contenteditable="true" onblur="updatePreviewData(${rowIndex}, '${col}', this)">${String(row[col] || '')}</td>`;
-            }
+            html += `<td class="col-idx-${idx} ${editedClass}" onclick="editCell(this, ${rowIndex}, '${col}')">${String(row[col] || '')}</td>`;
         });
         html += `</tr>`;
     });
@@ -340,6 +382,17 @@ function renderTable() {
     });
 
     tableContainer.innerHTML = generateTableHTML(filteredData, true);
+    
+    // v0.38 - Horizontal header scroll listener
+    const thead = document.getElementById('admin-thead');
+    if (thead) {
+        thead.addEventListener('wheel', (e) => {
+            if (e.deltaY !== 0) {
+                e.preventDefault();
+                tableContainer.scrollLeft += e.deltaY;
+            }
+        });
+    }
 
     document.querySelectorAll('.filter-header-input').forEach(inp => {
         inp.addEventListener('keypress', (e) => {
@@ -453,38 +506,49 @@ async function loadAdminAvatars() {
     renderAdminAvatars();
 }
 
-
-// =================== part 2 ================
-
-
+// v0.38 - Redesigned Grid renderer
 function renderAdminAvatars() {
     const list = document.getElementById('avatar-manager-list');
     if(!list) return;
     list.innerHTML = '';
     
     avatarAdminData.forEach((av, idx) => {
-        const row = document.createElement('div');
-        row.className = 'avatar-admin-row';
-        row.innerHTML = `
+        const card = document.createElement('div');
+        card.className = 'avatar-admin-card';
+        
+        let tagsInputHTML = '';
+        if (Array.isArray(av.category)) {
+            tagsInputHTML = `<input type="text" value="${av.category.join(', ')}" onblur="updateAvatarCatArray(${idx}, this.value)" placeholder="Tags (comma sep)">`;
+        } else {
+            tagsInputHTML = `
+                <select onchange="updateAvatarCat(${idx}, this.value)">
+                    <option value="Young" ${av.category === 'Young' ? 'selected' : ''}>Young</option>
+                    <option value="Prime" ${av.category === 'Prime' ? 'selected' : ''}>Prime</option>
+                    <option value="Mature" ${av.category === 'Mature' ? 'selected' : ''}>Mature</option>
+                </select>
+            `;
+        }
+
+        card.innerHTML = `
             <img src="Profile_images/${av.file}" onerror="this.src='placeholder_venue.jpg'">
             <input type="text" value="${av.label}" onblur="updateAvatarLabel(${idx}, this.value)" placeholder="Label">
-            <select onchange="updateAvatarCat(${idx}, this.value)">
-                <option value="Young" ${av.category === 'Young' ? 'selected' : ''}>Young</option>
-                <option value="Prime" ${av.category === 'Prime' ? 'selected' : ''}>Prime</option>
-                <option value="Mature" ${av.category === 'Mature' ? 'selected' : ''}>Mature</option>
-            </select>
-            <div class="up-down-btns">
-                <button onclick="moveAvatar(${idx}, -1)">▲</button>
-                <button onclick="moveAvatar(${idx}, 1)">▼</button>
+            ${tagsInputHTML}
+            <div class="avatar-admin-controls">
+                <button class="btn secondary-btn" style="padding:4px; font-size:0.8rem; flex:1;" onclick="moveAvatar(${idx}, -1)">◀ Shift</button>
+                <button class="btn secondary-btn" style="padding:4px; font-size:0.8rem; flex:1;" onclick="moveAvatar(${idx}, 1)">Shift ▶</button>
+                <button class="btn" style="background:var(--dark-red); color:#fff; padding:4px; font-size:0.8rem; flex:0.5;" onclick="deleteAvatar(${idx})">❌</button>
             </div>
-            <button class="btn" style="background:var(--dark-red); color:#fff; padding:5px;" onclick="deleteAvatar(${idx})">❌</button>
         `;
-        list.appendChild(row);
+        list.appendChild(card);
     });
 }
 
 window.updateAvatarLabel = (idx, val) => { avatarAdminData[idx].label = val; }
 window.updateAvatarCat = (idx, val) => { avatarAdminData[idx].category = val; }
+window.updateAvatarCatArray = (idx, val) => {
+    // Splits comma separated string into array and trims whitespace
+    avatarAdminData[idx].category = val.split(',').map(s => s.trim()).filter(s => s !== '');
+}
 window.moveAvatar = (idx, dir) => {
     if(idx + dir < 0 || idx + dir >= avatarAdminData.length) return;
     const temp = avatarAdminData[idx];
@@ -501,7 +565,8 @@ document.getElementById('btn-add-avatar')?.addEventListener('change', (e) => {
     const file = e.target.files[0];
     if(file) {
         const name = file.name;
-        avatarAdminData.push({ file: name, label: "New Avatar", category: "Prime" });
+        // Default to array support for v0.38
+        avatarAdminData.push({ file: name, label: "New Avatar", category: ["Prime"] });
         renderAdminAvatars();
         e.target.value = '';
     }
@@ -533,7 +598,7 @@ wysiwygContent?.addEventListener('input', () => {
     window.editorSaveTimer = setTimeout(saveEditorState, 500);
 });
 
-// v0.38 Fix - Ensure content editor has focus before formatting
+// v0.38 Fix - Ensure content editor has focus before formatting and fixes color
 window.editorAction = function(action, val, event) {
     if(event) event.preventDefault(); 
     if(wysiwygSource && !wysiwygSource.classList.contains('hidden')) return alert("Switch to Visual Editor first.");
@@ -553,6 +618,7 @@ window.editorAction = function(action, val, event) {
     } else if(action === 'bold') {
         document.execCommand('bold', false, null);
     } else if(action === 'color') {
+        // v0.38 - Uses passed hardcoded theme color from HTML button
         document.execCommand('foreColor', false, val);
     } else if(action === 'insertTable') {
         document.execCommand('insertHTML', false, '<table border="1" style="width:100%; border-collapse:collapse; margin: 15px 0;"><tr><td style="padding:8px;">Cell</td><td style="padding:8px;">Cell</td></tr><tr><td style="padding:8px;">Cell</td><td style="padding:8px;">Cell</td></tr></table><p><br></p>');
@@ -623,6 +689,17 @@ window.downloadEditorHTML = function() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+    // v0.38 Setup Text Size controls
+    document.getElementById('btn-text-size-up')?.addEventListener('click', () => {
+        if(currentAdminTextSize < 1.5) currentAdminTextSize += 0.1;
+        document.documentElement.style.setProperty('--admin-font-size', `${currentAdminTextSize}rem`);
+    });
+    
+    document.getElementById('btn-text-size-down')?.addEventListener('click', () => {
+        if(currentAdminTextSize > 0.6) currentAdminTextSize -= 0.1;
+        document.documentElement.style.setProperty('--admin-font-size', `${currentAdminTextSize}rem`);
+    });
+
     const pinGate = document.getElementById('pin-gate');
     const adminShell = document.getElementById('admin-shell');
     const btnLogin = document.getElementById('btn-login');
@@ -644,6 +721,11 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     document.getElementById('btn-sidebar-old')?.addEventListener('click', () => {
         document.getElementById('sidebar-old-list').classList.toggle('hidden');
+    });
+    
+    // v0.38 Format Guide Modal Toggle
+    document.getElementById('btn-formatting-guide')?.addEventListener('click', () => {
+        document.getElementById('formatting-guide-modal').classList.remove('hidden');
     });
 
     const makeDraggable = (headerId, windowId) => {
@@ -775,7 +857,6 @@ document.addEventListener('DOMContentLoaded', () => {
         if(currentMismatchIds.length === 0) return;
         const list = document.getElementById('mismatch-list');
         list.innerHTML = '';
-        // v0.38 - Make mismatch items clickable to jump straight to the row
         currentMismatchIds.forEach(id => {
             list.innerHTML += `<li style="color:var(--bright-red-orange); font-weight:bold; cursor:pointer; padding:4px 0; text-decoration:underline;" 
                 onclick="document.getElementById('mismatch-modal').classList.add('hidden'); jumpToRow('${id}')">${id}</li>`;
