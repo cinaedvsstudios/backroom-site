@@ -508,7 +508,6 @@ async function loadAdminAvatars() {
     renderAdminAvatars();
 }
 
-// v0.50 - Split Avatar Editor into Image Grid and Master Control Box
 let activeAvatarIndex = -1;
 function renderAdminAvatars() {
     const list = document.getElementById('avatar-manager-list');
@@ -538,6 +537,23 @@ function renderAdminAvatars() {
     if(fetSel) { fetSel.innerHTML = '<option value="">None</option>' + Array.from(fetishes).map(f => `<option value="${f}">${f}</option>`).join(''); }
 }
 
+// v0.51 - Render Fetish Pills Logic
+function renderFetishPills() {
+    if(activeAvatarIndex === -1) return;
+    const av = avatarAdminData[activeAvatarIndex];
+    const cats = Array.isArray(av.category) ? av.category : [av.category];
+    const fetishes = cats.filter(c => !['Young', 'Prime', 'Mature'].includes(c) && c);
+    
+    const pillsContainer = document.getElementById('ac-fetish-pills');
+    if(pillsContainer) {
+        pillsContainer.innerHTML = '';
+        fetishes.forEach(f => {
+            pillsContainer.innerHTML += `<span style="background:var(--bright-red-orange); color:#fff; padding:4px 10px; border-radius:var(--radius-pill); font-size:0.85rem; display:flex; align-items:center; gap:6px; font-weight:bold;">${f} <span style="cursor:pointer; color:#000;" onclick="removeActiveFetish('${f}')">❌</span></span>`;
+        });
+    }
+}
+
+// v0.51 - Connect Large Preview and Pills
 function selectAvatarForEditing(idx) {
     activeAvatarIndex = idx;
     renderAdminAvatars(); 
@@ -548,25 +564,67 @@ function selectAvatarForEditing(idx) {
     const nameEl = document.getElementById('ac-name');
     if(nameEl) nameEl.value = av.label || '';
     
+    // Connect Big Preview Box
+    const previewWrap = document.getElementById('avatar-large-preview');
+    const previewImg = document.getElementById('avatar-large-img');
+    const previewName = document.getElementById('avatar-large-name');
+    if(previewWrap && previewImg && previewName) {
+        previewWrap.style.display = 'block';
+        previewImg.src = `Profile_images/${av.file}`;
+        previewName.innerText = av.label || 'Unknown';
+    }
+    
     const cats = Array.isArray(av.category) ? av.category : [av.category];
     const ageSel = document.getElementById('ac-age');
-    const fetSel = document.getElementById('ac-fetish');
     if(ageSel) ageSel.value = cats.find(c => ['Young', 'Prime', 'Mature'].includes(c)) || '';
-    if(fetSel) fetSel.value = cats.find(c => !['Young', 'Prime', 'Mature'].includes(c)) || '';
+    
+    renderFetishPills();
 }
+
+window.addActiveFetish = function() {
+    if(activeAvatarIndex === -1) return;
+    const fetSel = document.getElementById('ac-fetish');
+    if(!fetSel || !fetSel.value) return;
+    const newFetish = fetSel.value;
+    
+    const av = avatarAdminData[activeAvatarIndex];
+    let cats = Array.isArray(av.category) ? av.category : [av.category];
+    if(!cats.includes(newFetish)) {
+        cats.push(newFetish);
+        av.category = cats;
+        renderFetishPills();
+        renderAdminAvatars(); // Re-render to ensure full object saves
+    }
+};
+
+window.removeActiveFetish = function(fetish) {
+    if(activeAvatarIndex === -1) return;
+    const av = avatarAdminData[activeAvatarIndex];
+    let cats = Array.isArray(av.category) ? av.category : [av.category];
+    av.category = cats.filter(c => c !== fetish);
+    renderFetishPills();
+    renderAdminAvatars();
+};
 
 window.saveActiveAvatarEdits = function() {
     if(activeAvatarIndex === -1) return;
     const name = document.getElementById('ac-name')?.value || '';
     const age = document.getElementById('ac-age')?.value || '';
-    const fetish = document.getElementById('ac-fetish')?.value || '';
+    
+    const av = avatarAdminData[activeAvatarIndex];
+    let cats = Array.isArray(av.category) ? av.category : [av.category];
+    let fetishes = cats.filter(c => !['Young', 'Prime', 'Mature'].includes(c) && c);
     
     let newCats = [];
     if(age) newCats.push(age);
-    if(fetish) newCats.push(fetish);
+    newCats = newCats.concat(fetishes); // Merge age back with active fetishes
     
-    avatarAdminData[activeAvatarIndex].label = name;
-    avatarAdminData[activeAvatarIndex].category = newCats;
+    av.label = name;
+    av.category = newCats;
+    
+    const previewName = document.getElementById('avatar-large-name');
+    if(previewName) previewName.innerText = name || 'Unknown';
+    
     renderAdminAvatars();
 };
 
@@ -594,8 +652,13 @@ document.getElementById('ac-delete')?.addEventListener('click', () => {
     if(activeAvatarIndex > -1 && confirm("Delete avatar?")) {
         avatarAdminData.splice(activeAvatarIndex, 1);
         activeAvatarIndex = -1;
+        
         const mc = document.getElementById('avatar-master-control');
         if(mc) { mc.style.opacity = '0.5'; mc.style.pointerEvents = 'none'; }
+        
+        const previewWrap = document.getElementById('avatar-large-preview');
+        if(previewWrap) previewWrap.style.display = 'none';
+        
         const nameEl = document.getElementById('ac-name');
         if(nameEl) nameEl.value = '';
         renderAdminAvatars();
@@ -606,7 +669,6 @@ document.getElementById('btn-add-avatar')?.addEventListener('change', (e) => {
     const file = e.target.files[0];
     if(file) {
         const name = file.name;
-        // Default to array support for v0.50
         avatarAdminData.push({ file: name, label: "New Avatar", category: ["Prime"] });
         activeAvatarIndex = avatarAdminData.length - 1;
         renderAdminAvatars();
@@ -660,7 +722,6 @@ window.editorAction = function(action, val, event) {
     } else if(action === 'bold') {
         document.execCommand('bold', false, null);
     } else if(action === 'color') {
-        // v0.50 - Uses passed hardcoded theme color from HTML dropdown
         document.execCommand('foreColor', false, val);
     } else if(action === 'insertTable') {
         document.execCommand('insertHTML', false, '<table border="1" style="width:100%; border-collapse:collapse; margin: 15px 0;"><tr><td style="padding:8px;">Cell</td><td style="padding:8px;">Cell</td></tr><tr><td style="padding:8px;">Cell</td><td style="padding:8px;">Cell</td></tr></table><p><br></p>');
@@ -731,7 +792,6 @@ window.downloadEditorHTML = function() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-    // v0.50 Set up custom color picker for editor
     const colorDropdown = document.getElementById('editor-color-dropdown');
     if(colorDropdown) {
         const SITE_PALETTE = ['#2CA8D4', '#0B0F19', '#111725', '#1F2535', '#212530', '#313748', '#53596B', '#969CAE', '#D55036', '#871300', '#000000', '#ffffff'];
@@ -741,7 +801,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // v0.38 Setup Text Size controls
     document.getElementById('btn-text-size-up')?.addEventListener('click', () => {
         if(currentAdminTextSize < 1.5) currentAdminTextSize += 0.1;
         document.documentElement.style.setProperty('--admin-font-size', `${currentAdminTextSize}rem`);
@@ -775,7 +834,6 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('sidebar-old-list').classList.toggle('hidden');
     });
     
-    // v0.38 Format Guide Modal Toggle
     document.getElementById('btn-formatting-guide')?.addEventListener('click', () => {
         document.getElementById('formatting-guide-modal').classList.remove('hidden');
     });

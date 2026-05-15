@@ -1,5 +1,5 @@
 // --- Application State ---
-const APP_VERSION = "v0.50";
+const APP_VERSION = "v0.51";
 const APP_DATE = "May 15, 2026";
 
 let systemInfo = {}, designTheme = {}, venues = [], events = [];
@@ -370,9 +370,73 @@ function renderDiscountsView() {
     document.getElementById('discounts-container')?.classList.remove('hidden');
 }
 
+// --- Tutorial System (v0.51) ---
+let currentTutorialSteps = [];
+let currentTutorialStepIndex = 0;
+
+function startTutorial(type) {
+    currentTutorialStepIndex = 0;
+    if (type === 'general') {
+        currentTutorialSteps = [
+            { target: '#search-input', text: 'Search for venues by name, city, or specific tags.' },
+            { target: '#filter-chips', text: 'Use these dynamic filter pills to quickly sort results.' },
+            { target: '#btn-location', text: 'Click here to set your location and see venues closest to you.' },
+            { target: '#sidebar', text: 'Access your saved Favourites, Travel pins, and upcoming Events from the menu.' }
+        ];
+    } else if (type === 'profile') {
+        currentTutorialSteps = [
+            { target: '#profile-name', text: 'Enter your custom profile name here.' },
+            { target: '#btn-save-profile', text: 'Click this to save your current active profile to this browser.' },
+            { target: '#btn-profile-download-data', text: 'Your data is ONLY stored locally on this device. We strongly recommend you download your data and back it up to Google Drive or Apple Drive to stay in control and prevent data loss.' }
+        ];
+    }
+    
+    const toast = document.getElementById('tutorial-toast');
+    if(toast) {
+        toast.classList.remove('hidden');
+        showNextTutorialStep();
+    }
+}
+
+function showNextTutorialStep() {
+    document.querySelectorAll('.tutorial-highlight').forEach(el => el.classList.remove('tutorial-highlight'));
+    
+    if (currentTutorialStepIndex >= currentTutorialSteps.length) {
+        endTutorial();
+        return;
+    }
+    
+    const step = currentTutorialSteps[currentTutorialStepIndex];
+    const targetEl = document.querySelector(step.target);
+    if (targetEl) {
+        targetEl.classList.add('tutorial-highlight');
+        targetEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+    
+    const msgEl = document.getElementById('tutorial-message');
+    if (msgEl) msgEl.innerText = step.text;
+    
+    const nextBtn = document.getElementById('btn-tutorial-next');
+    if (nextBtn) {
+        if (currentTutorialStepIndex === currentTutorialSteps.length - 1) {
+            nextBtn.innerText = "Finish ✔️";
+        } else {
+            nextBtn.innerText = "Next Step ▶";
+        }
+    }
+    
+    currentTutorialStepIndex++;
+}
+
+function endTutorial() {
+    document.querySelectorAll('.tutorial-highlight').forEach(el => el.classList.remove('tutorial-highlight'));
+    document.getElementById('tutorial-toast')?.classList.add('hidden');
+    currentTutorialSteps = [];
+    currentTutorialStepIndex = 0;
+}
+
 function runTutorial() {
-    alert("Tutorial Placeholder: A pulsing red highlight will guide you through the features here shortly.");
-    // In full implementation, this triggers .tutorial-highlight on specific selectors step-by-step.
+    startTutorial('general');
 }
 
 function setupEventListeners() {
@@ -405,6 +469,11 @@ function setupEventListeners() {
         drop?.classList.toggle('hidden');
         renderTravelDropdown();
     });
+
+    // Tutorial hooks
+    addEvt('btn-tutorial-skip', 'click', endTutorial);
+    addEvt('btn-tutorial-next', 'click', showNextTutorialStep);
+    addEvt('btn-profile-tutorial', 'click', () => startTutorial('profile'));
 
     addEvt('btn-language', 'click', () => alert("Translation widget placeholder"));
     addEvt('btn-back-to-results', 'click', () => {
@@ -1474,7 +1543,7 @@ function openVenueModal(venue) {
                         <button id="btn-map" class="btn secondary-btn pill-btn" style="padding: 2px 8px; font-size: 0.75rem; width: auto; flex-shrink: 0;">🗺️ Directions</button>
                         <p class="meta-text" style="margin:0;"><strong>${venue.Address || ''}</strong></p>
                     </div>
-                    ${venue.Nearest_Station ? `<p class="meta-text" style="margin:0; padding-left: 5px;">🚇 Station: ${venue.Nearest_Station}</p>` : ''}
+                    ${venue.Nearest_Station ? `<p class="meta-text" style="margin:0; padding-left: 5px;">🚄 Station: ${venue.Nearest_Station}</p>` : ''}
                 </div>
                 
                 <div class="mobile-stats">
@@ -1514,16 +1583,27 @@ function openVenueModal(venue) {
     
     const shareBtn = document.getElementById('modal-share');
     if(shareBtn) {
-        shareBtn.innerHTML = '<img src="link.png" style="width:24px;">';
+        shareBtn.innerHTML = '📣';
         shareBtn.onclick = () => shareURL(`${window.location.origin}${window.location.pathname}?venue=${venue.Venue_ID}#venue=${venue.Venue_ID}`, venue.Name);
     }
     
+    // v0.51 Maps Routing Logic
     const mapBtn = document.getElementById('btn-map');
     if(mapBtn) {
         mapBtn.onclick = () => {
+            const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+            
+            if (isIOS && venue.Apple_Maps_URL && venue.Apple_Maps_URL.trim() !== '') {
+                window.open(venue.Apple_Maps_URL, '_blank');
+                return;
+            } else if (!isIOS && venue.Google_Maps_URL && venue.Google_Maps_URL.trim() !== '') {
+                window.open(venue.Google_Maps_URL, '_blank');
+                return;
+            }
+            
+            // Fallback Native Query
             const mapQuery = venue.Native_Map_Query || venue.Address || venue.Name || '';
             const queryPlus = encodeURIComponent(mapQuery.trim()).replace(/%20/g, '+');
-            const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
             if (isIOS) {
                 window.open(`http://maps.apple.com/?q=${queryPlus}`, '_blank');
             } else {
