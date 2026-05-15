@@ -1,5 +1,5 @@
 // --- Application State ---
-const APP_VERSION = "v0.51";
+const APP_VERSION = "v0.52";
 const APP_DATE = "May 15, 2026";
 
 let systemInfo = {}, designTheme = {}, venues = [], events = [];
@@ -370,7 +370,7 @@ function renderDiscountsView() {
     document.getElementById('discounts-container')?.classList.remove('hidden');
 }
 
-// --- Tutorial System (v0.51) ---
+// --- Tutorial System ---
 let currentTutorialSteps = [];
 let currentTutorialStepIndex = 0;
 
@@ -387,7 +387,7 @@ function startTutorial(type) {
         currentTutorialSteps = [
             { target: '#profile-name', text: 'Enter your custom profile name here.' },
             { target: '#btn-save-profile', text: 'Click this to save your current active profile to this browser.' },
-            { target: '#btn-profile-download-data', text: 'Your data is ONLY stored locally on this device. We strongly recommend you download your data and back it up to Google Drive or Apple Drive to stay in control and prevent data loss.' }
+            { target: '#btn-profile-download-data', text: 'You are in control of your own data. We do not store any information online so there is no risk of data breaches. If you clear your cache you will lose your profile, so we strongly recommend you download your data and back it up to Google Drive or Apple Drive.' }
         ];
     }
     
@@ -438,6 +438,15 @@ function endTutorial() {
 function runTutorial() {
     startTutorial('general');
 }
+
+// --- Flagging/Reporting System ---
+window.flagListing = function(id, name) {
+    navigator.clipboard.writeText(`ID: ${id} | Name: ${name}`);
+    showToast("Listing ID copied! Prepare to paste in email...");
+    setTimeout(() => {
+        window.location.href = `mailto:backroom.site@gmail.com?subject=Report%20Listing%20[${id}]&body=Hello,%20I%20want%20to%20report%20an%20issue%20with%20listing:%0A%0A(Paste%20ID%20here)%0A%0AThe%20issue%20is:%20`;
+    }, 1500);
+};
 
 function setupEventListeners() {
     const addEvt = (id, evt, func) => {
@@ -643,17 +652,6 @@ function setupEventListeners() {
     if(searchInput) {
         searchInput.addEventListener('input', () => { recordUserInteraction(); window.location.hash=''; handleRouting(); });
     }
-    
-    const sidebarMenu = document.querySelector('.sidebar-menu');
-    if (sidebarMenu && !document.getElementById('btn-tutorial')) {
-        const tutBtn = document.createElement('div');
-        tutBtn.id = 'btn-tutorial';
-        tutBtn.className = 'sidebar-item tooltip';
-        tutBtn.title = 'Tutorial';
-        tutBtn.innerHTML = `<span class="icon">💡</span><span class="sidebar-text display-font">Tutorial</span>`;
-        tutBtn.onclick = runTutorial;
-        sidebarMenu.appendChild(tutBtn);
-    }
 }
 
 function initLeafletMap(lat, lng) {
@@ -686,7 +684,8 @@ function updateProfileDisplay() {
     if(userProfile.name) topName.innerText = userProfile.name;
     else topName.innerText = '👤';
 
-    if(userProfile.avatar) {
+    // v0.52 - Hide top preview if it's the noavatar blank image
+    if(userProfile.avatar && userProfile.avatar !== 'noavatar01.png') {
         topAvatar.src = `Profile_images/${userProfile.avatar}`;
         if(topAvatarContainer) topAvatarContainer.style.display = 'block'; 
         else topAvatar.style.display = 'inline-block';
@@ -715,6 +714,7 @@ function renderTravelDropdown() {
         list.appendChild(item);
     });
 }
+
 
 // =================== part 2 ================
 
@@ -935,7 +935,11 @@ function renderMyEventsView() {
             <div class="card-inner-content">
                 <div class="card-header">
                     <div><h3 class="card-title display-font">${ev.Event_Name}</h3><div class="card-meta">${formatDateToDDMMYYYY(ev.Event_Date)} | @ ${venueName}</div></div>
-                    <button class="icon-btn fav-btn active-star" style="font-size:1.5rem;" onclick="toggleEventFavorite('${ev.Event_ID}', null, true)">❌</button>
+                    <div style="display:flex; gap:10px; align-items:center;">
+                        <span class="icon-btn" onclick="event.stopPropagation(); shareURL('${window.location.origin}${window.location.pathname}?event=${ev.Event_ID}#myevents', '${ev.Event_Name.replace(/'/g, "\\'")}')" title="Share" style="font-size:1.5rem;">📣</span>
+                        <span class="icon-btn" onclick="event.stopPropagation(); window.flagListing('${ev.Event_ID}', '${ev.Event_Name.replace(/'/g, "\\'")}')" title="Report" style="font-size:1.1rem; border:2px solid var(--bright-red-orange); border-radius:50%; width:26px; height:26px; display:flex; align-items:center; justify-content:center;">⚠️</span>
+                        <button class="icon-btn fav-btn active-star" style="font-size:1.5rem;" onclick="toggleEventFavorite('${ev.Event_ID}', null, true)">❌</button>
+                    </div>
                 </div>
                 <div class="card-about">${ev.Event_Description || ''}</div>
             </div>
@@ -1060,20 +1064,21 @@ function renderProfileAvatars() {
         filterContainer = document.createElement('div');
         filterContainer.id = 'avatar-filters';
         filterContainer.style.display = 'flex';
-        filterContainer.style.flexWrap = 'wrap';
+        filterContainer.style.flexWrap = 'nowrap';
+        filterContainer.style.overflowX = 'auto';
         filterContainer.style.gap = '8px';
         filterContainer.style.marginBottom = '15px';
+        filterContainer.style.paddingBottom = '5px';
         grid.parentNode.insertBefore(filterContainer, grid);
     }
     
     const ageTags = ['Young', 'Prime', 'Mature'];
     const fetishTags = ['Ink', 'Leather', 'Rubber', 'Puppy'];
     
-    let html = `<button class="chip pill-btn ${activeAvatarCategory === 'All' ? 'active' : ''}" style="padding: 4px 10px; font-size: 0.85rem;" data-val="All">All</button>`;
+    let html = `<button class="chip pill-btn ${activeAvatarCategory === 'All' ? 'active' : ''}" style="padding: 4px 10px; font-size: 0.85rem; flex-shrink:0;" data-val="All">All</button>`;
     
-    html += ageTags.map(c => `<button class="chip pill-btn ${activeAvatarCategory === c ? 'active' : ''}" style="padding: 4px 10px; font-size: 0.85rem; color: var(--primary-blue); border-color: var(--primary-blue);" data-val="${c}">${c}</button>`).join('');
-    html += '<div style="flex-basis: 100%; height: 0;"></div>'; 
-    html += fetishTags.map(c => `<button class="chip pill-btn ${activeAvatarCategory === c ? 'active' : ''}" style="padding: 4px 10px; font-size: 0.85rem; color: var(--bright-red-orange); border-color: var(--bright-red-orange);" data-val="${c}">${c}</button>`).join('');
+    html += ageTags.map(c => `<button class="chip pill-btn ${activeAvatarCategory === c ? 'active' : ''}" style="padding: 4px 10px; font-size: 0.85rem; color: var(--primary-blue); border-color: var(--primary-blue); flex-shrink:0;" data-val="${c}">${c}</button>`).join('');
+    html += fetishTags.map(c => `<button class="chip pill-btn ${activeAvatarCategory === c ? 'active' : ''}" style="padding: 4px 10px; font-size: 0.85rem; color: var(--bright-red-orange); border-color: var(--bright-red-orange); flex-shrink:0;" data-val="${c}">${c}</button>`).join('');
     
     filterContainer.innerHTML = html;
     
@@ -1363,7 +1368,11 @@ function renderListings(data, isContextView = false) {
                 ${nextEventHtml}
                 <div class="card-stats">
                     <span>🌈 ${systemInfo.labels?.rated_by_gays || 'Rated by gays'}</span><span>👁️ ${venue.Views || 0}</span>
-                    <span class="star-btn icon-btn fav-btn ${isFav ? 'active-star' : ''}" style="margin-left:auto; font-size:1.8rem; line-height:1;">⚜️</span>
+                    <div style="margin-left:auto; display:flex; gap:10px; align-items:center;">
+                        <span class="icon-btn" onclick="event.stopPropagation(); shareURL('${window.location.origin}${window.location.pathname}?venue=${venue.Venue_ID}#venue=${venue.Venue_ID}', '${venue.Name.replace(/'/g, "\\'")}')" title="Share" style="font-size:1.5rem;">📣</span>
+                        <span class="icon-btn" onclick="event.stopPropagation(); window.flagListing('${venue.Venue_ID}', '${venue.Name.replace(/'/g, "\\'")}')" title="Report" style="font-size:1.1rem; border:2px solid var(--bright-red-orange); border-radius:50%; width:26px; height:26px; display:flex; align-items:center; justify-content:center;">⚠️</span>
+                        <span class="star-btn icon-btn fav-btn ${isFav ? 'active-star' : ''}" style="font-size:1.8rem; line-height:1;">⚜️</span>
+                    </div>
                 </div>
             </div>
         `;
@@ -1443,9 +1452,9 @@ function openVenueModal(venue) {
     `;
     
     const ratingTypes = [
+        { label: 'Overall', key: 'Rating_General', type: 'Overall' },
         { label: 'Age Range', key: 'Rating_Age_Range', type: 'Age' },
         { label: 'Size', key: 'Rating_Size', type: 'Size' },
-        { label: 'Overall', key: 'Rating_General', type: 'Overall' },
         { label: 'Darkroom', key: 'Rating_Darkroom', type: 'Darkroom' },
         { label: 'Cost', key: 'Rating_Cost', type: 'Cost' },
         { label: 'Location', key: 'Rating_Location', type: 'Location' },
@@ -1502,7 +1511,11 @@ function openVenueModal(venue) {
                                     <strong>${ev.Event_Name}</strong> ${isPast ? '<small>(Past)</small>' : ''}<br>
                                     <span class="meta-text">${formatDateToDDMMYYYY(ev.Event_Date)} | ${ev.Event_Start_Time}</span>
                                 </div>
-                                <button class="icon-btn fav-btn ${isSaved ? 'active-star' : ''}" style="font-size: 1.5rem;" onclick="toggleEventFavorite('${ev.Event_ID}', this)">💖</button>
+                                <div style="display:flex; gap:8px; align-items:center;">
+                                    <span class="icon-btn" onclick="event.stopPropagation(); shareURL('${window.location.origin}${window.location.pathname}?event=${ev.Event_ID}', '${ev.Event_Name.replace(/'/g, "\\'")}')" title="Share" style="font-size:1.2rem;">📣</span>
+                                    <span class="icon-btn" onclick="event.stopPropagation(); window.flagListing('${ev.Event_ID}', '${ev.Event_Name.replace(/'/g, "\\'")}')" title="Report" style="font-size:0.9rem; border:2px solid var(--bright-red-orange); border-radius:50%; padding:2px; width:22px; height:22px; display:flex; align-items:center; justify-content:center;">⚠️</span>
+                                    <button class="icon-btn fav-btn ${isSaved ? 'active-star' : ''}" style="font-size: 1.5rem;" onclick="toggleEventFavorite('${ev.Event_ID}', this)">💖</button>
+                                </div>
                             </div>
                             <p style="font-size:0.9rem; margin-top:5px;">${ev.Event_Description}</p>
                         </div>
@@ -1587,7 +1600,12 @@ function openVenueModal(venue) {
         shareBtn.onclick = () => shareURL(`${window.location.origin}${window.location.pathname}?venue=${venue.Venue_ID}#venue=${venue.Venue_ID}`, venue.Name);
     }
     
-    // v0.51 Maps Routing Logic
+    // Check if report button exists (we need to dynamically add it since we didn't rewrite index.html header yet, but we will in step 2. We can ensure the listener works when the file is updated).
+    const reportBtn = document.getElementById('modal-report');
+    if(reportBtn) {
+        reportBtn.onclick = () => window.flagListing(venue.Venue_ID, venue.Name);
+    }
+    
     const mapBtn = document.getElementById('btn-map');
     if(mapBtn) {
         mapBtn.onclick = () => {

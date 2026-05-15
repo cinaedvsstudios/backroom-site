@@ -101,16 +101,19 @@ window.switchView = function(view) {
     if(view === 'editor') {
         views['editor'].style.display = 'flex';
         views['editor'].classList.remove('hidden');
+        document.getElementById('btn-formatting-guide')?.classList.remove('hidden');
         saveEditorState(); 
     } else if (view === 'avatars') {
         views['avatars'].style.display = 'flex';
         views['avatars'].classList.remove('hidden');
+        document.getElementById('btn-formatting-guide')?.classList.add('hidden');
         loadAdminAvatars();
     } else {
         views['tables'].style.display = 'flex';
         views['tables'].classList.remove('hidden');
         const title = document.getElementById('summary-title');
         if(title) title.innerText = view === 'venues' ? 'VENUE DATA' : 'EVENT DATA';
+        document.getElementById('btn-formatting-guide')?.classList.add('hidden');
         activeTableFilters = {};
         loadDraftsFromLocal();
     }
@@ -247,7 +250,6 @@ function renderFilters() {
     });
 }
 
-// v0.38 - Support Deep Compares and Badges in the Preview Window
 function generatePreviewTableHTML(dataObj) {
     if (!dataObj || dataObj.length === 0) return "<p style='padding:20px;'>No data available.</p>";
 
@@ -267,7 +269,6 @@ function generatePreviewTableHTML(dataObj) {
         const idField = currentMode === 'venues' ? 'Venue_ID' : 'Event_ID';
         const id = row[idField] || String(rowIndex);
         
-        // Deep compare against draftData for tags
         let isNew = false;
         let isMismatched = false;
         
@@ -276,7 +277,7 @@ function generatePreviewTableHTML(dataObj) {
             if (!existingRow) isNew = true;
             else if (JSON.stringify(existingRow) !== JSON.stringify(row)) isMismatched = true;
         } else {
-            isNew = true; // If draft is empty, everything is new
+            isNew = true;
         }
 
         let rowClass = isNew ? 'row-new' : (isMismatched ? 'row-mismatch-merge' : 'row-existing');
@@ -300,12 +301,12 @@ function generatePreviewTableHTML(dataObj) {
 }
 
 function generateTableHTML(dataObj, isMainTable) {
-    if (!isMainTable) return generatePreviewTableHTML(dataObj); // Route to specialized v0.38 preview generator
+    if (!isMainTable) return generatePreviewTableHTML(dataObj);
 
     if (!dataObj || dataObj.length === 0) return "<p style='padding:20px;'>No data available.</p>";
 
     const columns = Object.keys(dataObj[0] || {});
-    let html = `<table><thead id="admin-thead"><tr>`; // Added ID for listener
+    let html = `<table><thead id="admin-thead"><tr>`; 
     
     if(isMainTable) html += `<th style="min-width:70px;">Review</th>`; 
         
@@ -385,7 +386,6 @@ function renderTable() {
 
     tableContainer.innerHTML = generateTableHTML(filteredData, true);
     
-    // v0.38 - Horizontal header scroll listener
     const thead = document.getElementById('admin-thead');
     if (thead) {
         thead.addEventListener('wheel', (e) => {
@@ -537,7 +537,6 @@ function renderAdminAvatars() {
     if(fetSel) { fetSel.innerHTML = '<option value="">None</option>' + Array.from(fetishes).map(f => `<option value="${f}">${f}</option>`).join(''); }
 }
 
-// v0.51 - Render Fetish Pills Logic
 function renderFetishPills() {
     if(activeAvatarIndex === -1) return;
     const av = avatarAdminData[activeAvatarIndex];
@@ -553,7 +552,6 @@ function renderFetishPills() {
     }
 }
 
-// v0.51 - Connect Large Preview and Pills
 function selectAvatarForEditing(idx) {
     activeAvatarIndex = idx;
     renderAdminAvatars(); 
@@ -564,7 +562,6 @@ function selectAvatarForEditing(idx) {
     const nameEl = document.getElementById('ac-name');
     if(nameEl) nameEl.value = av.label || '';
     
-    // Connect Big Preview Box
     const previewWrap = document.getElementById('avatar-large-preview');
     const previewImg = document.getElementById('avatar-large-img');
     const previewName = document.getElementById('avatar-large-name');
@@ -593,7 +590,7 @@ window.addActiveFetish = function() {
         cats.push(newFetish);
         av.category = cats;
         renderFetishPills();
-        renderAdminAvatars(); // Re-render to ensure full object saves
+        renderAdminAvatars(); 
     }
 };
 
@@ -617,7 +614,7 @@ window.saveActiveAvatarEdits = function() {
     
     let newCats = [];
     if(age) newCats.push(age);
-    newCats = newCats.concat(fetishes); // Merge age back with active fetishes
+    newCats = newCats.concat(fetishes); 
     
     av.label = name;
     av.category = newCats;
@@ -687,6 +684,30 @@ document.getElementById('btn-download-avatars')?.addEventListener('click', () =>
     showToast("Downloaded avatar_list.json");
 });
 
+// v0.52 - Avatar Audit (Paste List) Feature
+document.getElementById('btn-audit-avatars')?.addEventListener('click', () => {
+    const pastedText = prompt("Paste your raw GitHub directory list/text containing image filenames:");
+    if(!pastedText) return;
+    
+    const regex = /[\w-]+\.(png|jpg|jpeg)/gi;
+    const matches = pastedText.match(regex) || [];
+    let addedCount = 0;
+    
+    if(matches.length > 0) {
+        const uniqueFiles = [...new Set(matches)];
+        uniqueFiles.forEach(file => {
+            if(!avatarAdminData.some(a => a.file === file)) {
+                avatarAdminData.push({ file: file, label: "New Scanned Avatar", category: ["Prime"] });
+                addedCount++;
+            }
+        });
+        renderAdminAvatars();
+        showToast(`Audited: Added ${addedCount} new missing avatars.`);
+    } else {
+        showToast("No valid image filenames found in pasted text.");
+    }
+});
+
 const wysiwygContent = document.getElementById('wysiwyg-content');
 const wysiwygSource = document.getElementById('wysiwyg-source');
 
@@ -701,6 +722,16 @@ function saveEditorState() {
 wysiwygContent?.addEventListener('input', () => {
     clearTimeout(window.editorSaveTimer);
     window.editorSaveTimer = setTimeout(saveEditorState, 500);
+});
+
+// v0.52 - New Blank Page Editor Logic
+document.getElementById('editor-page-select')?.addEventListener('change', (e) => {
+    if(e.target.value === 'new') {
+        const defaultText = `<h1>New Page</h1><p>Start typing... dont forget to have this page added to the menu it wont appear automatically</p>`;
+        if(wysiwygContent) wysiwygContent.innerHTML = defaultText;
+        if(wysiwygSource) wysiwygSource.value = defaultText;
+        saveEditorState();
+    }
 });
 
 window.editorAction = function(action, val, event) {
