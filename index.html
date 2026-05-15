@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Backroom - v0.53</title>
+    <title>Backroom - v0.54</title>
     
     <meta name="description" content="Backroom - The comprehensive local guide to gay venues, cruise clubs, and events.">
     <meta name="keywords" content="gay guide, cruising, gay clubs, darkroom, fetish, gay events, queer venues">
@@ -13,7 +13,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Antonio:wght@400;700&family=Barlow+Condensed:wght@400;500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
-    <link rel="stylesheet" href="style.css?v=0.53">
+    <link rel="stylesheet" href="style.css?v=0.54">
 </head>
 <body>
 
@@ -40,6 +40,19 @@
                 <button id="btn-wipe-all" class="btn pill-btn secondary-btn" style="font-weight:bold;">Make a new blank profile</button>
                 <button id="btn-wipe-profile-only" class="btn primary-btn pill-btn" style="border:1px solid #fff;">Make a copy of this profile</button>
                 <button onclick="document.getElementById('profile-wipe-toast').classList.add('hidden')" class="btn pill-btn" style="background:transparent; border:1px solid rgba(255,255,255,0.5); color:#fff;">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="delete-profile-modal" class="modal hidden" style="z-index: 3500;">
+        <div class="modal-content small-modal" style="background: var(--panel-dark); border: 2px solid var(--bright-red-orange);">
+            <div class="modal-header"><h2 class="display-font" style="color:var(--bright-red-orange);">WARNING</h2></div>
+            <div class="modal-body body-font">
+                <p style="margin-bottom:15px; color:#fff;">Are you sure you want to delete this profile? You will lose all saved venues and events associated with it.</p>
+                <div style="display:flex; flex-direction:column; gap:10px;">
+                    <button id="btn-confirm-delete-profile" class="btn pill-btn" style="background: var(--dark-red); color: #fff; font-weight: bold;">Yes, Delete Profile</button>
+                    <button id="btn-cancel-delete-profile" class="btn secondary-btn pill-btn">Cancel</button>
+                </div>
             </div>
         </div>
     </div>
@@ -241,15 +254,20 @@
         <div class="modal-content large-modal" style="max-width: 900px;">
             <button class="btn-close close-modal-btn">❌</button>
             <div class="modal-header"><h2 class="display-font">MY PROFILE</h2></div>
-            <div class="modal-body body-font" style="display: flex; flex-direction: row; gap: 30px; flex-wrap: wrap;">
+            
+            <div class="modal-body body-font" style="display: flex; gap: 30px; flex-wrap: wrap-reverse;">
                 
                 <div style="flex: 1; min-width: 300px; display: flex; flex-direction: column;">
                     <div class="avatar-grid" id="avatar-grid"></div>
                     <div id="profile-stats-container" style="margin-top: 15px;"></div>
                 </div>
 
-                <div style="width: 280px; display: flex; flex-direction: column; gap: 15px; align-items: center; flex-shrink: 0; background: var(--panel-dark); padding: 25px; border-radius: var(--radius-card); border: 1px solid var(--panel-mid);">
+                <div style="width: 280px; display: flex; flex-direction: column; gap: 15px; align-items: center; flex-shrink: 0; background: var(--panel-dark); padding: 25px; border-radius: var(--radius-card); border: 1px solid var(--panel-mid); margin: 0 auto;">
                     
+                    <div id="preview-img-wrapper" class="hidden" style="width: 100%; display: flex; justify-content: center;">
+                        <img id="profile-avatar-preview" src="" style="width: 105px; height: 210px; border-radius: 12px; object-fit: cover; border: 3px solid var(--primary-blue); margin-bottom: 10px; box-shadow: 0 0 15px rgba(44, 168, 212, 0.4);">
+                    </div>
+
                     <div style="width: 100%;">
                         <label class="meta-text" style="font-size: 0.9rem; margin-bottom: 5px; display: block; text-align: center;">Profile Name</label>
                         <input type="text" id="profile-name" class="form-input pill-input" placeholder="Enter your name" style="color:var(--primary-blue); font-weight:bold; text-align: center;">
@@ -342,7 +360,7 @@
                     <p class="meta-text" style="margin-bottom: 10px;">Send a message to the team. Please include details if reporting an issue.</p>
                     
                     <input type="email" name="email" class="form-input pill-input" placeholder="Your Email (optional)" style="width: 100%; box-sizing: border-box;">
-                    <textarea name="message" class="form-input" placeholder="Your message here..." required style="width: 100%; min-height: 100px; border-radius: 12px; padding: 10px; box-sizing: border-box; background: var(--panel-mid); color: #fff; border: 1px solid var(--panel-standard);"></textarea>
+                    <textarea name="message" class="form-input" placeholder="describe what is wrong with this listing" required style="width: 100%; min-height: 100px; border-radius: 12px; padding: 10px; box-sizing: border-box; background: var(--panel-mid); color: #fff; border: 1px solid var(--panel-standard);"></textarea>
                     
                     <button type="submit" class="btn primary-btn pill-btn" style="margin-top: 10px;">Send Message</button>
                 </form>
@@ -351,6 +369,6 @@
     </div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
-    <script src="app.js?v=0.53"></script>
+    <script src="app.js?v=0.54"></script>
 </body>
 </html>

@@ -180,18 +180,19 @@ select.filter-header-select:focus, select.cell-edit:focus { border-color: var(--
 .modal-image-container img { width: 100%; max-height: 350px; object-fit: cover; border-radius: var(--radius-card); }
 .centered-image { object-position: center !important; }
 
-/* v0.53 - Force 6-wide to strictly kill horizontal scroll */
-#avatar-filters { display: flex; justify-content: center; flex-wrap: nowrap; gap: 8px; margin-bottom: 15px; width: 100%; box-sizing: border-box; }
-.avatar-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 15px; max-height: 450px; overflow-y: auto; overflow-x: hidden; padding: 15px; background: var(--bg-color); border-radius: var(--radius-card); box-sizing: border-box; width: 100%; }
-.avatar-item { text-align: center; cursor: pointer; transition: all 0.2s; }
+/* v0.54 - Redesigned Profile Layout to strict 2-columns */
+#avatar-filters { display: flex; justify-content: center; flex-wrap: wrap; gap: 8px; margin-bottom: 15px; width: 100%; box-sizing: border-box; }
+.avatar-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; max-height: 450px; overflow-y: auto; overflow-x: hidden; padding: 15px; background: var(--bg-color); border-radius: var(--radius-card); box-sizing: border-box; width: 100%; }
+
+.avatar-item { text-align: center; cursor: pointer; transition: all 0.2s; display: flex; flex-direction: column; align-items: center; }
 .avatar-item.hidden { display: none !important; }
 
-.avatar-item.selected { grid-column: 1 / -1; display: flex; flex-direction: column; align-items: center; justify-content: center; margin: 25px 0; z-index: 10; transform: scale(1.25); transform-origin: center; }
-.avatar-item.selected img { width: 105px; height: 210px; border-radius: 12px; object-fit: cover; border: 3px solid var(--primary-blue); margin-bottom: 10px; box-shadow: 0 0 15px rgba(44, 168, 212, 0.4); }
-.avatar-item.selected span { color: var(--primary-blue); font-weight: bold; font-size: 1.1rem; }
+.avatar-item img { width: 75px; height: 150px; border-radius: 8px; object-fit: cover; border: 3px solid transparent; margin-bottom: 5px; transition: all 0.2s; }
+.avatar-item span { display: block; font-size: 0.85rem; color: var(--text-light); }
 
-.avatar-item:not(.selected) img { width: 70px; height: 140px; border-radius: 8px; object-fit: cover; border: 2px solid transparent; margin-bottom: 5px; transition: border-color 0.2s; }
-.avatar-item:not(.selected) span { display: block; font-size: 0.8rem; color: var(--text-light); }
+/* v0.54 - Tile Highlighting (no expansion) */
+.avatar-item.selected img { border-color: var(--primary-blue); box-shadow: 0 0 10px rgba(44, 168, 212, 0.6); transform: scale(1.05); }
+.avatar-item.selected span { color: var(--primary-blue); font-weight: bold; }
 
 .desktop-stats-container { background-color: var(--near-black); border-radius: var(--radius-card); padding: 15px; }
 .public-stats-block { display: flex; gap: 15px; color: #fff; font-size: 1.1rem; }
@@ -212,8 +213,8 @@ select.filter-header-select:focus, select.cell-edit:focus { border-color: var(--
 .mobile-stats { display: none; }
 .desktop-stats { display: block; }
 
-/* v0.53 - Increase spacing for modal ratings emojis */
-.ratings-table { gap: 12px 6px !important; padding: 20px !important; box-sizing: border-box; width: 100%; overflow-x: hidden; }
+/* v0.54 - Increased spacing for modal ratings emojis */
+.ratings-table { gap: 16px 8px !important; padding: 20px !important; box-sizing: border-box; width: 100%; overflow-x: hidden; }
 
 @keyframes pulse-tutorial {
     0% { box-shadow: 0 0 0 0 rgba(213, 80, 54, 0.7); border-color: var(--bright-red-orange); }
@@ -266,9 +267,8 @@ select.filter-header-select:focus, select.cell-edit:focus { border-color: var(--
     
     .welcome-card { flex-direction: column; align-items: center; text-align: center; }
 
-    /* v0.53 mobile specific overrides */
-    #avatar-filters { flex-wrap: wrap; }
-    .avatar-grid { grid-template-columns: repeat(4, 1fr); }
+    /* v0.54 Mobile specific overrides */
+    .avatar-grid { grid-template-columns: repeat(3, 1fr); max-height: 350px; }
 }
 
 /* Admin Specific */
