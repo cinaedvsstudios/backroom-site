@@ -1,6 +1,6 @@
 // --- Application State ---
-const APP_VERSION = "v0.38";
-const APP_DATE = "May 15, 2026";
+const APP_VERSION = "v0.40";
+const APP_DATE = "May 20, 2026";
 
 let systemInfo = {}, designTheme = {}, venues = [], events = [];
 let activeFilter = 'All';
@@ -9,7 +9,7 @@ let currentTargetVenue = null;
 let currentEventCityFilter = 'All';
 
 // Profile Data Structure (Save Game Style)
-let userProfile = JSON.parse(localStorage.getItem('br_profile')) || { name: '', avatar: '' };
+let userProfile = JSON.parse(localStorage.getItem('br_profile')) || { name: '', avatar: 'noavatar01.png' };
 let savedProfiles = JSON.parse(localStorage.getItem('br_saved_profiles')) || {};
 
 // Globals swapped per profile
@@ -24,6 +24,10 @@ let activeAvatarCategory = 'All';
 
 let leafletMap = null;
 let leafletMarker = null;
+
+// Tutorial State
+let currentTutorialStep = 0;
+let tutorialSteps = [];
 
 const ageGate = document.getElementById('age-gate');
 const appShell = document.getElementById('app-shell');
@@ -155,11 +159,13 @@ function loadActiveProfileData() {
         userShortlists = bundle.shortlists || {};
         userEvents = bundle.events || [];
         userTravel = bundle.travel || [];
+        userProfile.avatar = bundle.avatar || 'noavatar01.png';
     } else {
         userFavorites = JSON.parse(localStorage.getItem('br_favorites')) || [];
         userShortlists = JSON.parse(localStorage.getItem('br_shortlists')) || {};
         userEvents = JSON.parse(localStorage.getItem('br_events')) || [];
         userTravel = JSON.parse(localStorage.getItem('br_travel')) || [];
+        if(!userProfile.avatar) userProfile.avatar = 'noavatar01.png';
     }
 }
 
@@ -369,6 +375,58 @@ function renderDiscountsView() {
     document.getElementById('discounts-container')?.classList.remove('hidden');
 }
 
+// v0.40 - Tutorial System Functions
+window.startMainTutorial = function() {
+    tutorialSteps = [
+        { target: 'search-input', text: 'Search by city, venue name, or vibe here.' },
+        { target: 'main-filters', text: 'Swipe horizontally and tap these pills to filter venues by specific features like Dresscode or Sauna.' },
+        { target: 'btn-location', text: 'Tap here to set your travel destination or lock in your GPS location.' },
+        { target: 'sidebar-hit-area', text: 'Tap the left edge (or swipe right) to open the main menu for shortlists, travel, and settings.' },
+        { target: null, text: 'You are all set! Tap a venue card to view full details.' }
+    ];
+    currentTutorialStep = 0;
+    document.getElementById('tutorial-modal')?.classList.remove('hidden');
+    window.showTutorialStep();
+};
+
+window.startProfileTutorial = function() {
+    tutorialSteps = [
+        { target: 'profile-name', text: 'Your profile settings and shortlists are stored LOCALLY on this device only.' },
+        { target: 'btn-settings', text: 'We do not have a server. If you clear your browser cache, you will lose everything.' },
+        { target: 'btn-export-trigger', text: 'To backup your data, use the Export feature. Save the file to your Google Drive or iCloud so you can import it later!' }
+    ];
+    currentTutorialStep = 0;
+    profileModal?.classList.add('hidden'); 
+    document.getElementById('tutorial-modal')?.classList.remove('hidden');
+    window.showTutorialStep();
+};
+
+window.showTutorialStep = function() {
+    document.querySelectorAll('.tutorial-highlight').forEach(el => el.classList.remove('tutorial-highlight'));
+    if(currentTutorialStep >= tutorialSteps.length) { window.endTutorial(); return; }
+    
+    const step = tutorialSteps[currentTutorialStep];
+    if (step.target) {
+        const targetEl = document.getElementById(step.target);
+        if(targetEl) {
+            targetEl.classList.add('tutorial-highlight');
+            targetEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+    }
+    const textEl = document.getElementById('tutorial-text');
+    if(textEl) textEl.innerText = step.text;
+};
+
+window.nextTutorialStep = function() {
+    currentTutorialStep++;
+    window.showTutorialStep();
+};
+
+window.endTutorial = function() {
+    document.querySelectorAll('.tutorial-highlight').forEach(el => el.classList.remove('tutorial-highlight'));
+    document.getElementById('tutorial-modal')?.classList.add('hidden');
+};
+
 function setupEventListeners() {
     const addEvt = (id, evt, func) => {
         const el = document.getElementById(id);
@@ -394,6 +452,13 @@ function setupEventListeners() {
     addEvt('btn-favorites', 'click', () => window.location.hash = '#favorites');
     addEvt('btn-shortlists-menu', 'click', () => window.location.hash = '#myshortlists');
     
+    // v0.40 - Tutorial Buttons
+    addEvt('btn-sidebar-tutorial', 'click', () => { 
+        document.getElementById('sidebar')?.classList.remove('visible'); 
+        window.startMainTutorial(); 
+    });
+    addEvt('btn-profile-tutorial', 'click', window.startProfileTutorial);
+
     addEvt('btn-sidebar-travel', 'click', () => {
         const drop = document.getElementById('travel-dropdown');
         drop?.classList.toggle('hidden');
@@ -518,7 +583,7 @@ function setupEventListeners() {
     });
 
     addEvt('btn-wipe-all', 'click', () => {
-        userProfile = { name: '', avatar: '' };
+        userProfile = { name: '', avatar: 'noavatar01.png' };
         userFavorites = []; userShortlists = {}; userEvents = []; userTravel = [];
         saveCurrentToBundle();
         const pName = document.getElementById('profile-name');
@@ -531,7 +596,7 @@ function setupEventListeners() {
     });
 
     addEvt('btn-wipe-profile-only', 'click', () => {
-        userProfile = { name: '', avatar: '' };
+        userProfile = { name: '', avatar: 'noavatar01.png' };
         saveCurrentToBundle();
         const pName = document.getElementById('profile-name');
         if(pName) pName.value = '';
@@ -569,15 +634,16 @@ function setupEventListeners() {
         searchInput.addEventListener('input', () => { recordUserInteraction(); window.location.hash=''; handleRouting(); });
     }
     
-    filterChips.forEach(chip => {
-        chip.addEventListener('click', (e) => {
+    // v0.40 - Dynamic click handling for filter chips (allows hijacked pills to work)
+    document.addEventListener('click', (e) => {
+        if(e.target.classList.contains('chip') && e.target.closest('#main-filters')) {
             recordUserInteraction();
-            filterChips.forEach(c => c.classList.remove('active'));
+            document.querySelectorAll('#main-filters .chip').forEach(c => c.classList.remove('active'));
             e.target.classList.add('active');
             activeFilter = e.target.getAttribute('data-filter');
             window.location.hash=''; 
             handleRouting();
-        });
+        }
     });
 }
 
@@ -611,7 +677,7 @@ function updateProfileDisplay() {
     if(userProfile.name) topName.innerText = userProfile.name;
     else topName.innerText = '👤';
 
-    if(userProfile.avatar) {
+    if(userProfile.avatar && userProfile.avatar !== 'noavatar01.png') {
         topAvatar.src = `Profile_images/${userProfile.avatar}`;
         if(topAvatarContainer) topAvatarContainer.style.display = 'block'; 
         else topAvatar.style.display = 'inline-block';
@@ -673,6 +739,19 @@ function applyFilters() {
             if(activeFilter === 'Darkroom') return v.Feature_Darkroom;
             if(activeFilter === 'Men Only') return v.Feature_Men_Only;
             if(activeFilter === 'Open Now') return v.Status === 'Live';
+            
+            // v0.40 - Hijacked/Repurposed Fields
+            if(activeFilter === 'Dresscode') return v.Feature_Dresscode;
+            if(activeFilter === 'Smoking Area') return v.Feature_Smoking_Area;
+            if(activeFilter === 'Cruising') return v.Feature_Cruise_Focused;
+            
+            if(['Queer', 'Sauna', 'Shop'].includes(activeFilter)) {
+                if(v.Feature_Playroom && typeof v.Feature_Playroom === 'string') {
+                    return v.Feature_Playroom.toLowerCase().includes(activeFilter.toLowerCase());
+                }
+                return false;
+            }
+            
             return true;
         });
     }
@@ -976,16 +1055,40 @@ function renderProfileAvatars() {
     });
 
     filteredData.forEach(avatar => {
+        // v0.40 - Hide default avatar unless specifically viewing All
+        if(activeAvatarCategory !== 'All' && avatar.file === 'noavatar01.png') return;
+
         const item = document.createElement('div');
         item.className = 'avatar-item';
-        if(userProfile.avatar === avatar.file) item.classList.add('selected');
         
-        item.innerHTML = `<img src="Profile_images/${avatar.file}" onerror="this.parentElement.style.display='none';" alt="${avatar.label}"><span>${avatar.label}</span>`;
+        let avToMatch = userProfile.avatar || 'noavatar01.png';
+        if(avToMatch === avatar.file) item.classList.add('selected');
+        
+        // v0.40 - Split tags into Blue (Age) and Red (Fetish) lines
+        let ageTags = []; let fetishTags = [];
+        let catArray = Array.isArray(avatar.category) ? avatar.category : (avatar.category ? [avatar.category] : []);
+        catArray.forEach(c => {
+            if(['Young', 'Prime', 'Mature'].includes(c)) ageTags.push(c);
+            else fetishTags.push(c);
+        });
+
+        let tagsHtml = '';
+        if(ageTags.length > 0) tagsHtml += `<span class="age-tag" style="color:var(--primary-blue); display:block; font-weight:bold;">${ageTags.join(', ')}</span>`;
+        if(fetishTags.length > 0) tagsHtml += `<span class="fetish-tag" style="color:var(--bright-red-orange); display:block;">${fetishTags.join(', ')}</span>`;
+        if(avatar.file === 'noavatar01.png') tagsHtml = `<span style="color:var(--label-grey); display:block;">Default</span>`;
+
+        item.innerHTML = `
+            <div class="avatar-image-wrap">
+                <img src="Profile_images/${avatar.file}" onerror="this.parentElement.style.display='none';" alt="${avatar.label}">
+            </div>
+            <span class="avatar-label">${avatar.label}</span>
+            <div class="avatar-tags">${tagsHtml}</div>
+        `;
         
         item.addEventListener('click', () => {
             if (item.classList.contains('selected')) {
                 document.querySelectorAll('.avatar-item').forEach(el => el.classList.remove('selected', 'hidden'));
-                userProfile.avatar = '';
+                userProfile.avatar = 'noavatar01.png';
             } else {
                 document.querySelectorAll('.avatar-item').forEach(el => {
                     el.classList.remove('selected');

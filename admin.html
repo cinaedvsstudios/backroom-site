@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Backroom Admin Dashboard - v0.38</title>
+    <title>Backroom Admin Dashboard - v0.40</title>
     <link href="https://fonts.googleapis.com/css2?family=Antonio:wght@400;700&family=Barlow+Condensed:wght@400;500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
     <style>
@@ -34,13 +34,6 @@
         .sidebar-review-list { padding: 0 20px 10px 35px; font-size: 0.85rem; display: flex; flex-direction: column; gap: 5px; }
         .sidebar-review-list div { cursor: pointer; color: var(--label-grey); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .sidebar-review-list div:hover { color: #fff; text-decoration: underline; }
-        
-        /* v0.38 - Redesigned Avatar Grid Style */
-        .avatar-admin-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 15px; margin-top: 15px; }
-        .avatar-admin-card { background: var(--panel-standard); padding: 15px; border-radius: var(--radius-card); border: 1px solid var(--panel-mid); display: flex; flex-direction: column; align-items: center; gap: 10px; }
-        .avatar-admin-card img { width: 80px; height: 160px; object-fit: cover; border-radius: 8px; border: 2px solid var(--primary-blue); }
-        .avatar-admin-card input, .avatar-admin-card select { width: 100%; background: var(--navy-grey); color: #fff; border: 1px solid var(--panel-mid); padding: 6px; border-radius: 4px; font-size: 0.85rem; }
-        .avatar-admin-controls { display: flex; width: 100%; gap: 5px; justify-content: space-between; margin-top: auto; }
         
         .preview-editable-cell { border: 1px dashed var(--label-grey); padding: 4px; min-width: 80px; }
         .preview-editable-cell:focus { background: rgba(44, 168, 212, 0.2); outline: 1px solid var(--primary-blue); }
@@ -145,7 +138,7 @@
 
     <div id="admin-shell" class="admin-layout hidden">
         <aside class="admin-sidebar">
-            <h2 class="display-font" style="color:var(--primary-blue); padding: 0 20px 20px; text-align:center;">BR ADMIN <span style="font-size: 0.9rem; color: var(--label-grey); margin-left: 5px;">v0.38</span></h2>
+            <h2 class="display-font" style="color:var(--primary-blue); padding: 0 20px 20px; text-align:center;">BR ADMIN <span style="font-size: 0.9rem; color: var(--label-grey); margin-left: 5px;">v0.40</span></h2>
             
             <div style="padding: 0 20px 15px; display:flex; gap:5px; justify-content:center;">
                 <button id="btn-text-size-down" class="btn secondary-btn" style="padding: 4px; font-size:0.9rem;">A-</button>
@@ -241,7 +234,16 @@
                         <button onclick="editorAction('h2')">H2</button>
                         <button onclick="editorAction('bold')" style="font-weight:bold;">B</button>
                         
-                        <button onclick="editorAction('color', '#2CA8D4')">🎨 Color</button>
+                        <div class="color-picker-wrap">
+                            <button onclick="this.nextElementSibling.classList.toggle('hidden')">🎨 Color</button>
+                            <div class="color-picker-dropdown hidden" style="flex-direction:row; padding:10px;">
+                                <div class="color-swatch" style="background: #2CA8D4;" onclick="editorAction('color', '#2CA8D4'); this.parentElement.classList.add('hidden');" title="Primary Blue"></div>
+                                <div class="color-swatch" style="background: #D55036;" onclick="editorAction('color', '#D55036'); this.parentElement.classList.add('hidden');" title="Bright Red"></div>
+                                <div class="color-swatch" style="background: #871300;" onclick="editorAction('color', '#871300'); this.parentElement.classList.add('hidden');" title="Dark Red"></div>
+                                <div class="color-swatch" style="background: #969CAE;" onclick="editorAction('color', '#969CAE'); this.parentElement.classList.add('hidden');" title="Text Light"></div>
+                                <div class="color-swatch" style="background: #FFFFFF;" onclick="editorAction('color', '#FFFFFF'); this.parentElement.classList.add('hidden');" title="White"></div>
+                            </div>
+                        </div>
                         
                         <button onclick="const url = prompt('Enter link URL:'); if(url) document.execCommand('createLink', false, url); saveEditorState();">🔗 Link</button>
                         
@@ -270,22 +272,60 @@
             </div>
 
             <div id="view-avatars" class="hidden" style="display:none; flex-direction:column; flex-grow:1;">
-                <div class="summary-bar" style="margin-bottom:0;">
+                <div class="summary-bar" style="margin-bottom:15px;">
                     <strong class="display-font" style="font-size:1.2rem; color:var(--primary-blue);">PROFILE AVATAR MANAGER</strong>
                     <div style="display:flex; gap:10px;">
                         <button id="btn-avatars-live" class="btn secondary-btn pill-btn" style="width:auto; padding:4px 15px;" onclick="loadAdminAvatars()">☁️ Load Live</button>
-                        <label class="btn secondary-btn pill-btn" style="cursor:pointer; width:auto; padding:4px 15px;">
-                            + Add New Avatar
-                            <input type="file" id="btn-add-avatar" class="hidden" accept=".png, .jpg, .jpeg">
-                        </label>
                         <button id="btn-download-avatars" class="btn primary-btn pill-btn" style="width:auto; padding:4px 15px;">💾 Download JSON</button>
                     </div>
                 </div>
                 
-                <div id="avatar-manager-list" class="avatar-admin-grid">
-                    </div>
-            </div>
+                <div style="background: var(--near-black); padding: 15px; border-radius: var(--radius-card); border: 1px solid var(--panel-mid); max-height: 400px; overflow-y: auto; margin-bottom: 20px;">
+                    <div id="avatar-manager-list" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); gap: 15px;">
+                        </div>
+                </div>
 
+                <div style="background: var(--panel-dark); padding: 20px; border-radius: var(--radius-card); border: 2px solid var(--primary-blue); display: flex; gap: 20px; align-items: stretch;">
+                    
+                    <div id="master-avatar-preview" style="width: 120px; height: 240px; background: #000; border-radius: 8px; border: 2px solid var(--label-grey); display: flex; justify-content: center; align-items: center; overflow: hidden; flex-shrink: 0;">
+                        <span class="meta-text" style="text-align: center;">Select an<br>Avatar</span>
+                    </div>
+
+                    <div style="flex-grow: 1; display: flex; flex-direction: column; gap: 15px;">
+                        <div style="display: flex; gap: 10px; align-items: center;">
+                            <strong style="color: var(--primary-blue); font-size: 1.1rem; width: 60px;">Name:</strong>
+                            <input type="text" id="master-avatar-label" class="form-input" style="margin:0;" disabled>
+                        </div>
+                        
+                        <div style="display: flex; gap: 10px; align-items: center;">
+                            <strong style="color: var(--primary-blue); font-size: 1.1rem; width: 60px;">Age:</strong>
+                            <select id="master-avatar-age" class="form-input" style="margin:0;" disabled>
+                                <option value="">None</option>
+                                <option value="Young">Young</option>
+                                <option value="Prime">Prime</option>
+                                <option value="Mature">Mature</option>
+                            </select>
+                        </div>
+                        
+                        <div style="display: flex; gap: 10px; align-items: center;">
+                            <strong style="color: var(--primary-blue); font-size: 1.1rem; width: 60px;">Tags:</strong>
+                            <input type="text" id="master-avatar-fetish" class="form-input" placeholder="e.g. Leather, Puppy" style="margin:0;" disabled>
+                        </div>
+                        
+                        <div style="display: flex; gap: 10px; margin-top: auto; padding-top: 15px; border-top: 1px solid var(--panel-mid);">
+                            <button id="master-btn-left" class="btn secondary-btn" style="flex:1;" disabled>◀ Shift Left</button>
+                            <button id="master-btn-right" class="btn secondary-btn" style="flex:1;" disabled>Shift Right ▶</button>
+                            <button id="master-btn-delete" class="btn" style="flex:1; background: var(--dark-red); color: #fff;" disabled>❌ Delete</button>
+                            
+                            <label class="btn primary-btn" style="flex:1; cursor:pointer; text-align: center;">
+                                + Upload New
+                                <input type="file" id="btn-add-avatar" class="hidden" accept=".png, .jpg, .jpeg">
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
         </main>
     </div>
 
