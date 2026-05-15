@@ -1,3 +1,15 @@
+// --- Safe Data Loading (Fixes the Age Gate Crash) ---
+function safeJSONParse(key, fallback) {
+    try {
+        const val = localStorage.getItem(key);
+        if (val === "undefined" || val === null || val === "") return fallback;
+        return JSON.parse(val) || fallback;
+    } catch(e) {
+        console.warn(`Local storage corruption detected for ${key}. Resetting to default.`);
+        return fallback;
+    }
+}
+
 // --- Application State ---
 const APP_VERSION = "v0.41";
 const APP_DATE = "May 20, 2026";
@@ -8,9 +20,9 @@ let selectedCardId = null;
 let currentTargetVenue = null; 
 let currentEventCityFilter = 'All';
 
-// Profile Data Structure (Save Game Style)
-let userProfile = JSON.parse(localStorage.getItem('br_profile')) || { name: '', avatar: 'noavatar01.png' };
-let savedProfiles = JSON.parse(localStorage.getItem('br_saved_profiles')) || {};
+// Profile Data Structure safely loaded
+let userProfile = safeJSONParse('br_profile', { name: '', avatar: 'noavatar01.png' });
+let savedProfiles = safeJSONParse('br_saved_profiles', {});
 
 // Globals swapped per profile
 let userFavorites = [];
@@ -18,7 +30,7 @@ let userShortlists = {};
 let userEvents = [];
 let userTravel = [];
 
-let importInfo = JSON.parse(localStorage.getItem('br_import_info')) || null;
+let importInfo = safeJSONParse('br_import_info', null);
 let avatarData = [];
 let activeAvatarCategory = 'All';
 
@@ -89,7 +101,6 @@ function getDistanceFromLatLonInKm(lat1, lon1, lat2, lon2) {
     return R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a))); 
 }
 
-// --- Backroom Syntax Parser ---
 function formatAboutText(text) {
     if (!text) return '';
     let lines = text.split('==');
@@ -132,7 +143,6 @@ function formatAboutText(text) {
     return out.join('\n');
 }
 
-// --- Social Icons Builder ---
 function buildSocialBar(venue) {
     let html = '<div class="social-bar" style="display:flex; gap:12px; margin-top:10px; align-items:center;">';
     const buildIcon = (url, iconName) => {
@@ -160,10 +170,10 @@ function loadActiveProfileData() {
         userTravel = bundle.travel || [];
         userProfile.avatar = bundle.avatar || 'noavatar01.png';
     } else {
-        userFavorites = JSON.parse(localStorage.getItem('br_favorites')) || [];
-        userShortlists = JSON.parse(localStorage.getItem('br_shortlists')) || {};
-        userEvents = JSON.parse(localStorage.getItem('br_events')) || [];
-        userTravel = JSON.parse(localStorage.getItem('br_travel')) || [];
+        userFavorites = safeJSONParse('br_favorites', []);
+        userShortlists = safeJSONParse('br_shortlists', {});
+        userEvents = safeJSONParse('br_events', []);
+        userTravel = safeJSONParse('br_travel', []);
         if(!userProfile.avatar) userProfile.avatar = 'noavatar01.png';
     }
 }
@@ -188,7 +198,7 @@ function saveCurrentToBundle() {
 
 function setupCriticalListeners() {
     const handleEnter = (e) => {
-        if(e.cancelable) e.preventDefault();
+        if(e && e.cancelable) e.preventDefault();
         localStorage.setItem('br_age_verified', 'true');
         ageGate?.classList.add('hidden');
         appShell?.classList.remove('hidden');
@@ -216,27 +226,25 @@ async function initApp() {
 
     try {
         const fetchJson = async (url) => {
-            const cacheBuster = '?v=' + new Date().getTime();
-            const res = await fetch(url + cacheBuster);
-            if (!res.ok) throw new Error(`HTTP ${res.status} on ${url}`);
+            const res = await fetch(url + '?v=' + new Date().getTime());
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
             return res.json();
         };
 
-        try { systemInfo = await fetchJson('system_info.json'); } catch(e) { console.warn("Using default system info."); }
-        try { designTheme = await fetchJson('design_theme.json'); } catch(e) { console.warn("Using default theme."); }
+        try { systemInfo = await fetchJson('system_info.json'); } catch(e) { }
+        try { designTheme = await fetchJson('design_theme.json'); } catch(e) { }
         try { events = await fetchJson('events.json'); } catch(e) { events = []; }
         try { 
             const avatarRes = await fetch('Profile_images/avatar_list.json?v=' + new Date().getTime());
             if(avatarRes.ok) avatarData = await avatarRes.json();
-        } catch(e) { console.warn("Avatar JSON missing"); avatarData = []; }
+        } catch(e) { avatarData = []; }
 
         try {
             venues = await fetchJson('listings.json');
         } catch (e) {
-            throw new Error(`Failed to load listings.json. Error: ${e.message}`);
+            throw new Error(`Failed to load listings.json`);
         }
 
-        applyTheme(); 
         populateSystemText(); 
         setupEventListeners(); 
         loadSavedLocation(); 
@@ -246,7 +254,7 @@ async function initApp() {
     } catch (error) {
         console.error("Data load failed:", error);
         const errText = document.getElementById('error-text');
-        if(errText) errText.innerText = `SYSTEM ERROR: ${error.message}. Click bypass below to view a dummy UI.`;
+        if(errText) errText.innerText = `SYSTEM ERROR: ${error.message}`;
         errorPanel?.classList.remove('hidden');
         
         const bypassContainer = document.getElementById('bypass-container');
@@ -260,44 +268,14 @@ async function initApp() {
                 if(e && e.cancelable) e.preventDefault();
                 errorPanel?.classList.add('hidden');
                 if(!systemInfo.labels) systemInfo = { labels: { rated_by_gays: "Rated by gays" } };
-                
-                venues = [{ 
-                    Venue_ID: "LOCAL-01", 
-                    Name: "Dummy GitHub Venue", 
-                    City: "Berlin", 
-                    Category: "Club", 
-                    Status: "Live", 
-                    Description: "If you see this on GitHub, it means listings.json failed to load. Check the red error message that appeared previously.", 
-                    Views: 420,
-                    Rating_Age_Range: 3,
-                    Rating_Size: 4,
-                    Rating_Popularity: 5,
-                    Feature_Darkroom: true
-                }]; 
-                if(!events) events = [];
-                
-                applyTheme(); populateSystemText(); setupEventListeners(); loadSavedLocation(); 
-                if(localStorage.getItem('br_age_verified') === 'true') {
-                    showToast("Backroom " + APP_VERSION);
-                    handleRouting();
-                }
+                venues = [{ Venue_ID: "LOCAL-01", Name: "Dummy Venue", City: "Berlin", Category: "Club", Status: "Live", Description: "Dummy description." }]; 
+                populateSystemText(); setupEventListeners(); loadSavedLocation(); 
+                if(localStorage.getItem('br_age_verified') === 'true') handleRouting();
             };
-
             bypassBtn.addEventListener('click', bypassLogic);
-            bypassBtn.addEventListener('touchstart', bypassLogic, {passive: false});
             bypassContainer.appendChild(bypassBtn);
         }
     }
-}
-
-function applyTheme() {
-    if(!designTheme.palette) return;
-    const r = document.documentElement, p = designTheme.palette;
-    r.style.setProperty('--bg-color', p.black); r.style.setProperty('--primary-blue', p.bright_cyan_blue);
-    r.style.setProperty('--near-black', p.near_black_grey); r.style.setProperty('--navy-grey', p.deep_navy_grey);
-    r.style.setProperty('--panel-dark', p.dark_panel_grey); r.style.setProperty('--panel-standard', p.standard_panel_grey);
-    r.style.setProperty('--panel-mid', p.mid_panel_grey); r.style.setProperty('--label-grey', p.muted_label_grey);
-    r.style.setProperty('--text-light', p.light_text_grey); r.style.setProperty('--bright-red-orange', p.bright_red_orange);
 }
 
 function populateSystemText() {
@@ -311,7 +289,8 @@ window.addEventListener('hashchange', handleRouting);
 
 function handleRouting() {
     const hash = window.location.hash;
-    const query = searchInput?.value.trim() || '';
+    const searchVal = searchInput?.value || '';
+    const query = searchVal.trim();
     
     document.querySelectorAll('.modal').forEach(m => m.classList.add('hidden'));
     contextHeader?.classList.add('hidden');
@@ -374,16 +353,16 @@ function renderDiscountsView() {
     document.getElementById('discounts-container')?.classList.remove('hidden');
 }
 
-// v0.41 - Tutorial System Functions with Red Border Highlight
 window.startMainTutorial = function() {
     tutorialSteps = [
         { target: 'search-input', text: 'Search by city, venue name, or vibe here.' },
         { target: 'main-filters', text: 'Swipe horizontally and tap these pills to filter venues by specific features like Dresscode or Sauna.' },
         { target: 'btn-location', text: 'Tap here to set your travel destination or lock in your GPS location.' },
-        { target: 'sidebar-hit-area', text: 'Tap the left edge (or swipe right) to open the main menu for shortlists, travel, and settings.' },
+        { target: 'btn-profile-menu', text: 'Tap your profile to switch avatars and save data.' },
         { target: null, text: 'You are all set! Tap a venue card to view full details.' }
     ];
     currentTutorialStep = 0;
+    document.getElementById('sidebar')?.classList.remove('visible');
     document.getElementById('tutorial-modal')?.classList.remove('hidden');
     window.showTutorialStep();
 };
@@ -433,14 +412,9 @@ function setupEventListeners() {
     };
 
     document.querySelectorAll('.close-modal-btn').forEach(btn => {
-        btn.addEventListener('click', (e) => e.target.closest('.modal')?.classList.add('hidden'));
+        btn.addEventListener('click', (e) => e.target.closest('.modal, .tutorial-float')?.classList.add('hidden'));
     });
     
-    addEvt('close-modal', 'click', () => {
-        window.history.pushState(null, '', window.location.pathname + window.location.search);
-        handleRouting();
-    });
-
     addEvt('btn-location', 'click', () => {
         if(window.location.hash !== '') window.location.hash = '';
         locModal?.classList.remove('hidden');
@@ -451,10 +425,7 @@ function setupEventListeners() {
     addEvt('btn-favorites', 'click', () => window.location.hash = '#favorites');
     addEvt('btn-shortlists-menu', 'click', () => window.location.hash = '#myshortlists');
     
-    addEvt('btn-sidebar-tutorial', 'click', () => { 
-        document.getElementById('sidebar')?.classList.remove('visible'); 
-        window.startMainTutorial(); 
-    });
+    addEvt('btn-sidebar-tutorial', 'click', window.startMainTutorial);
     addEvt('btn-profile-tutorial', 'click', window.startProfileTutorial);
 
     addEvt('btn-sidebar-travel', 'click', () => {
@@ -573,7 +544,7 @@ function setupEventListeners() {
         profileModal?.classList.add('hidden');
         updateProfileDisplay();
         showToast("Profile saved locally!");
-        if(window.location.hash === '' && searchInput?.value === '') renderWelcomeScreen();
+        if(window.location.hash === '' && (!searchInput || searchInput.value === '')) renderWelcomeScreen();
     });
 
     addEvt('btn-new-profile', 'click', () => {
@@ -632,7 +603,6 @@ function setupEventListeners() {
         searchInput.addEventListener('input', () => { recordUserInteraction(); window.location.hash=''; handleRouting(); });
     }
     
-    // Allows dynamically generated pills to work
     document.addEventListener('click', (e) => {
         if(e.target.classList.contains('chip') && e.target.closest('#main-filters')) {
             recordUserInteraction();
@@ -652,17 +622,16 @@ function initLeafletMap(lat, lng) {
     mapDiv.style.display = 'block';
     
     if (!leafletMap) {
-        leafletMap = L.map('loc-map').setView([lat, lng], 13);
-        L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            maxZoom: 19,
-            attribution: '© OpenStreetMap contributors'
-        }).addTo(leafletMap);
-        leafletMarker = L.marker([lat, lng]).addTo(leafletMap);
+        if(window.L) {
+            leafletMap = L.map('loc-map').setView([lat, lng], 13);
+            L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(leafletMap);
+            leafletMarker = L.marker([lat, lng]).addTo(leafletMap);
+        }
     } else {
         leafletMap.setView([lat, lng], 13);
         leafletMarker.setLatLng([lat, lng]);
     }
-    setTimeout(() => leafletMap.invalidateSize(), 150);
+    setTimeout(() => { if(leafletMap) leafletMap.invalidateSize(); }, 150);
 }
 
 function updateProfileDisplay() {
@@ -679,7 +648,6 @@ function updateProfileDisplay() {
         topAvatar.src = `Profile_images/${userProfile.avatar}`;
         if(topAvatarContainer) topAvatarContainer.style.display = 'block'; 
         else topAvatar.style.display = 'inline-block';
-        
         if(!userProfile.name) topName.style.display = 'none'; 
     } else {
         if(topAvatarContainer) topAvatarContainer.style.display = 'none';
@@ -705,19 +673,13 @@ function renderTravelDropdown() {
     });
 }
 
-// =================== part 2 ================
-// =================== part 2 ================
-
 function updateTravelSidebarHighlight() {
     const query = searchInput?.value.trim().toLowerCase() || '';
     const items = document.querySelectorAll('#travel-cities-list .submenu-item');
     items.forEach(item => {
         const spanText = item.querySelector('span').innerText.toLowerCase();
-        if(spanText === query && window.location.hash === '') {
-            item.classList.add('active-travel');
-        } else {
-            item.classList.remove('active-travel');
-        }
+        if(spanText === query && window.location.hash === '') item.classList.add('active-travel');
+        else item.classList.remove('active-travel');
     });
 }
 
@@ -728,53 +690,38 @@ window.removeTravel = function(city) {
     else renderTravelDropdown();
 }
 
-// v0.41 - Dynamic Tags Generator based on current results
 function renderDynamicFilters(baseVenues) {
     const filterContainer = document.getElementById('main-filters');
     if (!filterContainer) return;
 
     const masterList = ["Cruise", "Darkroom", "Fetish", "Leather", "Rubber", "Gear", "Sportswear", "Sneakers", "Naked", "Underwear", "Dresscode", "Men Only", "Bear", "Mature", "Young Crowd", "Queer", "Drag", "Karaoke", "Pop/Dance", "Techno", "Sauna", "Puppy"];
-    const featureMap = {
-        "Feature_Darkroom": "Darkroom",
-        "Feature_Men_Only": "Men Only",
-        "Feature_Dresscode": "Dresscode",
-        "Feature_Smoking_Area": "Smoking Area",
-        "Feature_Cruise_Focused": "Cruising",
-        "Feature_Dancefloor": "Dancefloor",
-        "Feature_Sauna": "Sauna"
-    };
+    const featureMap = { "Feature_Darkroom": "Darkroom", "Feature_Men_Only": "Men Only", "Feature_Dresscode": "Dresscode", "Feature_Smoking_Area": "Smoking Area", "Feature_Cruise_Focused": "Cruising", "Feature_Dancefloor": "Dancefloor", "Feature_Sauna": "Sauna" };
 
     let availableTags = new Set();
     baseVenues.forEach(v => {
-        if (v.Vibe_Tags) {
-            masterList.forEach(tag => {
-                if (v.Vibe_Tags.toLowerCase().includes(tag.toLowerCase())) availableTags.add(tag);
-            });
-        }
-        Object.keys(featureMap).forEach(key => {
-            if (v[key]) availableTags.add(featureMap[key]);
-        });
+        if (v.Vibe_Tags) masterList.forEach(tag => { if (v.Vibe_Tags.toLowerCase().includes(tag.toLowerCase())) availableTags.add(tag); });
+        Object.keys(featureMap).forEach(key => { if (v[key]) availableTags.add(featureMap[key]); });
     });
 
-    let html = `<button class="chip pill-btn ${activeFilter === 'All' ? 'active' : ''}" data-filter="All">All</button>
+    let html = `<div class="filter-chips"><button class="chip pill-btn ${activeFilter === 'All' ? 'active' : ''}" data-filter="All">All</button>
                 <button class="chip pill-btn ${activeFilter === 'Open Now' ? 'active' : ''}" data-filter="Open Now">Open Now</button>`;
 
     const orderedTags = masterList.concat(Object.values(featureMap)).filter((item, pos, self) => self.indexOf(item) === pos);
     orderedTags.forEach(tag => {
-        if (availableTags.has(tag)) {
-            html += `<button class="chip pill-btn ${activeFilter === tag ? 'active' : ''}" data-filter="${tag}">${tag}</button>`;
-        }
+        if (availableTags.has(tag)) html += `<button class="chip pill-btn ${activeFilter === tag ? 'active' : ''}" data-filter="${tag}">${tag}</button>`;
     });
 
+    html += `</div>`;
     filterContainer.innerHTML = html;
 }
 
 function applyFilters() {
-    const query = searchInput?.value || '';
+    const searchVal = searchInput?.value || '';
+    const query = searchVal.trim();
     let baseVenues = venues || [];
     selectedCardId = null;
 
-    if(query.trim() !== '') {
+    if(query !== '') {
         baseVenues = baseVenues.filter(v => fuzzyMatch(v.Name + " " + v.Description + " " + (v.Vibe_Tags||'') + " " + v.City, query));
     }
 
@@ -784,8 +731,6 @@ function applyFilters() {
     if(activeFilter !== 'All') {
         filteredVenues = filteredVenues.filter(v => {
             if(activeFilter === 'Open Now') return v.Status === 'Live';
-            
-            // Feature Booleans
             if(activeFilter === 'Darkroom') return v.Feature_Darkroom;
             if(activeFilter === 'Men Only') return v.Feature_Men_Only;
             if(activeFilter === 'Dresscode') return v.Feature_Dresscode;
@@ -793,11 +738,7 @@ function applyFilters() {
             if(activeFilter === 'Cruising') return v.Feature_Cruise_Focused;
             if(activeFilter === 'Dancefloor') return v.Feature_Dancefloor;
             if(activeFilter === 'Sauna') return v.Feature_Sauna;
-            
-            // Vibe_Tags
-            if(v.Vibe_Tags && typeof v.Vibe_Tags === 'string') {
-                return v.Vibe_Tags.toLowerCase().includes(activeFilter.toLowerCase());
-            }
+            if(v.Vibe_Tags && typeof v.Vibe_Tags === 'string') return v.Vibe_Tags.toLowerCase().includes(activeFilter.toLowerCase());
             return false;
         });
     }
@@ -848,11 +789,11 @@ function toggleFavorite(id, btnElement) {
     const index = userFavorites.indexOf(id);
     if(index > -1) {
         userFavorites.splice(index, 1);
-        btnElement?.classList.remove('active-star');
+        if(btnElement) btnElement.classList.remove('active-star');
         showToast("Removed from Favourites");
     } else {
         userFavorites.push(id);
-        btnElement?.classList.add('active-star');
+        if(btnElement) btnElement.classList.add('active-star');
         showToast("Added to Favourites ⚜️");
     }
     saveCurrentToBundle();
@@ -864,11 +805,11 @@ window.toggleEventFavorite = function(eventId, btnElement, isRemovalView = false
     if(index > -1) {
         if(isRemovalView && !confirm("Remove this event from your list?")) return;
         userEvents.splice(index, 1);
-        btnElement?.classList.remove('active-star');
+        if(btnElement) btnElement.classList.remove('active-star');
         if(!isRemovalView) showToast("Removed from Events");
     } else {
         userEvents.push(eventId);
-        btnElement?.classList.add('active-star');
+        if(btnElement) btnElement.classList.add('active-star');
         showToast("Saved to 💖 Events");
     }
     saveCurrentToBundle();
@@ -1067,27 +1008,20 @@ function renderProfileAvatars() {
     }
 
     let filterContainer = document.getElementById('avatar-filters');
-    if (!filterContainer) {
-        filterContainer = document.createElement('div');
-        filterContainer.id = 'avatar-filters';
-        filterContainer.style.display = 'flex';
-        filterContainer.style.gap = '8px';
-        filterContainer.style.marginBottom = '15px';
-        filterContainer.style.overflowX = 'auto';
-        grid.parentNode.insertBefore(filterContainer, grid);
-    }
     
     const cats = ['All', 'Young', 'Prime', 'Mature', 'Ink', 'Leather', 'Rubber', 'Puppy'];
-    filterContainer.innerHTML = '';
-    cats.forEach(c => {
-        const btn = document.createElement('button');
-        btn.className = `chip pill-btn ${activeAvatarCategory === c ? 'active' : ''}`;
-        btn.style.padding = '4px 10px';
-        btn.style.fontSize = '0.85rem';
-        btn.innerText = c;
-        btn.onclick = () => { activeAvatarCategory = c; renderProfileAvatars(); };
-        filterContainer.appendChild(btn);
-    });
+    if(filterContainer) {
+        filterContainer.innerHTML = '';
+        cats.forEach(c => {
+            const btn = document.createElement('button');
+            btn.className = `chip pill-btn ${activeAvatarCategory === c ? 'active' : ''}`;
+            btn.style.padding = '4px 10px';
+            btn.style.fontSize = '0.85rem';
+            btn.innerText = c;
+            btn.onclick = () => { activeAvatarCategory = c; renderProfileAvatars(); };
+            filterContainer.appendChild(btn);
+        });
+    }
 
     const filteredData = activeAvatarCategory === 'All' ? avatarData : avatarData.filter(a => {
         if (Array.isArray(a.category)) return a.category.includes(activeAvatarCategory);
@@ -1095,7 +1029,6 @@ function renderProfileAvatars() {
     });
 
     filteredData.forEach(avatar => {
-        // Hide default avatar unless specifically viewing All
         if(activeAvatarCategory !== 'All' && avatar.file === 'noavatar01.png') return;
 
         const item = document.createElement('div');
@@ -1104,7 +1037,6 @@ function renderProfileAvatars() {
         let avToMatch = userProfile.avatar || 'noavatar01.png';
         if(avToMatch === avatar.file) item.classList.add('selected');
         
-        // v0.41 - Removed tagsHtml to only show avatar names
         item.innerHTML = `
             <div class="avatar-image-wrap">
                 <img src="Profile_images/${avatar.file}" onerror="this.parentElement.style.display='none';" alt="${avatar.label}">
@@ -1116,6 +1048,8 @@ function renderProfileAvatars() {
             if (item.classList.contains('selected')) {
                 document.querySelectorAll('.avatar-item').forEach(el => el.classList.remove('selected', 'hidden'));
                 userProfile.avatar = 'noavatar01.png';
+                const mainAv = document.getElementById('top-profile-avatar-large');
+                if(mainAv) mainAv.src = 'Profile_images/noavatar01.png';
             } else {
                 document.querySelectorAll('.avatar-item').forEach(el => {
                     el.classList.remove('selected');
@@ -1123,6 +1057,8 @@ function renderProfileAvatars() {
                 });
                 item.classList.add('selected');
                 userProfile.avatar = avatar.file;
+                const mainAv = document.getElementById('top-profile-avatar-large');
+                if(mainAv) mainAv.src = `Profile_images/${avatar.file}`;
                 showToast("Click the avatar again to go back to the list");
             }
         });
@@ -1168,8 +1104,8 @@ function renderProfileStats() {
     });
     const shortNames = Object.keys(userShortlists);
     
-    html += createStatHtml('Saved Locations', travelCount, userTravel, '<img src="location.png" style="width:18px;">');
-    html += createStatHtml('Shortlists', shortCount, shortNames, '<img src="shortlist.png" style="width:18px;">');
+    html += createStatHtml('Saved Locations', travelCount, userTravel, '📍');
+    html += createStatHtml('Shortlists', shortCount, shortNames, '📑');
     html += createStatHtml('Saved Events', eventCount, eventNames, '💖');
     html += createStatHtml('Saved Venues', favCount, favNames, '⚜️');
     
@@ -1177,9 +1113,13 @@ function renderProfileStats() {
     container.innerHTML = html;
 }
 
-function openProfileMenu() {
+window.openProfileMenu = function() {
     const pName = document.getElementById('profile-name');
     if(pName) pName.value = userProfile.name || '';
+    
+    const mainAv = document.getElementById('top-profile-avatar-large');
+    if(mainAv) mainAv.src = `Profile_images/${userProfile.avatar || 'noavatar01.png'}`;
+
     renderProfileAvatars();
     renderProfileStats();
     profileModal?.classList.remove('hidden');
@@ -1234,7 +1174,7 @@ function exportUserData() {
         shortlists: userShortlists,
         events: userEvents,
         travel: userTravel,
-        location: JSON.parse(localStorage.getItem('br_location') || 'null')
+        location: safeJSONParse('br_location', null)
     };
     const blob = new Blob([JSON.stringify(data, null, 2)], {type: 'application/json'});
     const url = URL.createObjectURL(blob);
@@ -1253,9 +1193,9 @@ function importUserData(e) {
             const data = JSON.parse(event.target.result);
             if(data.profile) { userProfile = data.profile; localStorage.setItem('br_profile', JSON.stringify(userProfile)); }
             if(data.saved_profiles) { savedProfiles = data.saved_profiles; localStorage.setItem('br_saved_profiles', JSON.stringify(savedProfiles)); }
-            if(data.favorites) { userFavorites = data.favorites; saveUserFavorites(); }
-            if(data.shortlists) { userShortlists = data.shortlists; saveUserShortlists(); }
-            if(data.events) { userEvents = data.events; saveUserEvents(); }
+            if(data.favorites) { userFavorites = data.favorites; localStorage.setItem('br_favorites', JSON.stringify(userFavorites)); }
+            if(data.shortlists) { userShortlists = data.shortlists; localStorage.setItem('br_shortlists', JSON.stringify(userShortlists)); }
+            if(data.events) { userEvents = data.events; localStorage.setItem('br_events', JSON.stringify(userEvents)); }
             if(data.travel) { userTravel = data.travel; localStorage.setItem('br_travel', JSON.stringify(userTravel)); }
             if(data.location) { localStorage.setItem('br_location', JSON.stringify(data.location)); updateLocationDisplay(data.location); }
             
@@ -1324,7 +1264,7 @@ function renderListings(data, isContextView = false) {
             if (nearest && minDist !== Infinity) {
                 const distRounded = Math.round(minDist);
                 emptyHtml = `<p style="text-align:center; color:var(--label-grey); margin-top:20px; width: 100%; grid-column: 1 / -1;">
-                    <img src="location.png" style="width:40px; margin-bottom:10px;"><br>
+                    <span style="font-size: 2rem;">📍</span><br>
                     <span style="color: var(--bright-red-orange); font-family: 'Antonio', sans-serif; font-size: 1.5rem; text-transform: uppercase;">No venues found nearby</span><br><br>
                     <a href="javascript:void(0)" onclick="const s = document.getElementById('search-input'); if(s) s.value='${nearest.City}'; applyFilters();" style="color:var(--primary-blue); font-weight:bold; font-size:1.1rem; text-decoration:underline;">
                         Closest venue is ${distRounded} km away in ${nearest.City}.<br>Click here to load ${nearest.City}.
@@ -1354,11 +1294,11 @@ function renderListings(data, isContextView = false) {
         
         card.innerHTML = `
             <div class="card-image-wrapper">
-                <img class="venue-image centered-image" src="${baseImageSrc}" onerror="this.src='placeholder_venue.jpg'" data-id="${venue.Venue_ID}" data-index="1" title="Tap to see next photo">
+                <img class="centered-image venue-image" src="${baseImageSrc}" onerror="this.src='placeholder_venue.jpg'" data-id="${venue.Venue_ID}" data-index="1" title="Tap to see next photo">
             </div>
             <div class="card-inner-content">
                 <div class="card-header">
-                    <div><h3 class="card-title display-font">${venue.Name}</h3><div class="card-meta"><img src="location.png" style="width:14px; vertical-align:middle;"> ${venue.City}</div></div>
+                    <div><h3 class="card-title display-font">${venue.Name}</h3><div class="card-meta">📍 ${venue.City}</div></div>
                     <div class="status-badge ${venue.Status.toLowerCase()}">${venue.Status.toUpperCase()}</div>
                 </div>
                 <div class="card-about">${shortDesc}</div>
@@ -1370,7 +1310,8 @@ function renderListings(data, isContextView = false) {
             </div>
         `;
         
-        handleImageCarousel(card.querySelector('.venue-image'));
+        const imgEl = card.querySelector('.venue-image');
+        if(imgEl) handleImageCarousel(imgEl);
 
         card.addEventListener('click', (e) => { 
             if(e.target.classList.contains('star-btn')) {
@@ -1398,15 +1339,11 @@ function getRatingCells(val, type) {
         let asset = '';
         
         let iconSize = '26px';
-        if (type === 'Age' || type === 'Popularity') {
-            iconSize = '31.2px';
-        }
+        if (type === 'Age' || type === 'Popularity') iconSize = '31.2px';
         
-        if (type === 'Size') {
-            asset = `<img src="Emoji/size0${i}.png" style="width:${iconSize}; height:${iconSize}; vertical-align:middle; object-fit:contain;">`;
-        } else if (type === 'Age') {
-            asset = `<img src="Emoji/age0${i}.png" style="width:${iconSize}; height:${iconSize}; vertical-align:middle; object-fit:contain;">`;
-        } else {
+        if (type === 'Size') asset = `<img src="Emoji/size0${i}.png" style="width:${iconSize}; height:${iconSize}; vertical-align:middle; object-fit:contain;">`;
+        else if (type === 'Age') asset = `<img src="Emoji/age0${i}.png" style="width:${iconSize}; height:${iconSize}; vertical-align:middle; object-fit:contain;">`;
+        else {
             const map = { 'General': 'eggplant', 'Darkroom': 'water', 'Cost': 'money', 'Location': 'peach', 'Popularity': 'busy' };
             const prefix = map[type] || 'eggplant';
             asset = `<img src="Emoji/${prefix}0${i}.png" style="width:${iconSize}; height:${iconSize}; vertical-align:middle; object-fit:contain;">`;
@@ -1440,7 +1377,6 @@ function openVenueModal(venue) {
         <div class="feature-chips" style="margin-top: 15px;">${featureHtml}</div>
     `;
     
-    // v0.41 - Renamed General to Overall, moved to top
     const ratingTypes = [
         { label: 'Overall', key: 'Rating_General', type: 'General' },
         { label: 'Age Range', key: 'Rating_Age_Range', type: 'Age' },
@@ -1464,7 +1400,6 @@ function openVenueModal(venue) {
     
     ratingTypes.forEach(r => {
         const val = venue[r.key];
-        // v0.41 - NA check using grid-column span 5
         if(val === 'NA' || val === 'N/A' || val == null) {
             ratingsTableHtml += `
                 <div style="font-size: 1rem; color: var(--text-light); text-transform: uppercase; letter-spacing: 0.5px; text-align: left; padding-right: 10px;">${r.label}</div>
@@ -1523,7 +1458,7 @@ function openVenueModal(venue) {
         <div class="modal-top-split">
             <div class="modal-left-col">
                 <div class="modal-image-container">
-                    <img id="modal-venue-image" class="venue-image centered-image" src="Venue_images/${venue.Venue_ID}-01.jpg" onerror="this.src='placeholder_venue.jpg'" data-id="${venue.Venue_ID}" data-index="1" title="Tap for next image">
+                    <img id="modal-venue-image" class="centered-image" src="Venue_images/${venue.Venue_ID}-01.jpg" onerror="this.src='placeholder_venue.jpg'" data-id="${venue.Venue_ID}" data-index="1" title="Tap for next image" style="cursor: pointer;">
                 </div>
                 
                 <div class="desktop-stats">
@@ -1535,7 +1470,7 @@ function openVenueModal(venue) {
 
             <div class="modal-right-col">
                 <div style="display:flex; align-items:center; gap:8px; margin-bottom:10px;">
-                    <button id="btn-map" class="btn secondary-btn pill-btn" style="padding: 2px 8px; font-size: 0.75rem; width: auto; flex-shrink: 0;">🗺️ Directions</button>
+                    <button id="btn-map" class="btn secondary-btn pill-btn" style="padding: 4px 10px; font-size: 0.85rem; width: auto; flex-shrink: 0;">🗺️ Directions</button>
                     <p class="meta-text" style="margin:0;">${venue.Address || ''}</p>
                 </div>
                 
@@ -1547,9 +1482,9 @@ function openVenueModal(venue) {
             </div>
         </div>
         
-        <div class="full-width-about" style="background-color: var(--near-black); padding: 20px; border-radius: var(--radius-card); margin-bottom: 15px; margin-top: 15px;">
+        <div class="full-width-about">
             <h3 class="display-font" style="color: var(--primary-blue); margin-bottom:10px;">ABOUT</h3>
-            <div style="color: #fff; line-height: 1.5;">${formatAboutText(venue.Description)}</div>
+            <div style="color: #fff; line-height: 1.5; font-size: 1.05rem;">${formatAboutText(venue.Description)}</div>
         </div>
         
         ${eventsHtml}
@@ -1569,13 +1504,11 @@ function openVenueModal(venue) {
     if(shortBtn) {
         const isShortlisted = Object.values(userShortlists).some(list => list.includes(venue.Venue_ID));
         shortBtn.className = `icon-btn fav-btn ${isShortlisted ? 'active-star' : ''}`;
-        shortBtn.innerHTML = '<img src="shortlist.png" style="width:24px;">';
         shortBtn.onclick = () => promptAddToShortlist(venue);
     }
     
     const shareBtn = document.getElementById('modal-share');
     if(shareBtn) {
-        shareBtn.innerHTML = '<img src="link.png" style="width:24px;">';
         shareBtn.onclick = () => shareURL(`${window.location.origin}${window.location.pathname}?venue=${venue.Venue_ID}#venue=${venue.Venue_ID}`, venue.Name);
     }
     
@@ -1585,11 +1518,8 @@ function openVenueModal(venue) {
             const rawAddress = venue.Address || venue.City || venue.Name || '';
             const queryPlus = encodeURIComponent(rawAddress.trim()).replace(/%20/g, '+');
             const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
-            if (isIOS) {
-                window.open(`http://maps.apple.com/?q=${queryPlus}`, '_blank');
-            } else {
-                window.open(`https://maps.google.com/?q=${queryPlus}`, '_blank');
-            }
+            if (isIOS) window.open(`http://maps.apple.com/?q=${queryPlus}`, '_blank');
+            else window.open(`https://maps.google.com/?q=${queryPlus}`, '_blank');
         };
     }
 
@@ -1648,9 +1578,8 @@ function clearLocation() {
 }
 
 function loadSavedLocation() {
-    const saved = localStorage.getItem('br_location');
-    if(saved) {
-        const loc = JSON.parse(saved);
+    const loc = safeJSONParse('br_location', null);
+    if(loc) {
         const cInp = document.getElementById('loc-country');
         const ciInp = document.getElementById('loc-city');
         const pInp = document.getElementById('loc-postcode');
