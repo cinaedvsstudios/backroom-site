@@ -218,6 +218,9 @@ select.filter-header-select:focus, select.cell-edit:focus { border-color: var(--
 }
 
 /* Base Profile Elements */
+/* V0.56: 30% Avatar Preview Size Increase */
+#profile-avatar-preview { width: 136px !important; height: 273px !important; }
+
 #avatar-filters { display: flex; justify-content: center; flex-wrap: wrap; gap: 8px; margin-bottom: 15px; width: 100%; box-sizing: border-box; }
 .avatar-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; max-height: 400px; overflow-y: auto; overflow-x: hidden; padding: 15px; background: var(--bg-color); border-radius: var(--radius-card); box-sizing: border-box; width: 100%; }
 
@@ -279,6 +282,12 @@ select.filter-header-select:focus, select.cell-edit:focus { border-color: var(--
     .mobile-stats { display: block; margin-bottom: 15px; }
 }
 
+@keyframes mobile-sidebar-pulse {
+    0% { border-left: 3px solid var(--primary-blue); box-shadow: inset 5px 0 10px rgba(44, 168, 212, 0.6); }
+    50% { border-left: 3px solid rgba(44, 168, 212, 0.3); box-shadow: inset 15px 0 20px rgba(44, 168, 212, 0.1); }
+    100% { border-left: 3px solid var(--primary-blue); box-shadow: inset 5px 0 10px rgba(44, 168, 212, 0.6); }
+}
+
 @media (max-width: 768px) {
     #top-bar { display: grid; grid-template-columns: 1fr auto; grid-template-rows: auto auto; gap: 10px; padding: 10px; }
     .top-bar-left { grid-column: 1; grid-row: 1; display: flex; align-items: center; }
@@ -290,9 +299,10 @@ select.filter-header-select:focus, select.cell-edit:focus { border-color: var(--
     .top-btn .btn-text { display: none; }
     .top-btn { padding: 8px 12px; }
     
+    /* V0.56: Mobile Sidebar pulsing hint added */
     #sidebar { position: fixed; left: -220px; top: 0; height: 100vh; z-index: 500; transition: left 0.3s ease; border-left: none; border-right: 2px solid var(--primary-blue); box-shadow: 2px 0 15px rgba(44, 168, 212, 0.4); }
     #sidebar.visible { left: 0; }
-    #sidebar-hit-area { position: fixed; left: 0; top: 0; width: 15px; height: 100vh; z-index: 499; }
+    #sidebar-hit-area { position: fixed; left: 0; top: 0; width: 15px; height: 100vh; z-index: 499; animation: mobile-sidebar-pulse 2s infinite; }
     .sidebar-text { display: inline-block; margin-left: 10px; font-size: 1.1rem; }
     .sidebar-footer { display: none; }
 
@@ -303,6 +313,9 @@ select.filter-header-select:focus, select.cell-edit:focus { border-color: var(--
     .welcome-card { flex-direction: column; align-items: center; text-align: center; }
 
     .avatar-grid { grid-template-columns: repeat(3, 1fr); max-height: 350px; }
+
+    /* V0.56: Strict 1-Column mobile overflow lock */
+    #results-container { grid-template-columns: 1fr !important; overflow-x: hidden; width: 100%; box-sizing: border-box; }
 }
 
 /* Admin Specific */

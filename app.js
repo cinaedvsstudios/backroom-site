@@ -1,6 +1,6 @@
 // --- Application State ---
-const APP_VERSION = "v0.55";
-const APP_DATE = "May 22, 2026";
+const APP_VERSION = "v0.56";
+const APP_DATE = "May 2026";
 
 let systemInfo = {}, designTheme = {}, venues = [], events = [];
 let activeFilter = 'All';
@@ -310,7 +310,99 @@ function populateSystemText() {
 
 window.addEventListener('hashchange', handleRouting);
 
+// --- V0.56: SHARED LIST ROUTING & ONBOARDING ---
+function checkSharedListRoute() {
+    const hash = window.location.hash;
+    if (hash.startsWith('#sharedlist?')) {
+        const urlParams = new URLSearchParams(hash.substring(12)); // skip '#sharedlist?'
+        const listName = urlParams.get('title') || 'Shared List';
+        const listEmoji = urlParams.get('emoji') || '🔥';
+        const venueIds = (urlParams.get('ids') || '').split(',').filter(id => id);
+
+        renderSharedListView(listName, listEmoji, venueIds);
+        return true; 
+    }
+    return false;
+}
+
+function renderSharedListView(name, emoji, ids) {
+    // Hide standard UI
+    const searchInputEl = document.getElementById('search-input');
+    if(searchInputEl) searchInputEl.style.display = 'none';
+    const mainFilters = document.getElementById('main-filters');
+    if(mainFilters) mainFilters.style.display = 'none';
+    contextHeader?.classList.add('hidden');
+    
+    if(!resultsContainer) return;
+    resultsContainer.innerHTML = ''; // Clear current
+    
+    // Create the Shared Header
+    const sharedHeader = document.createElement('div');
+    sharedHeader.className = 'shared-list-header';
+    sharedHeader.style.cssText = 'text-align: center; padding: 30px 15px; margin-bottom: 20px; grid-column: 1 / -1;';
+    sharedHeader.innerHTML = `
+        <h1 style="font-size: 3rem; margin-bottom: 10px; color: #fff;">${emoji} ${name}</h1>
+        <p style="color: var(--text-light); margin-bottom: 20px;">Someone shared this Backroom list with you!</p>
+        <div style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
+            <button id="btn-save-shared" class="btn primary-btn pill-btn" style="padding: 10px 20px;">💾 Save List to Profile</button>
+            <button id="btn-open-site" class="btn secondary-btn pill-btn" style="padding: 10px 20px;">🌍 Open Main Site</button>
+        </div>
+        <p style="font-size: 0.85rem; color: var(--label-grey); margin-top: 15px;">Saving will add this to your shortlists.</p>
+    `;
+    
+    resultsContainer.appendChild(sharedHeader);
+
+    // Render the specific cards
+    const matchingVenues = venues.filter(v => ids.includes(v.Venue_ID));
+    if (matchingVenues.length === 0) {
+        resultsContainer.innerHTML += `<p style="text-align:center; color: var(--label-grey); grid-column: 1 / -1;">No active venues found in this list.</p>`;
+    } else {
+        // Temporarily render just these venues
+        matchingVenues.forEach(v => {
+            // We use the existing renderListings logic to build the cards properly
+            // But we do it one by one or create a temp array
+        });
+        // Better approach: use renderListings to append to innerHTML, but we already wiped it.
+        // Let's create a temporary div, run renderListings into it, and move the children.
+        const tempContainer = document.createElement('div');
+        const oldResultsContainer = resultsContainer;
+        // overriding global just for rendering
+        const backupContainerHTML = resultsContainer.innerHTML;
+        resultsContainer.innerHTML = '';
+        renderListings(matchingVenues, true);
+        const renderedCards = resultsContainer.innerHTML;
+        resultsContainer.innerHTML = backupContainerHTML + renderedCards;
+    }
+
+    // Button Listeners
+    document.getElementById('btn-save-shared').addEventListener('click', () => {
+        // Silently create a profile if one doesn't exist
+        if (!userProfile.name) {
+            userProfile.name = 'New Profile';
+            userProfile.avatar = avatarData[0]?.file || 'noavatar01.png';
+            localStorage.setItem('br_profile', JSON.stringify(userProfile));
+        }
+        
+        // Save the list
+        userShortlists[name] = ids;
+        userShortlistEmojis[name] = emoji;
+        saveCurrentToBundle();
+        showToast("List saved to your Shortlists!");
+    });
+
+    document.getElementById('btn-open-site').addEventListener('click', () => {
+        const searchInputEl = document.getElementById('search-input');
+        if(searchInputEl) searchInputEl.style.display = '';
+        const mainFilters = document.getElementById('main-filters');
+        if(mainFilters) mainFilters.style.display = '';
+        window.location.hash = ''; // Clear hash
+        window.location.reload(); // Quickest way to restore standard UI state
+    });
+}
+
 function handleRouting() {
+    if (checkSharedListRoute()) return; // V0.56 Shared List Intercept
+
     const hash = window.location.hash;
     const query = searchInput?.value.trim() || '';
     
@@ -381,6 +473,17 @@ let currentTutorialStepIndex = 0;
 let currentTutorialType = '';
 
 function startTutorial(type) {
+    // V0.56 Mobile Split Logic Inject
+    if (window.innerWidth < 768) {
+        if (type === 'general') {
+            const searchInputEl = document.getElementById('search-input');
+            if(searchInputEl) {
+                searchInputEl.value = "Berlin";
+                applyFilters(); 
+            }
+        }
+    }
+
     currentTutorialType = type;
     currentTutorialStepIndex = 0;
     if (type === 'general') {
@@ -402,13 +505,13 @@ function startTutorial(type) {
         ];
     } else if (type === 'profile') {
         currentTutorialSteps = [
-            { target: '#profile-name', text: 'Enter your custom profile name here.' },
-            { target: '#avatar-grid', text: 'Choose your avatar from the grid.' },
-            { target: '#avatar-filters', text: 'Select filter tags to find the perfect avatar.' },
-            { target: '#btn-save-profile', text: 'Click this to save your current active profile to this browser.' },
-            { target: '#profile-switcher', text: 'Switch between your saved profiles easily.' },
-            { target: '#btn-new-profile', text: 'Create a new profile from scratch.' },
-            { target: '#btn-profile-download-data', text: 'You are in control of your own data. We do not store any information online so there is no risk of data breaches. If you clear your cache in your browser everything you have saved will be gone unless you download your data and then import it all. We recommend you store this on your online Google Drive or Apple Drive.' }
+            { target: '#profile-name', text: 'Enter your custom profile name here.', action: 'mob_tab_1' },
+            { target: '#avatar-grid', text: 'Choose your avatar from the grid.', action: 'mob_tab_2' },
+            { target: '#avatar-filters', text: 'Select filter tags to find the perfect avatar.', action: 'mob_tab_2' },
+            { target: '#btn-save-profile', text: 'Click this to save your current active profile to this browser.', action: 'mob_tab_3' },
+            { target: '#profile-switcher', text: 'Switch between your saved profiles easily.', action: 'mob_tab_3' },
+            { target: '#btn-new-profile', text: 'Create a new profile from scratch.', action: 'mob_tab_3' },
+            { target: '#btn-profile-download-data', text: 'You are in control of your own data. We do not store any information online so there is no risk of data breaches. If you clear your cache in your browser everything you have saved will be gone unless you download your data and then import it all. We recommend you store this on your online Google Drive or Apple Drive.', action: 'mob_tab_3' }
         ];
     }
     
@@ -431,11 +534,25 @@ function showNextTutorialStep() {
     const step = currentTutorialSteps[currentTutorialStepIndex];
     
     if(step.action === 'open_venue') {
-        if(selectedCardId) {
+        // V0.56 Auto-open LAB on Mobile
+        if (window.innerWidth < 768) {
+            const labCard = venues.find(x => x.Venue_ID === 'BER-LAB-01');
+            if(labCard) {
+                openVenueModal(labCard);
+            }
+        } else if(selectedCardId) {
             const v = venues.find(x => x.Venue_ID === selectedCardId);
             if(v) openVenueModal(v);
         } else if(venues.length > 0) {
             openVenueModal(venues[0]); 
+        }
+    }
+
+    // V0.56 Mobile Profile Tab Auto-Switch
+    if (window.innerWidth < 768 && step.action && step.action.startsWith('mob_tab_')) {
+        const tabNum = parseInt(step.action.replace('mob_tab_', ''));
+        if (typeof switchProfileTab === 'function') {
+            switchProfileTab(tabNum);
         }
     }
 
@@ -563,7 +680,7 @@ function setupEventListeners() {
     addEvt('btn-tutorial-skip', 'click', endTutorial);
     addEvt('btn-profile-tutorial', 'click', () => startTutorial('profile'));
 
-    addEvt('btn-language', 'click', () => alert("Translation widget placeholder"));
+    addEvt('btn-language', 'click', () => showToast("Coming soon!")); // V0.56 Translate Toast
     addEvt('btn-back-to-results', 'click', () => {
         if(searchInput) searchInput.value = '';
         window.location.hash = '';
@@ -895,6 +1012,14 @@ function applyFilters() {
     renderListings(filteredVenues);
     renderDynamicFilters(filteredVenues);
     updateTravelSidebarHighlight();
+
+    // --- V0.56: 10+ RESULTS TAG POPUP ---
+    if(filteredVenues.length >= 10 && query.trim() !== '') {
+        const hideWarning = localStorage.getItem('br_hide_search_warning') === 'true';
+        if (!hideWarning && typeof triggerSearchTagsPopup === 'function') {
+            triggerSearchTagsPopup(filteredVenues.length, document.getElementById('loc-city')?.value || query || 'this area');
+        }
+    }
 }
 
 function getLevenshteinDistance(a, b) {
@@ -1101,6 +1226,14 @@ window.openEmojiPicker = function(listName) {
     modal.classList.remove('hidden');
 }
 
+// V0.56 Share URL Generator Update
+function shareShortlist(name) {
+    const eIcon = userShortlistEmojis[name] || '📑';
+    const ids = userShortlists[name].join(',');
+    const url = `${window.location.origin}${window.location.pathname}#sharedlist?title=${encodeURIComponent(name)}&emoji=${encodeURIComponent(eIcon)}&ids=${ids}`;
+    shareURL(url, `Backroom Shortlist: ${name}`);
+}
+
 function renderShortlistsFullView() {
     document.getElementById('main-filters')?.classList.add('hidden');
     contextHeader?.classList.remove('hidden');
@@ -1108,7 +1241,7 @@ function renderShortlistsFullView() {
     const cTitle = document.getElementById('context-title');
     const cDesc = document.getElementById('context-desc');
     if(cTitle) cTitle.innerHTML = `<img src="shortlist.png" style="width:55px; vertical-align:bottom; margin-right:8px;"> MY SHORTLISTS`;
-    if(cDesc) cDesc.innerText = "Your named venue collections.";
+    if(cDesc) cDesc.innerText = "Make a list and share it with your friends so they know where to go tonight!"; // V0.56 Updated Text
     
     const newBtn = document.getElementById('btn-new-shortlist-view');
     if(newBtn) {
@@ -1483,6 +1616,11 @@ function renderListings(data, isContextView = false) {
     const today = new Date(); today.setHours(0,0,0,0);
 
     if(!data || data.length === 0) {
+        // Empty State Handler Injection V0.56 Profile logic
+        if (!isContextView && activeAvatarCategories && activeAvatarCategories.length > 0 && typeof userProfile !== 'undefined' && document.getElementById('avatar-grid') && !document.getElementById('profile-modal')?.classList.contains('hidden')) {
+             showToast("No results! Message admin to request your favourite.");
+        }
+
         let emptyHtml = `<p style="text-align:center; color:var(--label-grey); margin-top:20px; width: 100%; grid-column: 1 / -1;">No venues found.</p>`;
         
         const cityInput = document.getElementById('loc-city');
@@ -1613,7 +1751,8 @@ function getRatingCells(val, type) {
             asset = `<img src="Emoji/${prefix}0${i}.png" title="${tooltip}" style="width:${iconSize}; height:${iconSize}; vertical-align:middle; object-fit:contain;">`;
         }
         
-        html += `<div style="opacity:${op}; display:flex; align-items:center; justify-content:center; cursor:pointer;">${asset}</div>`;
+        // V0.56 Touch-to-Toast Mobile support
+        html += `<div style="opacity:${op}; display:flex; align-items:center; justify-content:center; cursor:pointer;" ontouchstart="event.preventDefault(); showToast('${tooltip.replace(/'/g, "\\'")}')">${asset}</div>`;
     }
     return html;
 }
@@ -1828,11 +1967,6 @@ async function shareURL(url, title) {
         navigator.clipboard.writeText(url);
         showToast("Link copied to clipboard!");
     }
-}
-
-function shareShortlist(name) {
-    const url = `${window.location.origin}${window.location.pathname}#shortlist=${encodeURIComponent(name)}`;
-    shareURL(url, `Backroom Shortlist: ${name}`);
 }
 
 function saveLocation() {

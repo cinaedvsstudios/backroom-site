@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Backroom - v0.55</title>
+    <title>Backroom - v0.56</title>
     
     <meta name="description" content="Backroom - The comprehensive local guide to gay venues, cruise clubs, and events.">
     <meta name="keywords" content="gay guide, cruising, gay clubs, darkroom, fetish, gay events, queer venues">
@@ -13,7 +13,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Antonio:wght@400;700&family=Barlow+Condensed:wght@400;500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
-    <link rel="stylesheet" href="style.css?v=0.55">
+    <link rel="stylesheet" href="style.css?v=0.56">
 </head>
 <body>
 
@@ -26,6 +26,23 @@
             <div style="display:flex; justify-content:space-between;">
                 <button id="btn-tutorial-skip" class="btn secondary-btn pill-btn" style="width: auto; padding: 6px 15px;">Skip</button>
                 <button id="btn-tutorial-next" class="btn primary-btn pill-btn" style="width: auto; padding: 6px 15px;">Next Step ▶</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="search-tags-popup-modal" class="modal hidden" style="z-index: 4500;">
+        <div class="modal-content small-modal" style="background: var(--panel-dark); border: 2px solid var(--primary-blue);">
+            <button class="btn-close close-modal-btn">❌</button>
+            <div class="modal-header"><h2 class="display-font" style="color:var(--primary-blue);">REFINE SEARCH</h2></div>
+            <div class="modal-body body-font">
+                <p id="search-tags-popup-text" style="color:#fff; margin-bottom:15px; font-size:1.1rem; text-align:center;">What kind of venue are you looking for?</p>
+                <div id="search-tags-popup-pills" style="display:flex; flex-wrap:wrap; gap:8px; justify-content:center; margin-bottom:15px;"></div>
+                <button id="btn-apply-search-tags" class="btn primary-btn pill-btn" style="width:100%; margin-bottom:15px;">Apply Filters</button>
+                <div style="text-align:center; margin-top:10px;">
+                    <label style="color:var(--label-grey); font-size:0.9rem; cursor:pointer;">
+                        <input type="checkbox" id="chk-hide-search-warning" style="vertical-align:middle;"> Don't show this warning again
+                    </label>
+                </div>
             </div>
         </div>
     </div>
@@ -60,7 +77,7 @@
     <div id="age-gate" class="fullscreen-overlay">
         <div class="age-gate-content">
             <div class="age-gate-logo-area" style="margin-bottom: 25px;">
-                <img src="https://raw.githubusercontent.com/cinaedvsstudios/Backroom-site/refs/heads/main/backdoorlogo.png" alt="Backdoor Logo" style="height: 75px; vertical-align: middle; margin-right: 10px;">
+                <img src="https://raw.githubusercontent.com/cinaedvsstudios/Backroom-site/refs/heads/main/backdoorlogo.png" alt="Backroom Logo" style="height: 75px; vertical-align: middle; margin-right: 10px;">
                 <img src="backdoortitle.png" alt="Backroom Title" style="height: 65px; vertical-align: middle;" onerror="this.style.display='none';">
             </div>
             <h1 id="ag-title" class="display-font">18+ ENTRY</h1>
@@ -87,7 +104,7 @@
         <header id="top-bar">
             <div class="top-bar-left">
                 <div class="top-bar-logo-area">
-                    <img src="https://raw.githubusercontent.com/cinaedvsstudios/Backroom-site/refs/heads/main/backdoorlogo.png" alt="Backdoor Logo" class="brand-image" style="cursor:pointer;" onclick="window.open('https://instagram.com/backdoorguide', '_blank'); event.stopPropagation();" title="Visit our Instagram">
+                    <img src="https://raw.githubusercontent.com/cinaedvsstudios/Backroom-site/refs/heads/main/backdoorlogo.png" alt="Backroom Logo" class="brand-image" style="cursor:pointer;" onclick="window.open('https://instagram.com/backdoorguide', '_blank'); event.stopPropagation();" title="Visit our Instagram">
                     <img src="backdoortitle.png" alt="Backroom Title" class="brand-title-image" style="cursor:pointer;" onclick="window.location.hash='';" onerror="this.style.display='none';">
                 </div>
             </div>
@@ -134,6 +151,12 @@
                     </div>
                     <div class="sidebar-item tooltip" title="Tutorial" id="btn-tutorial" onclick="runTutorial()">
                         <span class="icon">💡</span><span class="sidebar-text display-font">Tutorial</span>
+                    </div>
+                    <div class="sidebar-item tooltip" title="Contact" onclick="window.flagListing('N/A', 'General Message', 'General Support')">
+                        <span class="icon">✉️</span><span class="sidebar-text display-font">Contact</span>
+                    </div>
+                    <div class="sidebar-item tooltip" title="About" onclick="const t = document.getElementById('toast-container'); if(t){t.classList.remove('hidden'); const d = document.createElement('div'); d.className='toast show'; d.innerText='Backroom: A comprehensive local guide.'; t.appendChild(d); setTimeout(()=>d.remove(), 2500);}">
+                        <span class="icon">ℹ️</span><span class="sidebar-text display-font">About</span>
                     </div>
                 </div>
                 <div class="sidebar-footer body-font">
@@ -258,11 +281,11 @@
             <div class="modal-body body-font">
                 
                 <div id="profile-mobile-tabs" class="mobile-only" style="display:none; justify-content:center; align-items:center; background:var(--panel-dark); padding:10px; border-radius:var(--radius-pill); margin-bottom:20px; border:1px solid var(--panel-mid);">
-                    <div id="ptab-1" onclick="switchProfileTab(1)" style="font-size:1.8rem; cursor:pointer; padding:5px; border-radius:50%; transition:all 0.2s;" class="tutorial-highlight">🤗</div>
+                    <div id="ptab-1" onclick="switchProfileTab(1)" style="font-size:1.8rem; cursor:pointer; padding:5px; border-radius:50%; transition:all 0.2s; text-align:center;" class="tutorial-highlight">🤗 <span style="font-size: 0.8rem; display:block; color:var(--primary-blue); font-weight:bold;">(1)</span></div>
                     <div id="parr-1" style="color:var(--primary-blue); font-weight:bold; padding:0 5px; font-family:'Antonio', sans-serif; font-size:1.2rem;" class="tutorial-highlight">&gt;&gt;&gt;</div>
-                    <div id="ptab-2" onclick="switchProfileTab(2)" style="font-size:1.8rem; cursor:pointer; padding:5px; border-radius:50%; transition:all 0.2s;">🤔</div>
+                    <div id="ptab-2" onclick="switchProfileTab(2)" style="font-size:1.8rem; cursor:pointer; padding:5px; border-radius:50%; transition:all 0.2s; text-align:center;">🤔 <span style="font-size: 0.8rem; display:block; color:var(--primary-blue); font-weight:bold;">(2)</span></div>
                     <div id="parr-2" style="color:var(--primary-blue); font-weight:bold; padding:0 5px; font-family:'Antonio', sans-serif; font-size:1.2rem;">&gt;&gt;&gt;</div>
-                    <div id="ptab-3" onclick="switchProfileTab(3)" style="font-size:1.8rem; cursor:pointer; padding:5px; border-radius:50%; transition:all 0.2s;">😎</div>
+                    <div id="ptab-3" onclick="switchProfileTab(3)" style="font-size:1.8rem; cursor:pointer; padding:5px; border-radius:50%; transition:all 0.2s; text-align:center;">😎 <span style="font-size: 0.8rem; display:block; color:var(--primary-blue); font-weight:bold;">(3)</span></div>
                 </div>
 
                 <div class="profile-desktop-wrapper">
@@ -290,16 +313,24 @@
                     </div>
 
                     <div id="profile-mob-view-3" class="profile-view-section mobile-hidden-tab">
-                        <div id="view-3-stats">
-                            <div id="profile-stats-container"></div>
-                        </div>
-                        <div id="view-3-buttons" style="background: var(--panel-dark); padding: 25px; border-radius: var(--radius-card); border: 1px solid var(--panel-mid); display:flex; flex-direction:column; gap:10px;">
-                            <button id="btn-save-profile" class="btn primary-btn pill-btn" style="width: 100%; font-size: 1.1rem; padding: 12px;">Save changes</button>
-                            <button id="btn-new-profile" class="btn secondary-btn pill-btn" style="width: 100%; font-size: 1rem;">Create New Profile</button>
-                            <button id="btn-profile-download-data" class="btn secondary-btn pill-btn btn-export-trigger" style="width: 100%; font-size: 1rem;">💾 Download My Data</button>
-                            <button id="btn-delete-profile" class="btn pill-btn" style="width: 100%; font-size: 1rem; background: var(--dark-red); color: #fff; margin-top: 5px;">Delete Profile</button>
-                            <button id="btn-profile-tutorial" class="btn secondary-btn pill-btn tooltip" style="width: 100%; font-size: 0.9rem; margin-top: 5px;">💡 Profile Tutorial</button>
-                        </div>
+                        <table style="width:100%; border-collapse:collapse;">
+                            <tr>
+                                <td style="width:50%; vertical-align:top; padding-right:10px;">
+                                    <div id="view-3-buttons" style="background: var(--panel-dark); padding: 25px; border-radius: var(--radius-card); border: 1px solid var(--panel-mid); display:flex; flex-direction:column; gap:10px;">
+                                        <button id="btn-save-profile" class="btn primary-btn pill-btn" style="width: 100%; font-size: 1.1rem; padding: 12px;">Save changes</button>
+                                        <button id="btn-new-profile" class="btn secondary-btn pill-btn" style="width: 100%; font-size: 1rem;">Create New Profile</button>
+                                        <button id="btn-profile-download-data" class="btn secondary-btn pill-btn btn-export-trigger" style="width: 100%; font-size: 1rem;">💾 Download My Data</button>
+                                        <button id="btn-delete-profile" class="btn pill-btn" style="width: 100%; font-size: 1rem; background: var(--dark-red); color: #fff; margin-top: 5px;">Delete Profile</button>
+                                        <button id="btn-profile-tutorial" class="btn secondary-btn pill-btn tooltip" style="width: 100%; font-size: 0.9rem; margin-top: 5px;">💡 Profile Tutorial</button>
+                                    </div>
+                                </td>
+                                <td style="width:50%; vertical-align:top; padding-left:10px;">
+                                    <div id="view-3-stats">
+                                        <div id="profile-stats-container"></div>
+                                    </div>
+                                </td>
+                            </tr>
+                        </table>
                     </div>
 
                 </div>
@@ -324,6 +355,8 @@
                     <button class="btn secondary-btn pill-btn" style="font-size:0.9rem;" onclick="document.getElementById('settings-modal').classList.add('hidden'); document.getElementById('btn-profile-menu').click();">👤 Edit Profile</button>
                     <button class="btn secondary-btn pill-btn" style="font-size:0.9rem;" onclick="document.getElementById('settings-modal').classList.add('hidden'); window.location.hash='#myshortlists';">📑 Edit Shortlists</button>
                 </div>
+
+                <button id="btn-toggle-search-warning" class="btn secondary-btn pill-btn" style="margin-bottom:15px; width: 100%; border: 1px solid var(--primary-blue);" onclick="const st = localStorage.getItem('br_hide_search_warning') === 'true'; localStorage.setItem('br_hide_search_warning', !st); const t = document.getElementById('toast-container'); if(t){t.classList.remove('hidden'); const d = document.createElement('div'); d.className='toast show'; d.innerText=st ? 'Search warning enabled' : 'Search warning disabled'; t.appendChild(d); setTimeout(()=>d.remove(), 2500);}">Toggle Search Tag Warning</button>
 
                 <hr class="divider">
                 
@@ -382,6 +415,73 @@
     </div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
-    <script src="app.js?v=0.55"></script>
+    <script src="app.js?v=0.56"></script>
+
+    <script>
+        const TAG_COLORS = {
+            'Cruise': 'red', 'Darkroom': 'red', 'Fetish': 'red', 'Leather': 'red', 'Rubber': 'red', 'Gear': 'red', 'Naked': 'red', 'Underwear': 'red', 'Men Only': 'red', 'Sauna': 'red', 'Cinema': 'red',
+            'Bar': 'blue', 'Club': 'blue', 'Dancefloor': 'blue', 'Party': 'blue', 'Smoking_Area': 'blue', 'Sportswear': 'blue', 'Sneakers': 'blue', 'Dresscode': 'blue', 'Bear': 'blue', 'Mature': 'blue', 'Techno': 'blue', 'Puppy': 'blue',
+            'Young Crowd': 'yellow', 'Queer': 'yellow', 'Drag': 'yellow', 'Karaoke': 'yellow', 'Pop/Dance': 'yellow', 'Shop': 'yellow'
+        };
+
+        window.triggerSearchTagsPopup = function(count, locationName) {
+            const modal = document.getElementById('search-tags-popup-modal');
+            const textEl = document.getElementById('search-tags-popup-text');
+            const pillsEl = document.getElementById('search-tags-popup-pills');
+            if(!modal) return;
+            
+            textEl.innerText = `There are ${count} results for ${locationName}. What kind of venue are you looking for?`;
+            pillsEl.innerHTML = '';
+            
+            let availableTags = new Set();
+            if (window.venues) {
+                window.venues.filter(v => window.fuzzyMatch ? window.fuzzyMatch(v.Name + " " + v.City, document.getElementById('search-input')?.value || '') : true).forEach(v => {
+                    if(v.Vibe_Tags) v.Vibe_Tags.split(',').forEach(t => availableTags.add(t.trim()));
+                });
+            }
+            
+            let selectedPopupTags = [];
+            
+            Array.from(availableTags).forEach(tag => {
+                if(!TAG_COLORS[tag]) return;
+                const btn = document.createElement('button');
+                btn.className = 'chip pill-btn';
+                btn.innerText = tag;
+                
+                let colorCode = TAG_COLORS[tag] === 'red' ? 'var(--bright-red-orange)' : (TAG_COLORS[tag] === 'blue' ? 'var(--primary-blue)' : '#FFD700');
+                btn.style.borderColor = colorCode;
+                btn.style.color = colorCode;
+                btn.style.margin = '4px';
+                
+                btn.onclick = () => {
+                    if(selectedPopupTags.includes(tag)) {
+                        selectedPopupTags = selectedPopupTags.filter(t => t !== tag);
+                        btn.classList.remove('active');
+                        btn.style.backgroundColor = 'transparent';
+                        btn.style.color = colorCode;
+                    } else {
+                        selectedPopupTags.push(tag);
+                        btn.classList.add('active');
+                        btn.style.backgroundColor = colorCode;
+                        btn.style.color = '#000'; 
+                    }
+                };
+                pillsEl.appendChild(btn);
+            });
+
+            document.getElementById('btn-apply-search-tags').onclick = () => {
+                if(selectedPopupTags.length > 0) {
+                    window.activeFilter = selectedPopupTags[0]; 
+                    if(window.handleRouting) window.handleRouting();
+                }
+                modal.classList.add('hidden');
+                if(document.getElementById('chk-hide-search-warning').checked) {
+                    localStorage.setItem('br_hide_search_warning', 'true');
+                }
+            };
+
+            modal.classList.remove('hidden');
+        };
+    </script>
 </body>
 </html>
