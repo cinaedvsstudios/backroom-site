@@ -10,7 +10,6 @@ let tempMergeData = [];
 let editorHistory = [];
 let historyIndex = -1;
 
-// v0.38 - Live Text Size Variable
 let currentAdminTextSize = 0.95;
 
 function showToast(message) {
@@ -571,7 +570,6 @@ function selectAvatarForEditing(idx) {
     
     const cats = Array.isArray(av.category) ? av.category : [av.category];
     
-    // v0.53 - Age Pill Selection Logic
     const selectedAge = cats.find(c => ['Young', 'Prime', 'Mature'].includes(c)) || '';
     document.querySelectorAll('.age-pill').forEach(p => {
         if(p.dataset.val === selectedAge) {
@@ -619,7 +617,6 @@ window.saveActiveAvatarEdits = function() {
     if(activeAvatarIndex === -1) return;
     const name = document.getElementById('ac-name')?.value || '';
     
-    // v0.53 - Read Age from Pills
     const activeAgePill = document.querySelector('.age-pill.active-age');
     const age = activeAgePill ? activeAgePill.dataset.val : '';
     
@@ -699,7 +696,6 @@ document.getElementById('btn-download-avatars')?.addEventListener('click', () =>
     showToast("Downloaded avatar_list.json");
 });
 
-// v0.52 - Avatar Audit (Paste List) Feature
 document.getElementById('btn-audit-avatars')?.addEventListener('click', () => {
     const pastedText = prompt("Paste your raw GitHub directory list/text containing image filenames:");
     if(!pastedText) return;
@@ -739,7 +735,7 @@ wysiwygContent?.addEventListener('input', () => {
     window.editorSaveTimer = setTimeout(saveEditorState, 500);
 });
 
-// v0.52 - New Blank Page Editor Logic
+// V0.58 Page Selector Updated
 document.getElementById('editor-page-select')?.addEventListener('change', (e) => {
     if(e.target.value === 'new') {
         const defaultText = `<h1>New Page</h1><p>Start typing... dont forget to have this page added to the menu it wont appear automatically</p>`;
@@ -839,7 +835,6 @@ window.downloadEditorHTML = function() {
 
 document.addEventListener('DOMContentLoaded', () => {
 
-    // v0.53 - Age Pill Listeners
     document.querySelectorAll('.age-pill').forEach(pill => {
         pill.addEventListener('click', (e) => {
             document.querySelectorAll('.age-pill').forEach(p => {

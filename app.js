@@ -1,13 +1,13 @@
 // --- Application State ---
-const APP_VERSION = "v0.57";
+const APP_VERSION = "v0.58";
 const APP_DATE = "May 2026";
 
 let systemInfo = {}, designTheme = {}, venues = [], events = [];
-let activeFilter = 'All';
+let activeFilters = []; // v0.58 Multi-select Array
 let selectedCardId = null;
 let currentTargetVenue = null; 
 let currentEventCityFilter = 'All';
-let isTutorialRunning = false; // v0.57 Tutorial flag
+let isTutorialRunning = false; 
 
 // Profile Data Structure (Save Game Style)
 let userProfile = JSON.parse(localStorage.getItem('br_profile')) || { name: '', avatar: '' };
@@ -46,8 +46,8 @@ let sidebarTimeout;
 
 const MASTER_VIBE_TAGS = ["Cruise", "Darkroom", "Fetish", "Leather", "Rubber", "Gear", "Sportswear", "Sneakers", "Naked", "Underwear", "Dresscode", "Men Only", "Bear", "Mature", "Young Crowd", "Queer", "Drag", "Karaoke", "Pop/Dance", "Techno", "Sauna", "Puppy"];
 const SHORTLIST_EMOJIS = ['🤠','🚄','👑','🥂','🦄','🫦','💪','🪇','🔥','🍆','🍑','💄','🛁','✈️','💥','💦','🗝️','🧿','🎧','🧭','⛓️','🎼'];
+const PLACEHOLDER_POOL = ['placeholder_venue.jpg', 'placeholder_venue01.jpg', 'placeholder_venue02.jpg', 'placeholder_venue03.jpg', 'placeholder_venue04.jpg', 'placeholder_venue05.jpg', 'placeholder_venue06.jpg', 'placeholder_venue07.jpg'];
 
-// v0.57 - Global Tag Color Utility
 function getTagColorClass(tag) {
     const red = ['Cruise', 'Darkroom', 'Fetish', 'Leather', 'Rubber', 'Gear', 'Naked', 'Underwear', 'Men Only', 'Sauna', 'Cinema'];
     const blue = ['Bar', 'Club', 'Dancefloor', 'Party', 'Smoking_Area', 'Sportswear', 'Sneakers', 'Dresscode', 'Bear', 'Mature', 'Techno', 'Puppy'];
@@ -100,7 +100,6 @@ function getDistanceFromLatLonInKm(lat1, lon1, lat2, lon2) {
     return R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a))); 
 }
 
-// --- Backroom Syntax Parser ---
 function formatAboutText(text) {
     if (!text) return '';
     let lines = text.split('==');
@@ -224,9 +223,6 @@ async function initApp() {
     const verDisplay = document.getElementById('sidebar-version-display');
     if(verDisplay) verDisplay.innerHTML = `${APP_VERSION}<br>${APP_DATE}`;
     
-    updateProfileDisplay();
-    checkImportPreview();
-
     try {
         const fetchJson = async (url) => {
             const cacheBuster = '?v=' + new Date().getTime();
@@ -249,6 +245,8 @@ async function initApp() {
             throw new Error(`Failed to load listings.json. Error: ${e.message}`);
         }
 
+        updateProfileDisplay(); // Moved here so avatarData is loaded
+        checkImportPreview();
         applyTheme(); 
         populateSystemText(); 
         setupEventListeners(); 
@@ -322,11 +320,10 @@ function populateSystemText() {
 
 window.addEventListener('hashchange', handleRouting);
 
-// --- V0.56: SHARED LIST ROUTING & ONBOARDING ---
 function checkSharedListRoute() {
     const hash = window.location.hash;
     if (hash.startsWith('#sharedlist?')) {
-        const urlParams = new URLSearchParams(hash.substring(12)); // skip '#sharedlist?'
+        const urlParams = new URLSearchParams(hash.substring(12));
         const listName = urlParams.get('title') || 'Shared List';
         const listEmoji = urlParams.get('emoji') || '🔥';
         const venueIds = (urlParams.get('ids') || '').split(',').filter(id => id);
@@ -338,7 +335,6 @@ function checkSharedListRoute() {
 }
 
 function renderSharedListView(name, emoji, ids) {
-    // Hide standard UI
     const searchInputEl = document.getElementById('search-input');
     if(searchInputEl) searchInputEl.style.display = 'none';
     const mainFilters = document.getElementById('main-filters');
@@ -346,9 +342,8 @@ function renderSharedListView(name, emoji, ids) {
     contextHeader?.classList.add('hidden');
     
     if(!resultsContainer) return;
-    resultsContainer.innerHTML = ''; // Clear current
+    resultsContainer.innerHTML = '';
     
-    // Create the Shared Header
     const sharedHeader = document.createElement('div');
     sharedHeader.className = 'shared-list-header';
     sharedHeader.style.cssText = 'text-align: center; padding: 30px 15px; margin-bottom: 20px; grid-column: 1 / -1;';
@@ -364,7 +359,6 @@ function renderSharedListView(name, emoji, ids) {
     
     resultsContainer.appendChild(sharedHeader);
 
-    // Render the specific cards
     const matchingVenues = venues.filter(v => ids.includes(v.Venue_ID));
     if (matchingVenues.length === 0) {
         resultsContainer.innerHTML += `<p style="text-align:center; color: var(--label-grey); grid-column: 1 / -1;">No active venues found in this list.</p>`;
@@ -377,16 +371,12 @@ function renderSharedListView(name, emoji, ids) {
         resultsContainer.innerHTML = backupContainerHTML + renderedCards;
     }
 
-    // Button Listeners
     document.getElementById('btn-save-shared').addEventListener('click', () => {
-        // Silently create a profile if one doesn't exist
         if (!userProfile.name) {
             userProfile.name = 'New Profile';
             userProfile.avatar = avatarData[0]?.file || 'noavatar01.png';
             localStorage.setItem('br_profile', JSON.stringify(userProfile));
         }
-        
-        // Save the list
         userShortlists[name] = ids;
         userShortlistEmojis[name] = emoji;
         saveCurrentToBundle();
@@ -398,13 +388,13 @@ function renderSharedListView(name, emoji, ids) {
         if(searchInputEl) searchInputEl.style.display = '';
         const mainFilters = document.getElementById('main-filters');
         if(mainFilters) mainFilters.style.display = '';
-        window.location.hash = ''; // Clear hash
-        window.location.reload(); // Quickest way to restore standard UI state
+        window.location.hash = '';
+        window.location.reload(); 
     });
 }
 
 function handleRouting() {
-    if (checkSharedListRoute()) return; // V0.56 Shared List Intercept
+    if (checkSharedListRoute()) return; 
 
     const hash = window.location.hash;
     const query = searchInput?.value.trim() || '';
@@ -415,10 +405,17 @@ function handleRouting() {
     document.getElementById('btn-new-shortlist-view')?.classList.add('hidden');
     document.getElementById('main-filters')?.classList.remove('hidden');
     document.getElementById('discounts-container')?.classList.add('hidden');
+    
+    // V0.58 Blank Page Handlers
+    const aboutContainer = document.getElementById('about-container');
+    const featuredContainer = document.getElementById('featured-container');
+    if(aboutContainer) aboutContainer.classList.add('hidden');
+    if(featuredContainer) featuredContainer.classList.add('hidden');
+    
     welcomeScreen?.classList.add('hidden');
     document.getElementById('profile-wipe-toast')?.classList.add('hidden');
 
-    if (hash === '' && query === '' && activeFilter === 'All' && sessionStorage.getItem('br_welcome_dismissed') !== 'true') {
+    if (hash === '' && query === '' && activeFilters.length === 0 && sessionStorage.getItem('br_welcome_dismissed') !== 'true') {
         document.getElementById('main-filters')?.classList.add('hidden');
         if(resultsContainer) resultsContainer.innerHTML = '';
         renderWelcomeScreen();
@@ -445,10 +442,16 @@ function handleRouting() {
     } else if (hash === '#discounts') {
         recordUserInteraction();
         renderDiscountsView();
+    } else if (hash === '#about') {
+        recordUserInteraction();
+        renderBlankPageView('about');
+    } else if (hash === '#featured') {
+        recordUserInteraction();
+        renderBlankPageView('featured');
     } else if (hash.startsWith('#shortlist=')) {
         recordUserInteraction();
         const name = decodeURIComponent(hash.replace('#shortlist=', ''));
-        renderSingleShortlist(name); // v0.57 Shortlist internal router hook
+        renderSingleShortlist(name);
     } else {
         applyFilters();
     }
@@ -456,7 +459,6 @@ function handleRouting() {
     updateTravelSidebarHighlight();
 }
 
-// v0.57 Internal Shortlist Rendering Logic
 function renderSingleShortlist(name) {
     document.getElementById('main-filters')?.classList.add('hidden');
     contextHeader?.classList.remove('hidden');
@@ -472,10 +474,26 @@ function renderSingleShortlist(name) {
     renderListings(matchingVenues, true);
 }
 
+function renderBlankPageView(page) {
+    document.getElementById('main-filters')?.classList.add('hidden');
+    if(resultsContainer) resultsContainer.innerHTML = '';
+    const container = document.getElementById(`${page}-container`);
+    if(container) container.classList.remove('hidden');
+}
+
 function renderWelcomeScreen() {
     const wName = document.getElementById('welcome-name');
     const wAvatar = document.getElementById('welcome-avatar');
-    if(wName) wName.innerText = userProfile.name || 'GUEST';
+    // V0.58 Dynamic Fallback Name
+    let dispName = 'GUEST';
+    if (userProfile.name) {
+        dispName = userProfile.name;
+    } else if (userProfile.avatar && userProfile.avatar !== 'noavatar01.png') {
+        const found = avatarData.find(a => a.file === userProfile.avatar);
+        if(found) dispName = found.label;
+    }
+    
+    if(wName) wName.innerText = dispName;
     if(wAvatar && userProfile.avatar) wAvatar.src = `Profile_images/${userProfile.avatar}`;
     welcomeScreen?.classList.remove('hidden');
 }
@@ -492,15 +510,19 @@ let currentTutorialStepIndex = 0;
 let currentTutorialType = '';
 
 function startTutorial(type) {
-    isTutorialRunning = true; // v0.57 bypass flag
+    isTutorialRunning = true; 
     
-    if (window.innerWidth < 768) {
-        if (type === 'general') {
-            const searchInputEl = document.getElementById('search-input');
-            if(searchInputEl) {
-                searchInputEl.value = "Berlin";
-                applyFilters(); 
-            }
+    // V0.58 Tutorial Reset & Hardcode Anchor
+    if (type === 'general') {
+        window.location.hash = ''; // Clear views
+        activeFilters = []; // Clear filters
+        const searchInputEl = document.getElementById('search-input');
+        if(searchInputEl) {
+            searchInputEl.value = "Berlin";
+            applyFilters(); 
+            // Force Lab to open immediately so it's ready for highlighting
+            const labVenue = venues.find(x => x.Venue_ID === 'BER-LAB-01');
+            if(labVenue) openVenueModal(labVenue);
         }
     }
 
@@ -514,7 +536,7 @@ function startTutorial(type) {
             { target: '#btn-favorites', text: 'View your locally saved Favourite venues.' },
             { target: '#btn-shortlists-menu', text: 'Create and view named venue collections.' },
             { target: '.card', text: 'Click any venue card to select it.' },
-            { target: '.card.selected', text: 'Double tap a selected card to open its full profile.', action: 'open_venue' },
+            { target: '.card.selected', text: 'Double tap a selected card to open its full profile.' },
             { target: '#modal-star', text: 'Use these buttons to favourite, shortlist, report, or share.' },
             { target: '.ratings-table', text: 'Check out detailed venue ratings.' },
             { target: '.social-bar', text: 'Quickly access the venue\'s social media and websites.' },
@@ -552,21 +574,6 @@ function showNextTutorialStep() {
     }
     
     const step = currentTutorialSteps[currentTutorialStepIndex];
-    
-    if(step.action === 'open_venue') {
-        // Auto-open LAB
-        if (window.innerWidth < 768) {
-            const labCard = venues.find(x => x.Venue_ID === 'BER-LAB-01');
-            if(labCard) {
-                openVenueModal(labCard);
-            }
-        } else if(selectedCardId) {
-            const v = venues.find(x => x.Venue_ID === selectedCardId);
-            if(v) openVenueModal(v);
-        } else if(venues.length > 0) {
-            openVenueModal(venues[0]); 
-        }
-    }
 
     if (window.innerWidth < 768 && step.action && step.action.startsWith('mob_tab_')) {
         const tabNum = parseInt(step.action.replace('mob_tab_', ''));
@@ -609,7 +616,7 @@ function showNextTutorialStep() {
 }
 
 function endTutorial() {
-    isTutorialRunning = false; // v0.57 Bypass clear
+    isTutorialRunning = false; 
     document.querySelectorAll('.tutorial-highlight').forEach(el => el.classList.remove('tutorial-highlight'));
     document.getElementById('tutorial-toast')?.classList.add('hidden');
     currentTutorialSteps = [];
@@ -648,7 +655,6 @@ function setupTutorialDrag() {
     windowEl.dataset.dragSet = 'true';
 }
 
-// --- Flagging/Reporting System ---
 window.flagListing = function(id, name, type="Venue/Event") {
     const modal = document.getElementById('formsubmit-modal');
     if(modal) {
@@ -788,7 +794,7 @@ function setupEventListeners() {
     
     document.querySelectorAll('.btn-export-trigger').forEach(btn => btn.addEventListener('click', exportUserData));
     addEvt('import-data-file', 'change', importUserData);
-    addEvt('import-profile-file', 'change', importUserData); // V0.57 Direct UI binder
+    addEvt('import-profile-file', 'change', importUserData); 
 
     addEvt('btn-add-create-shortlist', 'click', () => {
         const nameInp = document.getElementById('add-new-shortlist-name');
@@ -924,8 +930,15 @@ function updateProfileDisplay() {
     
     if(!topName || !topAvatar) return;
 
-    if(userProfile.name) topName.innerText = userProfile.name;
-    else topName.innerText = '👤';
+    let dispName = '👤';
+    if (userProfile.name) {
+        dispName = userProfile.name;
+    } else if (userProfile.avatar && userProfile.avatar !== 'noavatar01.png') {
+        const found = avatarData.find(a => a.file === userProfile.avatar);
+        if(found) dispName = found.label; // V0.58 Fallback Name Logic
+    }
+
+    topName.innerText = dispName;
 
     if(userProfile.avatar && userProfile.avatar !== 'noavatar01.png') {
         topAvatar.src = `Profile_images/${userProfile.avatar}`;
@@ -992,13 +1005,12 @@ function renderDynamicFilters(filteredData) {
         if(v.Feature_Dresscode) activeTags.add('Dresscode');
     });
     
-    let html = `<button class="chip pill-btn ${activeFilter === 'All' ? 'active' : ''}" data-filter="All">All</button>`;
+    let html = `<button class="chip pill-btn ${activeFilters.length === 0 ? 'active' : ''}" data-filter="All">All</button>`;
     
     MASTER_VIBE_TAGS.forEach(tag => {
-        if(activeTags.has(tag) || activeFilter === tag) {
-            // v0.57 Color taxonomy application
+        if(activeTags.has(tag) || activeFilters.includes(tag)) {
             const colorClass = getTagColorClass(tag);
-            html += `<button class="chip pill-btn ${colorClass} ${activeFilter === tag ? 'active' : ''}" data-filter="${tag}">${tag}</button>`;
+            html += `<button class="chip pill-btn ${colorClass} ${activeFilters.includes(tag) ? 'active' : ''}" data-filter="${tag}">${tag}</button>`;
         }
     });
     container.innerHTML = html;
@@ -1006,7 +1018,16 @@ function renderDynamicFilters(filteredData) {
     container.querySelectorAll('.chip').forEach(chip => {
         chip.addEventListener('click', (e) => {
             recordUserInteraction();
-            activeFilter = e.target.getAttribute('data-filter');
+            const tag = e.target.getAttribute('data-filter');
+            
+            // V0.58 Multi-Select AND Logic
+            if(tag === 'All') {
+                activeFilters = [];
+            } else {
+                const idx = activeFilters.indexOf(tag);
+                if(idx > -1) activeFilters.splice(idx, 1);
+                else activeFilters.push(tag);
+            }
             window.location.hash=''; 
             handleRouting();
         });
@@ -1018,13 +1039,16 @@ function applyFilters() {
     let filteredVenues = venues || [];
     selectedCardId = null;
 
-    if(activeFilter !== 'All') {
+    // V0.58 Multi-Select AND Logic Implementation
+    if(activeFilters.length > 0) {
         filteredVenues = filteredVenues.filter(v => {
-            if(activeFilter === 'Darkroom') return v.Feature_Darkroom;
-            if(activeFilter === 'Men Only') return v.Feature_Men_Only;
-            if(activeFilter === 'Dresscode') return v.Feature_Dresscode;
-            if(v.Vibe_Tags && v.Vibe_Tags.includes(activeFilter)) return true;
-            return false;
+            let tags = [];
+            if(v.Vibe_Tags) tags = v.Vibe_Tags.split(',').map(t => t.trim());
+            if(v.Feature_Darkroom) tags.push('Darkroom');
+            if(v.Feature_Men_Only) tags.push('Men Only');
+            if(v.Feature_Dresscode) tags.push('Dresscode');
+            
+            return activeFilters.every(af => tags.includes(af));
         });
     }
 
@@ -1032,11 +1056,29 @@ function applyFilters() {
         filteredVenues = filteredVenues.filter(v => fuzzyMatch(v.Name + " " + v.Description + " " + v.Vibe_Tags + " " + v.City, query));
     }
 
+    // V0.58 Sorting Algorithm
+    filteredVenues.sort((a, b) => {
+        const aShop = (a.Category === 'Shop') ? 1 : 0;
+        const bShop = (b.Category === 'Shop') ? 1 : 0;
+        if (aShop !== bShop) return aShop - bShop;
+
+        const aHasImg = (a.Image_URL && a.Image_URL.trim() !== '') ? 1 : 0;
+        const bHasImg = (b.Image_URL && b.Image_URL.trim() !== '') ? 1 : 0;
+        if (aHasImg !== bHasImg) return bHasImg - aHasImg; 
+
+        const aSize = parseInt(a.Rating_Size) || 0;
+        const bSize = parseInt(b.Rating_Size) || 0;
+        if (aSize !== bSize) return bSize - aSize; 
+
+        const aPop = parseInt(a.Rating_Busyness || a.Rating_Popularity) || 0;
+        const bPop = parseInt(b.Rating_Busyness || b.Rating_Popularity) || 0;
+        return bPop - aPop; 
+    });
+
     renderListings(filteredVenues);
     renderDynamicFilters(filteredVenues);
     updateTravelSidebarHighlight();
 
-    // V0.57: Tutorial Bypass for popup
     if(filteredVenues.length >= 10 && query.trim() !== '' && !isTutorialRunning) {
         const hideWarning = localStorage.getItem('br_hide_search_warning') === 'true';
         if (!hideWarning && typeof triggerSearchTagsPopup === 'function') {
@@ -1414,7 +1456,8 @@ function renderProfileAvatars() {
         const item = document.createElement('div');
         item.className = 'avatar-item';
         
-        item.innerHTML = `<img src="Profile_images/${avatar.file}" onerror="this.parentElement.style.display='none';" alt="${avatar.label}"><span>${avatar.label}</span>`;
+        // V0.58 Title fallback for desktop span hiding
+        item.innerHTML = `<img src="Profile_images/${avatar.file}" onerror="this.parentElement.style.display='none';" alt="${avatar.label}" title="${avatar.label}"><span>${avatar.label}</span>`;
         
         item.addEventListener('click', () => {
             userProfile.avatar = avatar.file;
@@ -1451,8 +1494,7 @@ function renderProfileStats() {
     const travelCount = userTravel.length;
     
     let html = `
-        <hr style="border: 0; height: 2px; background: var(--bright-red-orange); margin: 20px 0;">
-        <h3 style="color: var(--primary-blue); margin-bottom: 15px; font-size: 1.2rem;" class="display-font">YOUR PROFILE CONTAINS</h3>
+        <h3 class="desktop-only-text display-font" style="color:var(--primary-blue); margin-bottom:10px; font-size:1.2rem;">YOUR PROFILE CONTAINS</h3>
         <div style="display: flex; flex-direction: column; gap: 10px;">
     `;
 
@@ -1498,6 +1540,19 @@ function openProfileMenu() {
         window.switchProfileTab(1);
     }
     
+    // V0.58 Dynamic Fallback welcome string
+    const privacyGreeting = document.getElementById('profile-privacy-greeting');
+    if(privacyGreeting) {
+        let dispName = 'Guest';
+        if (userProfile.name) {
+            dispName = userProfile.name;
+        } else if (userProfile.avatar && userProfile.avatar !== 'noavatar01.png') {
+            const found = avatarData.find(a => a.file === userProfile.avatar);
+            if(found) dispName = found.label; 
+        }
+        privacyGreeting.innerText = `Hi ${dispName},`;
+    }
+
     const profileWipeToast = document.getElementById('profile-wipe-toast');
     if(profileWipeToast) {
         const wipeAllBtn = profileWipeToast.querySelector('#btn-wipe-all');
@@ -1605,6 +1660,7 @@ function checkImportPreview() {
     }
 }
 
+// V0.58 Random Placeholder Infinite Loop Breaker
 function handleImageCarousel(imgElement) {
     imgElement.addEventListener('click', (e) => {
         e.stopPropagation(); 
@@ -1620,7 +1676,10 @@ function handleImageCarousel(imgElement) {
             showToast("Double tap the venue name to open");
         };
         tempImg.onerror = () => {
-            imgElement.src = `Venue_images/${id}-01.jpg`;
+            // V0.58 Random image pool selection
+            const randomFallback = PLACEHOLDER_POOL[Math.floor(Math.random() * PLACEHOLDER_POOL.length)];
+            imgElement.onerror = null; 
+            imgElement.src = randomFallback;
             imgElement.setAttribute('data-index', 1);
             showToast("Double tap the venue name to open");
         };
@@ -1684,7 +1743,7 @@ function renderListings(data, isContextView = false) {
         
         card.innerHTML = `
             <div class="card-image-wrapper">
-                <img class="venue-image centered-image" src="${baseImageSrc}" onerror="this.src='placeholder_venue.jpg'" data-id="${venue.Venue_ID}" data-index="1" title="Tap to see next photo">
+                <img class="venue-image centered-image" src="${baseImageSrc}" onerror="this.onerror=null; this.src='${PLACEHOLDER_POOL[Math.floor(Math.random() * PLACEHOLDER_POOL.length)]}'" data-id="${venue.Venue_ID}" data-index="1" title="Tap to see next photo">
             </div>
             <div class="card-inner-content">
                 <div class="card-header">
@@ -1784,7 +1843,6 @@ function openVenueModal(venue) {
     if(venue.Feature_Men_Only) features.push('Men Only');
     if(venue.Feature_Dancefloor) features.push('Dancefloor');
     if(venue.Feature_Sauna) features.push('Sauna');
-    // V0.57 Global Tag Colors via getTagColorClass
     const featureHtml = features.map(f => `<span class="chip pill-btn ${getTagColorClass(f)}" style="font-size:0.85rem; padding: 4px 10px;">${f}</span>`).join('');
 
     const statsHtml = `
@@ -1885,7 +1943,7 @@ function openVenueModal(venue) {
         <div class="modal-top-split">
             <div class="modal-left-col">
                 <div class="modal-image-container">
-                    <img id="modal-venue-image" class="venue-image centered-image" src="Venue_images/${venue.Venue_ID}-01.jpg" onerror="this.src='placeholder_venue.jpg'" data-id="${venue.Venue_ID}" data-index="1" title="Tap for next image">
+                    <img id="modal-venue-image" class="venue-image centered-image" src="Venue_images/${venue.Venue_ID}-01.jpg" onerror="this.onerror=null; this.src='${PLACEHOLDER_POOL[Math.floor(Math.random() * PLACEHOLDER_POOL.length)]}'" data-id="${venue.Venue_ID}" data-index="1" title="Tap for next image">
                 </div>
                 
                 <div class="desktop-stats">

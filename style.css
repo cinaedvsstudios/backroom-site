@@ -135,7 +135,6 @@ select.filter-header-select:focus, select.cell-edit:focus { border-color: var(--
 .chip { background-color: var(--panel-standard); color: var(--text-light); border: 1px solid var(--panel-mid); padding: 6px 14px; cursor: pointer; font-family: 'Barlow Condensed', sans-serif; white-space: nowrap; }
 .chip.active { background-color: var(--primary-blue); color: #fff; border-color: var(--primary-blue); }
 
-/* V0.57 Global CSS Tag Taxonomy */
 .tag-adult-red { color: var(--bright-red-orange) !important; border-color: var(--bright-red-orange) !important; }
 .tag-adult-red.active { background-color: var(--bright-red-orange) !important; color: #fff !important; }
 .tag-venue-blue { color: var(--primary-blue) !important; border-color: var(--primary-blue) !important; }
@@ -185,12 +184,17 @@ select.filter-header-select:focus, select.cell-edit:focus { border-color: var(--
 .modal-image-container img { width: 100%; max-height: 350px; object-fit: cover; border-radius: var(--radius-card); }
 .centered-image { object-position: center !important; }
 
+/* V0.58 Profile Button Styling Consistency */
+.profile-btn-stack .btn { font-family: 'Barlow Condensed', sans-serif; font-size: 1.1rem !important; padding: 12px !important; font-weight: normal; border-radius: var(--radius-pill); margin-top: 0 !important; width: 100%; box-sizing: border-box; }
+
 /* Desktop Media Queries */
 @media (min-width: 769px) {
-    .filter-chips { flex-wrap: wrap; white-space: normal; overflow-x: visible; }
+    /* V0.58 Desktop tag wrap limit (~12 pills approx) */
+    .filter-chips { justify-content: center; flex-wrap: wrap; white-space: normal; overflow-x: visible; max-width: 950px; margin: 0 auto; }
     
     .desktop-only-hr { display: block !important; }
     .desktop-only-text { display: block !important; }
+    .desktop-only-table { display: table !important; }
     
     .profile-desktop-wrapper {
         display: grid;
@@ -208,17 +212,22 @@ select.filter-header-select:focus, select.cell-edit:focus { border-color: var(--
     .mobile-hidden-tab { display: block !important; }
     .mobile-only { display: none !important; }
     
-    /* v0.57: 30% Scale up on preview avatar desktop */
     #profile-avatar-preview { width: 176px !important; height: 354px !important; }
     
-    #view-3-buttons .btn { padding: 8px 12px !important; font-size: 0.95rem !important; margin-top: 0 !important; }
-    #view-3-buttons { gap: 8px !important; }
+    /* V0.58 Hide Avatar Text on Desktop */
+    .avatar-item span { display: none !important; }
 }
 
 /* Mobile Media Queries */
 @media (max-width: 768px) {
+    /* V0.58 Deep Mobile Overflow Constraints */
+    body, #app-shell, #workspace { max-width: 100vw; overflow-x: hidden; }
+    .card, .card-inner-content, .card-about, .card-header { min-width: 0; word-wrap: break-word; overflow-wrap: break-word; }
+    #results-container { grid-template-columns: 1fr !important; overflow-x: hidden; width: 100%; box-sizing: border-box; }
+
     .desktop-only-hr { display: none !important; }
     .desktop-only-text { display: none !important; }
+    .desktop-only-table { display: none !important; }
 
     .profile-desktop-wrapper { display: flex; flex-direction: column; gap: 15px; }
     .mobile-hidden-tab { display: none !important; }
@@ -274,7 +283,6 @@ select.filter-header-select:focus, select.cell-edit:focus { border-color: var(--
     position: relative;
 }
 
-/* V0.57 Touch-Target Rating Glow */
 @keyframes flash-glow-anim {
     0% { box-shadow: 0 0 0px transparent; }
     50% { box-shadow: 0 0 10px var(--primary-blue); border-radius: 4px; background: rgba(44, 168, 212, 0.2); }
@@ -326,12 +334,8 @@ select.filter-header-select:focus, select.cell-edit:focus { border-color: var(--
     
     .welcome-card { flex-direction: column; align-items: center; text-align: center; }
 
-    /* V0.57 Strict 3x3 Profile Thumbnails Grid */
     .avatar-grid { grid-template-columns: repeat(3, 1fr) !important; grid-template-rows: repeat(3, auto); max-height: none; }
     .avatar-item img { width: 60px; height: 120px; } 
-
-    /* V0.57 Strict 1-Column mobile overflow lock */
-    #results-container { grid-template-columns: 1fr !important; overflow-x: hidden; width: 100%; box-sizing: border-box; }
 }
 
 /* Admin Specific */
