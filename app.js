@@ -1,5 +1,5 @@
 // --- Application State ---
-const APP_VERSION = "v0.56";
+const APP_VERSION = "v0.57";
 const APP_DATE = "May 2026";
 
 let systemInfo = {}, designTheme = {}, venues = [], events = [];
@@ -7,6 +7,7 @@ let activeFilter = 'All';
 let selectedCardId = null;
 let currentTargetVenue = null; 
 let currentEventCityFilter = 'All';
+let isTutorialRunning = false; // v0.57 Tutorial flag
 
 // Profile Data Structure (Save Game Style)
 let userProfile = JSON.parse(localStorage.getItem('br_profile')) || { name: '', avatar: '' };
@@ -45,6 +46,17 @@ let sidebarTimeout;
 
 const MASTER_VIBE_TAGS = ["Cruise", "Darkroom", "Fetish", "Leather", "Rubber", "Gear", "Sportswear", "Sneakers", "Naked", "Underwear", "Dresscode", "Men Only", "Bear", "Mature", "Young Crowd", "Queer", "Drag", "Karaoke", "Pop/Dance", "Techno", "Sauna", "Puppy"];
 const SHORTLIST_EMOJIS = ['🤠','🚄','👑','🥂','🦄','🫦','💪','🪇','🔥','🍆','🍑','💄','🛁','✈️','💥','💦','🗝️','🧿','🎧','🧭','⛓️','🎼'];
+
+// v0.57 - Global Tag Color Utility
+function getTagColorClass(tag) {
+    const red = ['Cruise', 'Darkroom', 'Fetish', 'Leather', 'Rubber', 'Gear', 'Naked', 'Underwear', 'Men Only', 'Sauna', 'Cinema'];
+    const blue = ['Bar', 'Club', 'Dancefloor', 'Party', 'Smoking_Area', 'Sportswear', 'Sneakers', 'Dresscode', 'Bear', 'Mature', 'Techno', 'Puppy'];
+    const yellow = ['Young Crowd', 'Queer', 'Drag', 'Karaoke', 'Pop/Dance', 'Shop'];
+    if (red.includes(tag)) return 'tag-adult-red';
+    if (blue.includes(tag)) return 'tag-venue-blue';
+    if (yellow.includes(tag)) return 'tag-social-yellow';
+    return '';
+}
 
 function showToast(message) {
     const container = document.getElementById('toast-container');
@@ -357,16 +369,7 @@ function renderSharedListView(name, emoji, ids) {
     if (matchingVenues.length === 0) {
         resultsContainer.innerHTML += `<p style="text-align:center; color: var(--label-grey); grid-column: 1 / -1;">No active venues found in this list.</p>`;
     } else {
-        // Temporarily render just these venues
-        matchingVenues.forEach(v => {
-            // We use the existing renderListings logic to build the cards properly
-            // But we do it one by one or create a temp array
-        });
-        // Better approach: use renderListings to append to innerHTML, but we already wiped it.
-        // Let's create a temporary div, run renderListings into it, and move the children.
         const tempContainer = document.createElement('div');
-        const oldResultsContainer = resultsContainer;
-        // overriding global just for rendering
         const backupContainerHTML = resultsContainer.innerHTML;
         resultsContainer.innerHTML = '';
         renderListings(matchingVenues, true);
@@ -445,12 +448,28 @@ function handleRouting() {
     } else if (hash.startsWith('#shortlist=')) {
         recordUserInteraction();
         const name = decodeURIComponent(hash.replace('#shortlist=', ''));
-        renderSingleShortlist(name);
+        renderSingleShortlist(name); // v0.57 Shortlist internal router hook
     } else {
         applyFilters();
     }
     
     updateTravelSidebarHighlight();
+}
+
+// v0.57 Internal Shortlist Rendering Logic
+function renderSingleShortlist(name) {
+    document.getElementById('main-filters')?.classList.add('hidden');
+    contextHeader?.classList.remove('hidden');
+    
+    const cTitle = document.getElementById('context-title');
+    const cDesc = document.getElementById('context-desc');
+    const eIcon = userShortlistEmojis[name] || '📑';
+    if(cTitle) cTitle.innerHTML = `${eIcon} ${name}`;
+    if(cDesc) cDesc.innerText = "A saved shortlist collection.";
+    
+    const listIds = userShortlists[name] || [];
+    const matchingVenues = (venues||[]).filter(v => listIds.includes(v.Venue_ID));
+    renderListings(matchingVenues, true);
 }
 
 function renderWelcomeScreen() {
@@ -473,7 +492,8 @@ let currentTutorialStepIndex = 0;
 let currentTutorialType = '';
 
 function startTutorial(type) {
-    // V0.56 Mobile Split Logic Inject
+    isTutorialRunning = true; // v0.57 bypass flag
+    
     if (window.innerWidth < 768) {
         if (type === 'general') {
             const searchInputEl = document.getElementById('search-input');
@@ -534,7 +554,7 @@ function showNextTutorialStep() {
     const step = currentTutorialSteps[currentTutorialStepIndex];
     
     if(step.action === 'open_venue') {
-        // V0.56 Auto-open LAB on Mobile
+        // Auto-open LAB
         if (window.innerWidth < 768) {
             const labCard = venues.find(x => x.Venue_ID === 'BER-LAB-01');
             if(labCard) {
@@ -548,7 +568,6 @@ function showNextTutorialStep() {
         }
     }
 
-    // V0.56 Mobile Profile Tab Auto-Switch
     if (window.innerWidth < 768 && step.action && step.action.startsWith('mob_tab_')) {
         const tabNum = parseInt(step.action.replace('mob_tab_', ''));
         if (typeof switchProfileTab === 'function') {
@@ -590,6 +609,7 @@ function showNextTutorialStep() {
 }
 
 function endTutorial() {
+    isTutorialRunning = false; // v0.57 Bypass clear
     document.querySelectorAll('.tutorial-highlight').forEach(el => el.classList.remove('tutorial-highlight'));
     document.getElementById('tutorial-toast')?.classList.add('hidden');
     currentTutorialSteps = [];
@@ -612,7 +632,7 @@ function setupTutorialDrag() {
         isDragging = true; startX = e.clientX; startY = e.clientY;
         const rect = windowEl.getBoundingClientRect();
         windowEl.style.transform = 'none'; 
-        windowEl.style.bottom = 'auto'; // FIX: Clears bottom to prevent vertical stretching
+        windowEl.style.bottom = 'auto'; 
         initialLeft = rect.left; initialTop = rect.top;
         windowEl.style.left = initialLeft + 'px';
         windowEl.style.top = initialTop + 'px';
@@ -680,7 +700,7 @@ function setupEventListeners() {
     addEvt('btn-tutorial-skip', 'click', endTutorial);
     addEvt('btn-profile-tutorial', 'click', () => startTutorial('profile'));
 
-    addEvt('btn-language', 'click', () => showToast("Coming soon!")); // V0.56 Translate Toast
+    addEvt('btn-language', 'click', () => showToast("Coming soon!")); 
     addEvt('btn-back-to-results', 'click', () => {
         if(searchInput) searchInput.value = '';
         window.location.hash = '';
@@ -768,6 +788,7 @@ function setupEventListeners() {
     
     document.querySelectorAll('.btn-export-trigger').forEach(btn => btn.addEventListener('click', exportUserData));
     addEvt('import-data-file', 'change', importUserData);
+    addEvt('import-profile-file', 'change', importUserData); // V0.57 Direct UI binder
 
     addEvt('btn-add-create-shortlist', 'click', () => {
         const nameInp = document.getElementById('add-new-shortlist-name');
@@ -975,7 +996,9 @@ function renderDynamicFilters(filteredData) {
     
     MASTER_VIBE_TAGS.forEach(tag => {
         if(activeTags.has(tag) || activeFilter === tag) {
-            html += `<button class="chip pill-btn ${activeFilter === tag ? 'active' : ''}" data-filter="${tag}">${tag}</button>`;
+            // v0.57 Color taxonomy application
+            const colorClass = getTagColorClass(tag);
+            html += `<button class="chip pill-btn ${colorClass} ${activeFilter === tag ? 'active' : ''}" data-filter="${tag}">${tag}</button>`;
         }
     });
     container.innerHTML = html;
@@ -1013,8 +1036,8 @@ function applyFilters() {
     renderDynamicFilters(filteredVenues);
     updateTravelSidebarHighlight();
 
-    // --- V0.56: 10+ RESULTS TAG POPUP ---
-    if(filteredVenues.length >= 10 && query.trim() !== '') {
+    // V0.57: Tutorial Bypass for popup
+    if(filteredVenues.length >= 10 && query.trim() !== '' && !isTutorialRunning) {
         const hideWarning = localStorage.getItem('br_hide_search_warning') === 'true';
         if (!hideWarning && typeof triggerSearchTagsPopup === 'function') {
             triggerSearchTagsPopup(filteredVenues.length, document.getElementById('loc-city')?.value || query || 'this area');
@@ -1226,7 +1249,6 @@ window.openEmojiPicker = function(listName) {
     modal.classList.remove('hidden');
 }
 
-// V0.56 Share URL Generator Update
 function shareShortlist(name) {
     const eIcon = userShortlistEmojis[name] || '📑';
     const ids = userShortlists[name].join(',');
@@ -1241,7 +1263,7 @@ function renderShortlistsFullView() {
     const cTitle = document.getElementById('context-title');
     const cDesc = document.getElementById('context-desc');
     if(cTitle) cTitle.innerHTML = `<img src="shortlist.png" style="width:55px; vertical-align:bottom; margin-right:8px;"> MY SHORTLISTS`;
-    if(cDesc) cDesc.innerText = "Make a list and share it with your friends so they know where to go tonight!"; // V0.56 Updated Text
+    if(cDesc) cDesc.innerText = "Make a list and share it with your friends so they know where to go tonight!";
     
     const newBtn = document.getElementById('btn-new-shortlist-view');
     if(newBtn) {
@@ -1288,7 +1310,6 @@ function renderShortlistsFullView() {
     });
 }
 
-// v0.55 Mobile Face Emoji Progress Handler
 window.switchProfileTab = function(step) {
     const p1 = document.getElementById('profile-mob-view-1');
     const p2 = document.getElementById('profile-mob-view-2');
@@ -1301,7 +1322,6 @@ window.switchProfileTab = function(step) {
     const t3 = document.getElementById('ptab-3');
 
     if(p1 && p2 && p3 && t1 && t2 && t3) {
-        // Hide all
         p1.classList.add('mobile-hidden-tab');
         p2.classList.add('mobile-hidden-tab');
         p3.classList.add('mobile-hidden-tab');
@@ -1385,7 +1405,6 @@ function renderProfileAvatars() {
         displayData.unshift({ file: 'noavatar01.png', label: 'Default', category: [] });
     }
 
-    // v0.55 - STRICT AND LOGIC (.every instead of .some)
     const filteredData = activeAvatarCategories.length === 0 ? displayData : displayData.filter(a => {
         let cats = Array.isArray(a.category) ? a.category : [a.category];
         return activeAvatarCategories.every(cat => cats.includes(cat));
@@ -1405,7 +1424,6 @@ function renderProfileAvatars() {
                 previewImg.parentElement.classList.remove('hidden');
             }
             
-            // Highlight selected tile visually
             document.querySelectorAll('.avatar-item').forEach(el => el.classList.remove('selected'));
             item.classList.add('selected');
         });
@@ -1476,7 +1494,6 @@ function openProfileMenu() {
     renderProfileAvatars();
     renderProfileStats();
     
-    // v0.55 - Reset Mobile Face Emoji Tabs to Step 1 on open
     if(window.innerWidth <= 768) {
         window.switchProfileTab(1);
     }
@@ -1616,7 +1633,6 @@ function renderListings(data, isContextView = false) {
     const today = new Date(); today.setHours(0,0,0,0);
 
     if(!data || data.length === 0) {
-        // Empty State Handler Injection V0.56 Profile logic
         if (!isContextView && activeAvatarCategories && activeAvatarCategories.length > 0 && typeof userProfile !== 'undefined' && document.getElementById('avatar-grid') && !document.getElementById('profile-modal')?.classList.contains('hidden')) {
              showToast("No results! Message admin to request your favourite.");
         }
@@ -1751,8 +1767,7 @@ function getRatingCells(val, type) {
             asset = `<img src="Emoji/${prefix}0${i}.png" title="${tooltip}" style="width:${iconSize}; height:${iconSize}; vertical-align:middle; object-fit:contain;">`;
         }
         
-        // V0.56 Touch-to-Toast Mobile support
-        html += `<div style="opacity:${op}; display:flex; align-items:center; justify-content:center; cursor:pointer;" ontouchstart="event.preventDefault(); showToast('${tooltip.replace(/'/g, "\\'")}')">${asset}</div>`;
+        html += `<div class="rating-cell-target" style="opacity:${op}; display:flex; align-items:center; justify-content:center; cursor:pointer;" ontouchstart="event.preventDefault(); this.classList.add('flash-glow'); setTimeout(() => this.classList.remove('flash-glow'), 500); showToast('${tooltip.replace(/'/g, "\\'")}')">${asset}</div>`;
     }
     return html;
 }
@@ -1769,7 +1784,8 @@ function openVenueModal(venue) {
     if(venue.Feature_Men_Only) features.push('Men Only');
     if(venue.Feature_Dancefloor) features.push('Dancefloor');
     if(venue.Feature_Sauna) features.push('Sauna');
-    const featureHtml = features.map(f => `<span class="chip pill-btn" style="font-size:0.85rem; padding: 4px 10px;">${f}</span>`).join('');
+    // V0.57 Global Tag Colors via getTagColorClass
+    const featureHtml = features.map(f => `<span class="chip pill-btn ${getTagColorClass(f)}" style="font-size:0.85rem; padding: 4px 10px;">${f}</span>`).join('');
 
     const statsHtml = `
         <div class="public-stats-block">

@@ -14,7 +14,7 @@
     --radius-card: 8px;
     --radius-btn: 4px;
     --radius-pill: 50px; 
-    --admin-font-size: 0.95rem; /* v0.38 - Live Text Variable */
+    --admin-font-size: 0.95rem;
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -44,7 +44,6 @@ body { background-color: var(--bg-color); color: #fff; font-family: 'Barlow Cond
 .icon-btn { background: none; border: none; color: var(--text-light); font-size: 1.2rem; cursor: pointer; transition: color 0.2s; display: flex; align-items: center; justify-content: center; }
 .icon-btn:hover { color: #fff; }
 
-/* Social Bar Hover Effect */
 .social-bar img:hover { transform: scale(1.15); filter: brightness(1.2); }
 
 .fav-btn { opacity: 0.5; transition: opacity 0.2s, transform 0.2s; }
@@ -56,7 +55,6 @@ body { background-color: var(--bg-color); color: #fff; font-family: 'Barlow Cond
 .meta-text { color: var(--label-grey); font-size: 0.9rem; }
 .divider { border: 0; height: 1px; background: var(--panel-mid); margin: 15px 0; }
 
-/* v0.38 - Admin Dropdown Aesthetics */
 select.form-input, select.filter-header-select, select.cell-edit {
     appearance: none;
     -webkit-appearance: none;
@@ -100,7 +98,6 @@ select.filter-header-select:focus, select.cell-edit:focus { border-color: var(--
 
 .profile-btn-wrap { padding: 4px 8px !important; display: flex; align-items: center; }
 
-/* Profile Zoom Container */
 .avatar-crop-container { width: 36px; height: 36px; border-radius: 4px; overflow: hidden; display: none; margin-right: 5px; background-color: var(--panel-dark); }
 #top-profile-avatar { width: 100%; height: 100%; object-fit: cover; object-position: center top; transform-origin: center top; transform: scale(2.5); }
 
@@ -134,9 +131,17 @@ select.filter-header-select:focus, select.cell-edit:focus { border-color: var(--
 .features-list ul { list-style: none; display: flex; flex-direction: column; gap: 12px; }
 
 .filter-chips-container { margin-bottom: 25px; padding-bottom: 10px; }
-.filter-chips { display: flex; gap: 10px; overflow-x: auto; scrollbar-width: none; }
+.filter-chips { display: flex; gap: 10px; overflow-x: auto; scrollbar-width: none; white-space: nowrap; }
 .chip { background-color: var(--panel-standard); color: var(--text-light); border: 1px solid var(--panel-mid); padding: 6px 14px; cursor: pointer; font-family: 'Barlow Condensed', sans-serif; white-space: nowrap; }
 .chip.active { background-color: var(--primary-blue); color: #fff; border-color: var(--primary-blue); }
+
+/* V0.57 Global CSS Tag Taxonomy */
+.tag-adult-red { color: var(--bright-red-orange) !important; border-color: var(--bright-red-orange) !important; }
+.tag-adult-red.active { background-color: var(--bright-red-orange) !important; color: #fff !important; }
+.tag-venue-blue { color: var(--primary-blue) !important; border-color: var(--primary-blue) !important; }
+.tag-venue-blue.active { background-color: var(--primary-blue) !important; color: #fff !important; }
+.tag-social-yellow { color: #FFD700 !important; border-color: #FFD700 !important; }
+.tag-social-yellow.active { background-color: #FFD700 !important; color: #000 !important; }
 
 .status-badge { padding: 4px 10px; border-radius: var(--radius-pill); font-size: 0.85rem; font-weight: bold; display: inline-block; }
 .status-badge.live { background-color: var(--primary-blue); color: #fff; }
@@ -157,7 +162,6 @@ select.filter-header-select:focus, select.cell-edit:focus { border-color: var(--
 .card-title { font-size: 1.5rem; color: #fff; margin: 0; }
 .card-meta { color: var(--label-grey); font-size: 0.9rem; margin-top: 2px; }
 
-/* v0.55 - Fix mobile text blowout via min-width and break-word */
 .card-about { font-size: 1rem; color: var(--text-light); margin-bottom: 15px; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; word-wrap: break-word; min-width: 0; }
 .card-next-event { background-color: var(--panel-dark); padding: 8px; border-left: 3px solid var(--primary-blue); border-radius: 0 var(--radius-btn) var(--radius-btn) 0; font-size: 0.9rem; color: #fff; margin-bottom: 15px; }
 .card-stats { display: flex; align-items: center; gap: 15px; font-size: 0.95rem; color: var(--text-light); margin-top: auto; padding-top: 10px; border-top: 1px solid var(--panel-mid); }
@@ -181,8 +185,13 @@ select.filter-header-select:focus, select.cell-edit:focus { border-color: var(--
 .modal-image-container img { width: 100%; max-height: 350px; object-fit: cover; border-radius: var(--radius-card); }
 .centered-image { object-position: center !important; }
 
-/* v0.55 - Responsive Multi-View Profile Magic */
+/* Desktop Media Queries */
 @media (min-width: 769px) {
+    .filter-chips { flex-wrap: wrap; white-space: normal; overflow-x: visible; }
+    
+    .desktop-only-hr { display: block !important; }
+    .desktop-only-text { display: block !important; }
+    
     .profile-desktop-wrapper {
         display: grid;
         grid-template-columns: 1fr 280px;
@@ -190,36 +199,34 @@ select.filter-header-select:focus, select.cell-edit:focus { border-color: var(--
         align-items: start;
     }
     
-    /* View 1: Right Column (Preview/Name) */
     #profile-mob-view-1 { grid-column: 2; grid-row: 1; }
-    
-    /* View 2: Left Column (Grid) */
     #profile-mob-view-2 { grid-column: 1; grid-row: 1; }
-    
-    /* View 3: Split between Left and Right */
     #profile-mob-view-3 { display: contents; }
-    #view-3-stats { grid-column: 1; grid-row: 2; }
-    #view-3-buttons { grid-column: 2; grid-row: 2; }
+    #view-3-stats { grid-column: 1; grid-row: 3; }
+    #view-3-buttons { grid-column: 2; grid-row: 3; }
     
-    /* Disable Mobile Hiding classes on Desktop */
     .mobile-hidden-tab { display: block !important; }
     .mobile-only { display: none !important; }
     
-    /* Shrink desktop action buttons slightly to prevent scroll */
+    /* v0.57: 30% Scale up on preview avatar desktop */
+    #profile-avatar-preview { width: 176px !important; height: 354px !important; }
+    
     #view-3-buttons .btn { padding: 8px 12px !important; font-size: 0.95rem !important; margin-top: 0 !important; }
     #view-3-buttons { gap: 8px !important; }
 }
 
+/* Mobile Media Queries */
 @media (max-width: 768px) {
+    .desktop-only-hr { display: none !important; }
+    .desktop-only-text { display: none !important; }
+
     .profile-desktop-wrapper { display: flex; flex-direction: column; gap: 15px; }
     .mobile-hidden-tab { display: none !important; }
     .mobile-only { display: flex !important; }
     #profile-mob-view-3 { display: flex; flex-direction: column; gap: 15px; }
 }
 
-/* Base Profile Elements */
-/* V0.56: 30% Avatar Preview Size Increase */
-#profile-avatar-preview { width: 136px !important; height: 273px !important; }
+#profile-avatar-preview { width: 136px; height: 273px; }
 
 #avatar-filters { display: flex; justify-content: center; flex-wrap: wrap; gap: 8px; margin-bottom: 15px; width: 100%; box-sizing: border-box; }
 .avatar-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; max-height: 400px; overflow-y: auto; overflow-x: hidden; padding: 15px; background: var(--bg-color); border-radius: var(--radius-card); box-sizing: border-box; width: 100%; }
@@ -267,6 +274,14 @@ select.filter-header-select:focus, select.cell-edit:focus { border-color: var(--
     position: relative;
 }
 
+/* V0.57 Touch-Target Rating Glow */
+@keyframes flash-glow-anim {
+    0% { box-shadow: 0 0 0px transparent; }
+    50% { box-shadow: 0 0 10px var(--primary-blue); border-radius: 4px; background: rgba(44, 168, 212, 0.2); }
+    100% { box-shadow: 0 0 0px transparent; }
+}
+.flash-glow { animation: flash-glow-anim 0.5s ease-out; }
+
 @media (min-width: 1024px) {
     .body-font { font-size: 1.25rem; letter-spacing: 0.5px; }
     .display-font { letter-spacing: 2px; }
@@ -299,7 +314,6 @@ select.filter-header-select:focus, select.cell-edit:focus { border-color: var(--
     .top-btn .btn-text { display: none; }
     .top-btn { padding: 8px 12px; }
     
-    /* V0.56: Mobile Sidebar pulsing hint added */
     #sidebar { position: fixed; left: -220px; top: 0; height: 100vh; z-index: 500; transition: left 0.3s ease; border-left: none; border-right: 2px solid var(--primary-blue); box-shadow: 2px 0 15px rgba(44, 168, 212, 0.4); }
     #sidebar.visible { left: 0; }
     #sidebar-hit-area { position: fixed; left: 0; top: 0; width: 15px; height: 100vh; z-index: 499; animation: mobile-sidebar-pulse 2s infinite; }
@@ -312,9 +326,11 @@ select.filter-header-select:focus, select.cell-edit:focus { border-color: var(--
     
     .welcome-card { flex-direction: column; align-items: center; text-align: center; }
 
-    .avatar-grid { grid-template-columns: repeat(3, 1fr); max-height: 350px; }
+    /* V0.57 Strict 3x3 Profile Thumbnails Grid */
+    .avatar-grid { grid-template-columns: repeat(3, 1fr) !important; grid-template-rows: repeat(3, auto); max-height: none; }
+    .avatar-item img { width: 60px; height: 120px; } 
 
-    /* V0.56: Strict 1-Column mobile overflow lock */
+    /* V0.57 Strict 1-Column mobile overflow lock */
     #results-container { grid-template-columns: 1fr !important; overflow-x: hidden; width: 100%; box-sizing: border-box; }
 }
 

@@ -3,17 +3,19 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Backroom - v0.56</title>
+    <title>Backroom - v0.57</title>
     
     <meta name="description" content="Backroom - The comprehensive local guide to gay venues, cruise clubs, and events.">
     <meta name="keywords" content="gay guide, cruising, gay clubs, darkroom, fetish, gay events, queer venues">
     <meta name="robots" content="index, follow">
+    <meta property="og:title" content="Backroom - Local Guide">
+    <meta property="og:description" content="The comprehensive local guide to gay venues, cruise clubs, and events.">
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Antonio:wght@400;700&family=Barlow+Condensed:wght@400;500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
-    <link rel="stylesheet" href="style.css?v=0.56">
+    <link rel="stylesheet" href="style.css?v=0.57">
 </head>
 <body>
 
@@ -204,8 +206,7 @@
                     </div>
 
                     <div class="filter-chips-container" id="main-filters">
-                        <div class="filter-chips" id="filter-chips">
-                            </div>
+                        <div class="filter-chips" id="filter-chips"></div>
                     </div>
 
                     <section id="results-container"></section>
@@ -281,19 +282,21 @@
             <div class="modal-body body-font">
                 
                 <div id="profile-mobile-tabs" class="mobile-only" style="display:none; justify-content:center; align-items:center; background:var(--panel-dark); padding:10px; border-radius:var(--radius-pill); margin-bottom:20px; border:1px solid var(--panel-mid);">
-                    <div id="ptab-1" onclick="switchProfileTab(1)" style="font-size:1.8rem; cursor:pointer; padding:5px; border-radius:50%; transition:all 0.2s; text-align:center;" class="tutorial-highlight">🤗 <span style="font-size: 0.8rem; display:block; color:var(--primary-blue); font-weight:bold;">(1)</span></div>
+                    <div id="ptab-1" onclick="switchProfileTab(1)" style="font-size:1.8rem; cursor:pointer; padding:5px; border-radius:50%; transition:all 0.2s; text-align:center;" class="tutorial-highlight">🤗 <span style="font-size: 0.8rem; display:block; color:var(--primary-blue); font-weight:bold; white-space:nowrap;">1: Your Profile</span></div>
                     <div id="parr-1" style="color:var(--primary-blue); font-weight:bold; padding:0 5px; font-family:'Antonio', sans-serif; font-size:1.2rem;" class="tutorial-highlight">&gt;&gt;&gt;</div>
-                    <div id="ptab-2" onclick="switchProfileTab(2)" style="font-size:1.8rem; cursor:pointer; padding:5px; border-radius:50%; transition:all 0.2s; text-align:center;">🤔 <span style="font-size: 0.8rem; display:block; color:var(--primary-blue); font-weight:bold;">(2)</span></div>
+                    <div id="ptab-2" onclick="switchProfileTab(2)" style="font-size:1.8rem; cursor:pointer; padding:5px; border-radius:50%; transition:all 0.2s; text-align:center;">🤔 <span style="font-size: 0.8rem; display:block; color:var(--primary-blue); font-weight:bold; white-space:nowrap;">2: Choose Avatar</span></div>
                     <div id="parr-2" style="color:var(--primary-blue); font-weight:bold; padding:0 5px; font-family:'Antonio', sans-serif; font-size:1.2rem;">&gt;&gt;&gt;</div>
-                    <div id="ptab-3" onclick="switchProfileTab(3)" style="font-size:1.8rem; cursor:pointer; padding:5px; border-radius:50%; transition:all 0.2s; text-align:center;">😎 <span style="font-size: 0.8rem; display:block; color:var(--primary-blue); font-weight:bold;">(3)</span></div>
+                    <div id="ptab-3" onclick="switchProfileTab(3)" style="font-size:1.8rem; cursor:pointer; padding:5px; border-radius:50%; transition:all 0.2s; text-align:center;">😎 <span style="font-size: 0.8rem; display:block; color:var(--primary-blue); font-weight:bold; white-space:nowrap;">3: Functions</span></div>
                 </div>
 
                 <div class="profile-desktop-wrapper">
                     
                     <div id="profile-mob-view-1" class="profile-view-section">
+                        <h2 class="mobile-only display-font" style="color:var(--primary-blue); text-align:center;">YOUR PROFILE</h2>
+                        <hr class="mobile-only divider" style="border-color:var(--bright-red-orange); background:var(--bright-red-orange);">
                         <div style="background: var(--panel-dark); padding: 25px; border-radius: var(--radius-card); border: 1px solid var(--panel-mid);">
                             <div id="preview-img-wrapper" class="hidden" style="width: 100%; display: flex; justify-content: center;">
-                                <img id="profile-avatar-preview" src="" style="width: 105px; height: 210px; border-radius: 12px; object-fit: cover; border: 3px solid var(--primary-blue); margin-bottom: 10px; box-shadow: 0 0 15px rgba(44, 168, 212, 0.4);">
+                                <img id="profile-avatar-preview" src="" style="border-radius: 12px; object-fit: cover; border: 3px solid var(--primary-blue); margin-bottom: 10px; box-shadow: 0 0 15px rgba(44, 168, 212, 0.4);">
                             </div>
                             <div style="width: 100%;">
                                 <label class="meta-text" style="font-size: 0.9rem; margin-bottom: 5px; display: block; text-align: center;">Profile Name</label>
@@ -309,17 +312,26 @@
                     </div>
 
                     <div id="profile-mob-view-2" class="profile-view-section mobile-hidden-tab">
+                        <h2 class="mobile-only display-font" style="color:var(--primary-blue); text-align:center;">CHOOSE AVATAR</h2>
+                        <hr class="mobile-only divider" style="border-color:var(--bright-red-orange); background:var(--bright-red-orange);">
                         <div class="avatar-grid" id="avatar-grid"></div>
                     </div>
 
+                    <hr class="desktop-only-hr" style="grid-column: 1 / -1; width: 100%; border: 0; height: 2px; background: var(--bright-red-orange); margin: 10px 0;">
+
                     <div id="profile-mob-view-3" class="profile-view-section mobile-hidden-tab">
+                        <h2 class="mobile-only display-font" style="color:var(--primary-blue); text-align:center;">FUNCTIONS</h2>
+                        <hr class="mobile-only divider" style="border-color:var(--bright-red-orange); background:var(--bright-red-orange);">
                         <table style="width:100%; border-collapse:collapse;">
                             <tr>
                                 <td style="width:50%; vertical-align:top; padding-right:10px;">
+                                    <h4 class="display-font desktop-only-text" style="color:var(--primary-blue); margin-bottom:10px; font-size:1.2rem;">FUNCTIONS</h4>
                                     <div id="view-3-buttons" style="background: var(--panel-dark); padding: 25px; border-radius: var(--radius-card); border: 1px solid var(--panel-mid); display:flex; flex-direction:column; gap:10px;">
                                         <button id="btn-save-profile" class="btn primary-btn pill-btn" style="width: 100%; font-size: 1.1rem; padding: 12px;">Save changes</button>
                                         <button id="btn-new-profile" class="btn secondary-btn pill-btn" style="width: 100%; font-size: 1rem;">Create New Profile</button>
-                                        <button id="btn-profile-download-data" class="btn secondary-btn pill-btn btn-export-trigger" style="width: 100%; font-size: 1rem;">💾 Download My Data</button>
+                                        <label for="import-profile-file" class="btn secondary-btn pill-btn" style="width: 100%; font-size: 1rem; margin-top: 5px; text-align: center; cursor: pointer; border:1px solid var(--label-grey);">📥 Import Profile</label>
+                                        <input type="file" id="import-profile-file" class="hidden" accept=".json">
+                                        <button id="btn-profile-download-data" class="btn secondary-btn pill-btn btn-export-trigger" style="width: 100%; font-size: 1rem; margin-top: 5px;">💾 Download My Data</button>
                                         <button id="btn-delete-profile" class="btn pill-btn" style="width: 100%; font-size: 1rem; background: var(--dark-red); color: #fff; margin-top: 5px;">Delete Profile</button>
                                         <button id="btn-profile-tutorial" class="btn secondary-btn pill-btn tooltip" style="width: 100%; font-size: 0.9rem; margin-top: 5px;">💡 Profile Tutorial</button>
                                     </div>
@@ -395,7 +407,7 @@
             <button class="btn-close close-modal-btn">❌</button>
             <div class="modal-header"><h2 class="display-font">CONTACT / REPORT</h2></div>
             <div class="modal-body body-font">
-                <form action="https://formsubmit.co/ae0e141d-ad94-47fe-ac46-55702c6534a6" method="POST" id="fs-form" style="display: flex; flex-direction: column; gap: 10px;">
+                <form action="https://formsubmit.cloud/f/ae0e141d-ad94-47fe-ac46-55702c6534a6/" method="POST" id="fs-form" style="display: flex; flex-direction: column; gap: 10px;">
                     <input type="hidden" name="ID" id="fs-id" value="">
                     <input type="hidden" name="Name" id="fs-name" value="">
                     <input type="hidden" name="Type" id="fs-type" value="">
@@ -415,15 +427,9 @@
     </div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
-    <script src="app.js?v=0.56"></script>
+    <script src="app.js?v=0.57"></script>
 
     <script>
-        const TAG_COLORS = {
-            'Cruise': 'red', 'Darkroom': 'red', 'Fetish': 'red', 'Leather': 'red', 'Rubber': 'red', 'Gear': 'red', 'Naked': 'red', 'Underwear': 'red', 'Men Only': 'red', 'Sauna': 'red', 'Cinema': 'red',
-            'Bar': 'blue', 'Club': 'blue', 'Dancefloor': 'blue', 'Party': 'blue', 'Smoking_Area': 'blue', 'Sportswear': 'blue', 'Sneakers': 'blue', 'Dresscode': 'blue', 'Bear': 'blue', 'Mature': 'blue', 'Techno': 'blue', 'Puppy': 'blue',
-            'Young Crowd': 'yellow', 'Queer': 'yellow', 'Drag': 'yellow', 'Karaoke': 'yellow', 'Pop/Dance': 'yellow', 'Shop': 'yellow'
-        };
-
         window.triggerSearchTagsPopup = function(count, locationName) {
             const modal = document.getElementById('search-tags-popup-modal');
             const textEl = document.getElementById('search-tags-popup-text');
@@ -443,27 +449,21 @@
             let selectedPopupTags = [];
             
             Array.from(availableTags).forEach(tag => {
-                if(!TAG_COLORS[tag]) return;
-                const btn = document.createElement('button');
-                btn.className = 'chip pill-btn';
-                btn.innerText = tag;
+                const colorClass = window.getTagColorClass ? window.getTagColorClass(tag) : '';
+                if(!colorClass) return; // Only process mapped tags
                 
-                let colorCode = TAG_COLORS[tag] === 'red' ? 'var(--bright-red-orange)' : (TAG_COLORS[tag] === 'blue' ? 'var(--primary-blue)' : '#FFD700');
-                btn.style.borderColor = colorCode;
-                btn.style.color = colorCode;
+                const btn = document.createElement('button');
+                btn.className = `chip pill-btn ${colorClass}`;
+                btn.innerText = tag;
                 btn.style.margin = '4px';
                 
                 btn.onclick = () => {
                     if(selectedPopupTags.includes(tag)) {
                         selectedPopupTags = selectedPopupTags.filter(t => t !== tag);
                         btn.classList.remove('active');
-                        btn.style.backgroundColor = 'transparent';
-                        btn.style.color = colorCode;
                     } else {
                         selectedPopupTags.push(tag);
                         btn.classList.add('active');
-                        btn.style.backgroundColor = colorCode;
-                        btn.style.color = '#000'; 
                     }
                 };
                 pillsEl.appendChild(btn);
