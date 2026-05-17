@@ -541,3 +541,151 @@ td.hidden-col * { display: none !important; }
     #avatar-filters { overflow-x:auto !important; flex-wrap: nowrap !important; justify-content:flex-start !important; }
     #avatar-filters .chip { flex: 0 0 auto !important; }
 }
+
+
+/* v0.63 repair pass */
+#sidebar {
+    position: sticky;
+    top: 73px;
+    height: calc(100vh - 73px);
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+.sidebar-footer {
+    margin-top: auto;
+    position: sticky;
+    bottom: 0;
+    background: var(--panel-dark);
+    border-top: 1px solid var(--panel-mid);
+    box-shadow: 0 -8px 16px rgba(0,0,0,.35);
+}
+#sidebar-version-display {
+    display: block;
+    color: var(--primary-blue);
+    font-weight: 700;
+    line-height: 1.35;
+}
+.muted-chip {
+    opacity: 0.78 !important;
+    filter: none !important;
+    background-color: var(--panel-dark) !important;
+    color: var(--text-light) !important;
+    border-color: var(--panel-dark) !important;
+}
+.muted-chip:hover {
+    opacity: 1 !important;
+    border-color: var(--primary-blue) !important;
+}
+.avatar-item img {
+    border: 3px solid transparent !important;
+}
+.avatar-item.selected img {
+    border-color: var(--primary-blue) !important;
+    box-shadow: 0 0 0 3px rgba(44,168,212,.18), 0 0 18px rgba(44,168,212,.9) !important;
+    transform: scale(1.04);
+}
+.profile-hi-mobile-box {
+    background: var(--panel-dark);
+    border: 1px solid var(--panel-mid);
+    border-radius: var(--radius-card);
+    padding: 16px;
+    color: var(--text-light);
+    line-height: 1.45;
+}
+.profile-hi-mobile-box h4 {
+    color: var(--primary-blue);
+    margin: 0 0 8px;
+    font-size: 1.2rem;
+}
+.settings-sections {
+    gap: 14px !important;
+}
+.settings-heading {
+    color: var(--primary-blue) !important;
+    background: var(--near-black);
+    border-left: 4px solid var(--primary-blue);
+    padding: 8px 10px;
+    border-radius: 8px;
+    font-size: 1.25rem !important;
+}
+.settings-red-divider {
+    height: 3px !important;
+    background: linear-gradient(90deg, var(--bright-red-orange), transparent) !important;
+    margin: 18px 0 12px !important;
+}
+.settings-button-grid {
+    gap: 12px !important;
+}
+.settings-sections .btn {
+    border: 1px solid var(--panel-mid) !important;
+}
+#admin-table-container,
+.table-wrapper,
+.admin-main,
+#preview-table-container,
+#preview-import-modal {
+    scrollbar-width: auto !important;
+    scrollbar-color: var(--primary-blue) var(--near-black) !important;
+}
+#admin-table-container::-webkit-scrollbar,
+.table-wrapper::-webkit-scrollbar,
+.admin-main::-webkit-scrollbar,
+#preview-table-container::-webkit-scrollbar,
+#preview-import-modal::-webkit-scrollbar {
+    width: 26px !important;
+    height: 26px !important;
+}
+#admin-table-container::-webkit-scrollbar-thumb,
+.table-wrapper::-webkit-scrollbar-thumb,
+.admin-main::-webkit-scrollbar-thumb,
+#preview-table-container::-webkit-scrollbar-thumb,
+#preview-import-modal::-webkit-scrollbar-thumb {
+    background: var(--primary-blue) !important;
+    border: 5px solid var(--near-black) !important;
+    border-radius: 999px !important;
+    min-height: 48px !important;
+    min-width: 48px !important;
+}
+#admin-table-container::-webkit-scrollbar-track,
+.table-wrapper::-webkit-scrollbar-track,
+.admin-main::-webkit-scrollbar-track,
+#preview-table-container::-webkit-scrollbar-track,
+#preview-import-modal::-webkit-scrollbar-track {
+    background: var(--near-black) !important;
+}
+
+@media (max-width: 768px) {
+    #sidebar {
+        position: fixed !important;
+        left: -220px !important;
+        top: var(--mobile-sidebar-top, 126px) !important;
+        height: calc(100vh - var(--mobile-sidebar-top, 126px)) !important;
+        z-index: 850 !important;
+        transition: left 0.3s ease !important;
+        border-left: none !important;
+        border-right: 2px solid var(--primary-blue) !important;
+        box-shadow: 2px 0 15px rgba(44, 168, 212, 0.4) !important;
+        overflow-y: auto !important;
+        padding-top: 12px !important;
+    }
+    #sidebar.visible { left: 0 !important; }
+    #sidebar-hit-area {
+        position: fixed !important;
+        left: 0 !important;
+        top: var(--mobile-sidebar-top, 126px) !important;
+        width: 18px !important;
+        height: calc(100vh - var(--mobile-sidebar-top, 126px)) !important;
+        z-index: 840 !important;
+        animation: mobile-sidebar-pulse 2s infinite !important;
+    }
+    .sidebar-footer {
+        display: block !important;
+        font-size: .78rem !important;
+    }
+    .sidebar-menu {
+        padding-top: 0 !important;
+    }
+    .profile-hi-mobile-box {
+        display: block !important;
+    }
+}

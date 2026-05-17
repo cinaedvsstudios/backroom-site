@@ -1,10 +1,11 @@
 // --- Application State ---
-const APP_VERSION = "v0.62";
+const APP_VERSION = "v0.63";
 const APP_DATE = "17 May 2026";
 
 let systemInfo = {}, designTheme = {}, venues = [], events = [];
 let activeFilters = []; // v0.62 Multi-select Array
 let selectedCardId = null;
+let venueReturnHash = '#results';
 let currentTargetVenue = null; 
 let currentEventCityFilter = 'All';
 let isTutorialRunning = false; 
@@ -318,8 +319,7 @@ function setupCriticalListeners() {
         document.body.dataset.escapeVenueBound = 'true';
         document.addEventListener('keydown', (e) => {
             if(e.key === 'Escape' && venueModal && !venueModal.classList.contains('hidden')) {
-                venueModal.classList.add('hidden');
-                if(window.location.hash.startsWith('#venue=')) window.location.hash = '#results';
+                closeVenueModalToPreviousView();
             }
         });
     }
@@ -426,6 +426,61 @@ function populateSystemText() {
 }
 
 window.addEventListener('hashchange', handleRouting);
+window.addEventListener('resize', updateMobileSidebarOffset);
+
+
+function getCurrentListHashForVenueReturn() {
+    const hash = window.location.hash || '#results';
+    const listRoutes = ['#results', '#featured', '#favorites', '#myshortlists', '#myevents', '#mytravel', '#discounts', '#about', '#cruising-guide'];
+    if (listRoutes.includes(hash)) return hash;
+    if (hash.startsWith('#shortlist=')) return '#myshortlists';
+    return '#results';
+}
+
+function closeVenueModalToPreviousView() {
+    venueModal?.classList.add('hidden');
+    const target = venueReturnHash || '#results';
+    if (window.location.hash === target) handleRouting();
+    else window.location.hash = target;
+}
+
+function getFeaturedSortScore(venue) {
+    const general = Number.parseInt(venue?.Rating_General, 10) || 0;
+    const popularity = Number.parseInt(venue?.Rating_Busyness || venue?.Rating_Popularity, 10) || 0;
+    const darkroom = Number.parseInt(venue?.Rating_Darkroom, 10) || 0;
+    const location = Number.parseInt(venue?.Rating_Location, 10) || 0;
+    return (general * 1000) + (popularity * 100) + (darkroom * 10) + location;
+}
+
+function sortFeaturedVenues(list) {
+    return [...(list || [])].sort((a, b) => {
+        const scoreDiff = getFeaturedSortScore(b) - getFeaturedSortScore(a);
+        if (scoreDiff !== 0) return scoreDiff;
+        return String(a?.Name || '').localeCompare(String(b?.Name || ''));
+    });
+}
+
+function updateMobileSidebarOffset() {
+    const topBar = document.getElementById('top-bar');
+    if (!topBar) return;
+    const height = Math.ceil(topBar.getBoundingClientRect().height);
+    document.documentElement.style.setProperty('--mobile-sidebar-top', `${height}px`);
+}
+
+function closeSidebarImmediately() {
+    if (!sidebar) return;
+    sidebar.classList.remove('visible');
+    clearTimeout(sidebarTimeout);
+}
+
+function openSidebarTemporarily() {
+    if (!sidebar) return;
+    updateMobileSidebarOffset();
+    sidebar.classList.add('visible');
+    sidebar.scrollTop = 0;
+    clearTimeout(sidebarTimeout);
+    sidebarTimeout = setTimeout(closeSidebarImmediately, 5000);
+}
 
 function checkSharedListRoute() {
     const hash = window.location.hash;
@@ -661,7 +716,7 @@ function renderFeaturedView() {
     }
 
     ['1','2','3'].forEach(level => {
-        const levelVenues = featVenues.filter(v => normalizeFeaturedLevel(v) === level);
+        const levelVenues = sortFeaturedVenues(featVenues.filter(v => normalizeFeaturedLevel(v) === level));
         if(levelVenues.length) {
             html += `<section class="featured-section" style="margin-bottom:28px;"><h3 class="display-font" style="margin:0 0 12px; color:var(--primary-blue);">${levelLabels[level]}</h3><div id="featured-level-${level}" class="featured-grid" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(300px, 1fr)); gap:20px;"></div></section>`;
         }
@@ -669,7 +724,7 @@ function renderFeaturedView() {
     container.innerHTML = html;
     ['1','2','3'].forEach(level => {
         const grid = document.getElementById(`featured-level-${level}`);
-        if(grid) renderListings(featVenues.filter(v => normalizeFeaturedLevel(v) === level), true, grid);
+        if(grid) renderListings(sortFeaturedVenues(featVenues.filter(v => normalizeFeaturedLevel(v) === level)), true, grid);
     });
 }
 
@@ -872,40 +927,64 @@ function setupEventListeners() {
             e.preventDefault();
             const submitBtn = fsForm.querySelector('button[type="submit"]');
             const oldText = submitBtn ? submitBtn.innerText : '';
+            const hiddenFrame = document.getElementById('formsubmit-hidden-frame');
             if(submitBtn) {
                 submitBtn.disabled = true;
                 submitBtn.innerText = 'Sending...';
             }
-            try {
-                fsForm.action = FORMSUBMIT_ENDPOINT;
-                await fetch(FORMSUBMIT_ENDPOINT, {
-                    method: 'POST',
-                    body: new FormData(fsForm),
-                    mode: 'no-cors',
-                    cache: 'no-store'
-                });
-                showToast(systemInfo.form_success_message || 'Thanks, your report has been submitted.');
+
+            const finishAsHandedOff = () => {
+                showToast(systemInfo.form_success_message || 'Your message was handed to FormSubmit. Check email/FormSubmit settings if it does not arrive.');
                 document.getElementById('formsubmit-modal')?.classList.add('hidden');
                 fsForm.reset();
-            } catch (err) {
-                const hiddenFrame = document.getElementById('formsubmit-hidden-frame');
-                try {
-                    if(hiddenFrame) fsForm.target = 'formsubmit-hidden-frame';
-                    fsForm.action = FORMSUBMIT_ENDPOINT;
-                    HTMLFormElement.prototype.submit.call(fsForm);
-                    showToast(systemInfo.form_success_message || 'Thanks, your report has been submitted.');
-                    document.getElementById('formsubmit-modal')?.classList.add('hidden');
-                    fsForm.reset();
-                } catch (fallbackErr) {
-                    showToast(systemInfo.error_messages?.form_submit_failed || 'The report could not be submitted. Please try again.');
-                } finally {
-                    fsForm.removeAttribute('target');
-                }
-            } finally {
                 if(submitBtn) {
                     submitBtn.disabled = false;
                     submitBtn.innerText = oldText || 'Send Message';
                 }
+            };
+
+            const failSubmit = () => {
+                showToast(systemInfo.error_messages?.form_submit_failed || 'The report could not be submitted. Please try again.');
+                if(submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.innerText = oldText || 'Send Message';
+                }
+                fsForm.removeAttribute('target');
+            };
+
+            try {
+                fsForm.action = FORMSUBMIT_ENDPOINT;
+                if(hiddenFrame) {
+                    let completed = false;
+                    const onLoad = () => {
+                        if(completed) return;
+                        completed = true;
+                        hiddenFrame.removeEventListener('load', onLoad);
+                        fsForm.removeAttribute('target');
+                        finishAsHandedOff();
+                    };
+                    hiddenFrame.addEventListener('load', onLoad);
+                    fsForm.target = 'formsubmit-hidden-frame';
+                    HTMLFormElement.prototype.submit.call(fsForm);
+                    setTimeout(() => {
+                        if(completed) return;
+                        completed = true;
+                        hiddenFrame.removeEventListener('load', onLoad);
+                        fsForm.removeAttribute('target');
+                        showToast('Message sent to FormSubmit. If no email arrives, check the FormSubmit Cloud dashboard/settings.');
+                        document.getElementById('formsubmit-modal')?.classList.add('hidden');
+                        fsForm.reset();
+                        if(submitBtn) {
+                            submitBtn.disabled = false;
+                            submitBtn.innerText = oldText || 'Send Message';
+                        }
+                    }, 4500);
+                } else {
+                    HTMLFormElement.prototype.submit.call(fsForm);
+                    finishAsHandedOff();
+                }
+            } catch (err) {
+                failSubmit();
             }
         });
     }
@@ -926,9 +1005,7 @@ function setupEventListeners() {
         });
     });
     
-    addEvt('close-modal', 'click', () => {
-        window.location.hash = '#results';
-    });
+    addEvt('close-modal', 'click', closeVenueModalToPreviousView);
 
     addEvt('btn-location', 'click', () => {
         locModal?.classList.remove('hidden');
@@ -1139,14 +1216,22 @@ function setupEventListeners() {
         }
     });
 
-    if(hitArea && sidebar) {
-        const showSidebar = () => {
-            sidebar.classList.add('visible');
-            clearTimeout(sidebarTimeout);
-            sidebarTimeout = setTimeout(() => { sidebar.classList.remove('visible'); }, 5000);
-        };
-        hitArea.addEventListener('click', showSidebar);
-        sidebar.addEventListener('click', showSidebar);
+    if(hitArea && sidebar && !document.body.dataset.sidebarBound) {
+        document.body.dataset.sidebarBound = 'true';
+        hitArea.addEventListener('click', (e) => { e.stopPropagation(); openSidebarTemporarily(); });
+        hitArea.addEventListener('touchstart', (e) => { e.stopPropagation(); openSidebarTemporarily(); }, {passive:true});
+        sidebar.addEventListener('click', (e) => { e.stopPropagation(); openSidebarTemporarily(); });
+        document.addEventListener('click', (e) => {
+            if(!sidebar.classList.contains('visible')) return;
+            if(e.target.closest('#sidebar') || e.target.closest('#sidebar-hit-area')) return;
+            closeSidebarImmediately();
+        });
+        document.addEventListener('touchstart', (e) => {
+            if(!sidebar.classList.contains('visible')) return;
+            if(e.target.closest('#sidebar') || e.target.closest('#sidebar-hit-area')) return;
+            closeSidebarImmediately();
+        }, {passive:true});
+        updateMobileSidebarOffset();
     }
 
     if(searchInput) {
@@ -1703,7 +1788,7 @@ function renderProfileAvatars() {
     }
     
     const ageTags = ['Young', 'Prime', 'Mature'];
-    const fetishTags = ['Ink', 'Leather', 'Rubber', 'Puppy'];
+    const fetishTags = ['Fun', 'Ink', 'Inked', 'Leather', 'Rubber', 'Puppy'];
     
     let html = `<div class="tag-row-blue" style="display:flex; justify-content:center; gap:8px;">`;
     html += `<button class="chip pill-btn ${activeAvatarCategories.length === 0 ? 'active' : ''}" style="padding: 4px 10px; font-size: 0.85rem; flex-shrink:0;" data-val="All">All</button>`;
@@ -1740,6 +1825,7 @@ function renderProfileAvatars() {
     filteredData.forEach(avatar => {
         const item = document.createElement('div');
         item.className = 'avatar-item';
+        if (avatar.file === userProfile.avatar) item.classList.add('selected');
         
         // V0.58 Title fallback for desktop span hiding
         item.innerHTML = `<img src="Profile_images/${avatar.file}" onerror="this.parentElement.style.display='none';" alt="${avatar.label}" title="${avatar.label}"><span>${avatar.label}</span>`;
@@ -1833,15 +1919,27 @@ function openProfileMenu() {
     
     // V0.58 Dynamic Fallback welcome string
     const privacyGreeting = document.getElementById('profile-privacy-greeting');
-    if(privacyGreeting) {
-        let dispName = 'Guest';
-        if (userProfile.name) {
-            dispName = userProfile.name;
-        } else if (userProfile.avatar && userProfile.avatar !== 'noavatar01.png') {
-            const found = avatarData.find(a => a.file === userProfile.avatar);
-            if(found) dispName = found.label; 
+    let dispName = 'Guest';
+    if (userProfile.name) {
+        dispName = userProfile.name;
+    } else if (userProfile.avatar && userProfile.avatar !== 'noavatar01.png') {
+        const found = avatarData.find(a => a.file === userProfile.avatar);
+        if(found) dispName = found.label; 
+    }
+    if(privacyGreeting) privacyGreeting.innerText = `Hi ${dispName},`;
+
+    const mobileFunctions = document.querySelector('#profile-mob-view-3 .mobile-only');
+    if(mobileFunctions) {
+        let mobileHi = document.getElementById('profile-mobile-hi-box');
+        if(!mobileHi) {
+            mobileHi = document.createElement('div');
+            mobileHi.id = 'profile-mobile-hi-box';
+            mobileHi.className = 'profile-hi-mobile-box';
+            const btnStack = mobileFunctions.querySelector('.profile-btn-stack');
+            if(btnStack) btnStack.insertAdjacentElement('afterend', mobileHi);
+            else mobileFunctions.prepend(mobileHi);
         }
-        privacyGreeting.innerText = '';
+        mobileHi.innerHTML = `<h4 class="display-font">Hi ${dispName},</h4><p>In this screen you can edit your profile. Your favorites, shortlists, events, travel pins and profile choices are stored locally in this browser. Export your data if you want a backup.</p>`;
     }
 
     const profileWipeToast = document.getElementById('profile-wipe-toast');
@@ -1852,7 +1950,6 @@ function openProfileMenu() {
         if(copyBtn) copyBtn.innerText = "Make a copy of this profile";
     }
 
-    document.getElementById('profile-mobile-help')?.remove();
 
     profileModal?.classList.remove('hidden');
 }
@@ -2065,6 +2162,7 @@ function renderListings(data, isContextView = false, targetContainer = resultsCo
             } else if (!e.target.classList.contains('venue-image')) {
                 if(selectedCardId === venue.Venue_ID) {
                     recordUserInteraction();
+                    venueReturnHash = getCurrentListHashForVenueReturn();
                     window.location.hash = `#venue=${venue.Venue_ID}`; 
                 } else {
                     document.querySelectorAll('.card.selected').forEach(c => c.classList.remove('selected'));
