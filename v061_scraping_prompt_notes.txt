@@ -1,0 +1,17 @@
+Backroom scraping prompt addition for touring / multi-city parties
+
+When a listing is a recurring party, touring party, circuit party, or event brand rather than a fixed venue, decide whether it has one stable home city or multiple rotating cities.
+
+Rules:
+- If the party has one stable city/venue, use the normal single City value and normal venue/address fields.
+- If the party rotates across multiple cities and should be discoverable by tourists in those cities, put all verified cities into City as a comma-separated list, for example: Berlin, Paris, Amsterdam.
+- Use Country: Europe for cross-country European rotating parties, unless all listed cities are in one country. If all cities are in one country, use that country.
+- Do not invent cities. Only add cities directly supported by official event pages, ticket pages, Resident Advisor-style listings, Instagram posts, or reliable public listings.
+- Put the current/known rotating cities in the Description or Opening_Notes as plain text too, so free-text search can find them.
+- Keep the description clear that the party is touring/rotating and users must check the current date/location before attending.
+- Do not add latitude/longitude or a fixed address unless the specific upcoming edition has a confirmed venue.
+- Generic rotating-party listings should be excluded from closest-location/distance sorting unless a real current venue/address/lat-long exists.
+- If the party has repeated stable editions in major cities, separate child listings can be created later, for example Pornceptual Berlin or Hollywood Tramp Cologne, but this is optional.
+
+Code requirement:
+The public app must parse comma-separated City values into individual tokens for search, city filtering, travel filtering, and dynamic city chips. It must not treat Berlin, Paris, Amsterdam as one literal city.

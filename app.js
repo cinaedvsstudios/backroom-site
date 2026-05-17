@@ -1,9 +1,9 @@
 // --- Application State ---
-const APP_VERSION = "v0.60";
+const APP_VERSION = "v0.61";
 const APP_DATE = "17 May 2026";
 
 let systemInfo = {}, designTheme = {}, venues = [], events = [];
-let activeFilters = []; // v0.60 Multi-select Array
+let activeFilters = []; // v0.61 Multi-select Array
 let selectedCardId = null;
 let currentTargetVenue = null; 
 let currentEventCityFilter = 'All';
@@ -71,6 +71,38 @@ function getVenueTags(venue) {
         });
 }
 
+
+function getCityTokens(venue) {
+    return String(venue?.City || '')
+        .split(',')
+        .map(city => city.trim())
+        .filter(Boolean);
+}
+
+function isMultiCityVenue(venue) {
+    return getCityTokens(venue).length > 1;
+}
+
+function formatVenueLocation(venue) {
+    const cityText = getCityTokens(venue).join(', ');
+    const countryText = String(venue?.Country || '').trim();
+    if (cityText && countryText) return `${cityText} · ${countryText}`;
+    return cityText || countryText || '';
+}
+
+function venueMatchesCity(venue, cityName) {
+    const target = String(cityName || '').trim().toLowerCase();
+    if (!target) return true;
+    return getCityTokens(venue).some(city => city.toLowerCase() === target);
+}
+
+function hasFixedCoordinates(venue) {
+    if (isMultiCityVenue(venue)) return false;
+    const lat = parseFloat(venue?.Latitude);
+    const lon = parseFloat(venue?.Longitude);
+    return !Number.isNaN(lat) && !Number.isNaN(lon);
+}
+
 function renderTagPills(tags, extraStyle = '') {
     return (tags || []).map(tag => `<span class="chip pill-btn ${getTagColorClass(tag)}" title="${tag}" style="font-size:0.85rem; padding: 4px 10px; ${extraStyle}">${tag}</span>`).join('');
 }
@@ -81,11 +113,14 @@ function normalizeFeaturedLevel(venue) {
 }
 
 function getVenueSearchText(venue) {
+    const cityTokens = getCityTokens(venue).join(' ');
     return [
         venue?.Name,
         venue?.Description,
+        venue?.Opening_Notes,
         venue?.Vibe_Tags,
         venue?.City,
+        cityTokens,
         venue?.Country,
         venue?.Address,
         venue?.Postcode,
@@ -276,6 +311,16 @@ function setupCriticalListeners() {
         appShell?.classList.remove('hidden');
         showToast("Backroom " + APP_VERSION);
     }
+
+    if(!document.body.dataset.escapeVenueBound) {
+        document.body.dataset.escapeVenueBound = 'true';
+        document.addEventListener('keydown', (e) => {
+            if(e.key === 'Escape' && venueModal && !venueModal.classList.contains('hidden')) {
+                venueModal.classList.add('hidden');
+                if(window.location.hash.startsWith('#venue=')) window.location.hash = '#results';
+            }
+        });
+    }
 }
 
 async function initApp() {
@@ -457,7 +502,6 @@ function handleRouting() {
     if (checkSharedListRoute()) return; 
 
     const hash = window.location.hash;
-    const query = searchInput?.value.trim() || '';
 
     document.querySelectorAll('.modal').forEach(m => m.classList.add('hidden'));
     contextHeader?.classList.add('hidden');
@@ -469,10 +513,14 @@ function handleRouting() {
     welcomeScreen?.classList.add('hidden');
     document.getElementById('profile-wipe-toast')?.classList.add('hidden');
 
-    if (hash === '' && query === '' && activeFilters.length === 0 && sessionStorage.getItem('br_welcome_dismissed') !== 'true') {
+    if (hash === '') {
+        if (searchInput) searchInput.value = '';
+        activeFilters = [];
+        selectedCardId = null;
         document.getElementById('main-filters')?.classList.add('hidden');
         if(resultsContainer) resultsContainer.innerHTML = '';
         renderWelcomeScreen();
+        updateTravelSidebarHighlight();
         return;
     }
 
@@ -486,6 +534,9 @@ function handleRouting() {
             showToast('Venue not available or under review');
             window.location.hash = '#results'; 
         }
+    } else if (hash === '#results') {
+        recordUserInteraction();
+        applyFilters();
     } else if (hash === '#favorites') {
         recordUserInteraction();
         renderFavoritesView();
@@ -515,8 +566,7 @@ function handleRouting() {
         const name = decodeURIComponent(hash.replace('#shortlist=', ''));
         renderSingleShortlist(name);
     } else {
-        if(window.location.hash !== '#results') window.location.hash = '#results';
-        else applyFilters();
+        window.location.hash = '#results';
     }
 
     updateTravelSidebarHighlight();
@@ -525,6 +575,7 @@ function handleRouting() {
 function renderSingleShortlist(name) {
     document.getElementById('main-filters')?.classList.add('hidden');
     contextHeader?.classList.remove('hidden');
+    document.getElementById('btn-back-to-results')?.classList.remove('result-back-hidden');
     
     const cTitle = document.getElementById('context-title');
     const cDesc = document.getElementById('context-desc');
@@ -592,7 +643,7 @@ function renderFeaturedView() {
     container.classList.remove('hidden');
 
     const featVenues = getPublicVenues().filter(v => ['1','2','3'].includes(normalizeFeaturedLevel(v)));
-    const cities = [...new Set(featVenues.map(v => v.City).filter(Boolean))].sort();
+    const cities = [...new Set(featVenues.flatMap(v => getCityTokens(v)).filter(Boolean))].sort();
     let html = `<h2 class="display-font" style="color:var(--primary-blue); margin-bottom:5px;">🏛️ FEATURED VENUES</h2>`;
     html += `<p class="body-font" style="margin-bottom:15px; color:#fff;">${systemInfo.featured_page_intro || 'Below are some of our favourite venues.'}</p>`;
     if(cities.length) html += `<div style="display:flex; gap:8px; margin-bottom:20px; overflow-x:auto; flex-wrap:wrap;">${cities.map(c => `<button class="chip pill-btn" onclick="const s=document.getElementById('search-input'); if(s) s.value='${String(c).replace(/'/g, "\\'")}'; window.location.hash='#results'; handleRouting();">${c}</button>`).join('')}</div>`;
@@ -819,7 +870,19 @@ function setupEventListeners() {
     }
 
     document.querySelectorAll('.close-modal-btn').forEach(btn => {
-        btn.addEventListener('click', (e) => e.target.closest('.modal')?.classList.add('hidden'));
+        btn.addEventListener('click', (e) => {
+            const modal = e.target.closest('.modal');
+            if(modal && modal.id === 'profile-modal') {
+                const currentName = document.getElementById('profile-name')?.value.trim() || '';
+                if(currentName !== (userProfile.name || '')) {
+                    const saveIt = confirm('You have unsaved profile changes. Save before closing?');
+                    if(saveIt) document.getElementById('btn-save-profile')?.click();
+                    else modal.classList.add('hidden');
+                    return;
+                }
+            }
+            modal?.classList.add('hidden');
+        });
     });
     
     addEvt('close-modal', 'click', () => {
@@ -829,6 +892,7 @@ function setupEventListeners() {
     addEvt('btn-location', 'click', () => {
         locModal?.classList.remove('hidden');
     });
+    addEvt('btn-close-to-me-location', 'click', () => showToast(systemInfo.labels?.coming_soon || 'Coming soon'));
     
     addEvt('btn-settings', 'click', () => settingsModal?.classList.remove('hidden'));
     addEvt('btn-profile-menu', 'click', openProfileMenu);
@@ -855,6 +919,7 @@ function setupEventListeners() {
     addEvt('btn-clear-location', 'click', clearLocation);
     
     addEvt('btn-gps', 'click', () => {
+        showToast('Hold up a few seconds, we are confirming your location.');
         if(navigator.geolocation) {
             navigator.geolocation.getCurrentPosition(
                 async (pos) => { 
@@ -1114,7 +1179,7 @@ function updateTravelSidebarHighlight() {
     const items = document.querySelectorAll('#travel-cities-list .submenu-item');
     items.forEach(item => {
         const spanText = item.querySelector('span').innerText.toLowerCase();
-        if(spanText === query && window.location.hash === '') {
+        if(spanText === query && window.location.hash === '#results') {
             item.classList.add('active-travel');
         } else {
             item.classList.remove('active-travel');
@@ -1188,6 +1253,13 @@ function applyFilters() {
     }
 
     filteredVenues.sort((a, b) => {
+        const queryCity = query.trim().toLowerCase();
+        if (queryCity) {
+            const aCityMatch = venueMatchesCity(a, queryCity);
+            const bCityMatch = venueMatchesCity(b, queryCity);
+            if (aCityMatch && bCityMatch && isMultiCityVenue(a) !== isMultiCityVenue(b)) return isMultiCityVenue(a) ? 1 : -1;
+        }
+
         const aShop = getVenueTags(a).includes('Shop') ? 1 : 0;
         const bShop = getVenueTags(b).includes('Shop') ? 1 : 0;
         if (aShop !== bShop) return aShop - bShop;
@@ -1211,6 +1283,7 @@ function applyFilters() {
 
     if(contextHeader) {
         contextHeader.classList.remove('hidden');
+        document.getElementById('btn-back-to-results')?.classList.add('result-back-hidden');
         const title = document.getElementById('context-title');
         const desc = document.getElementById('context-desc');
         const parts = [];
@@ -1297,6 +1370,7 @@ window.toggleEventFavorite = function(eventId, btnElement, isRemovalView = false
 function renderFavoritesView() {
     document.getElementById('main-filters')?.classList.add('hidden');
     contextHeader?.classList.remove('hidden');
+    document.getElementById('btn-back-to-results')?.classList.remove('result-back-hidden');
     const cTitle = document.getElementById('context-title');
     const cDesc = document.getElementById('context-desc');
     if(cTitle) cTitle.innerHTML = "⚜️ MY FAVOURITES";
@@ -1309,6 +1383,7 @@ function renderFavoritesView() {
 function renderMyEventsView() {
     document.getElementById('main-filters')?.classList.add('hidden');
     contextHeader?.classList.remove('hidden');
+    document.getElementById('btn-back-to-results')?.classList.remove('result-back-hidden');
     
     const cTitle = document.getElementById('context-title');
     const cDesc = document.getElementById('context-desc');
@@ -1332,7 +1407,7 @@ function renderMyEventsView() {
     const cities = new Set();
     myEvts.forEach(ev => {
         const venue = (venues||[]).find(v => v.Venue_ID === ev.Venue_ID);
-        if(venue && venue.City) cities.add(venue.City);
+        if(venue) getCityTokens(venue).forEach(city => cities.add(city));
     });
 
     const createCityBtn = (cityName, label) => {
@@ -1350,7 +1425,7 @@ function renderMyEventsView() {
     if(currentEventCityFilter !== 'All') {
         myEvts = myEvts.filter(ev => {
             const venue = (venues||[]).find(v => v.Venue_ID === ev.Venue_ID);
-            return venue && venue.City === currentEventCityFilter;
+            return venue && venueMatchesCity(venue, currentEventCityFilter);
         });
     }
 
@@ -1381,6 +1456,7 @@ function renderMyEventsView() {
 function renderTravelFullView() {
     document.getElementById('main-filters')?.classList.add('hidden');
     contextHeader?.classList.remove('hidden');
+    document.getElementById('btn-back-to-results')?.classList.remove('result-back-hidden');
     
     const cTitle = document.getElementById('context-title');
     const cDesc = document.getElementById('context-desc');
@@ -1439,6 +1515,7 @@ function shareShortlist(name) {
 function renderShortlistsFullView() {
     document.getElementById('main-filters')?.classList.add('hidden');
     contextHeader?.classList.remove('hidden');
+    document.getElementById('btn-back-to-results')?.classList.remove('result-back-hidden');
     
     const cTitle = document.getElementById('context-title');
     const cDesc = document.getElementById('context-desc');
@@ -1599,6 +1676,7 @@ function renderProfileAvatars() {
         
         item.addEventListener('click', () => {
             userProfile.avatar = avatar.file;
+            showToast(`You selected ${avatar.label || avatar.file}`);
             const previewImg = document.getElementById('profile-avatar-preview');
             if(previewImg) {
                 previewImg.src = `Profile_images/${avatar.file}`;
@@ -1666,6 +1744,11 @@ function renderProfileStats() {
     
     html += `</div>`;
     container.innerHTML = html;
+    const mobileHtml = html.replace('desktop-only-text ', '');
+    const containerMob = document.getElementById('profile-stats-container-mob');
+    if(containerMob) containerMob.innerHTML = mobileHtml;
+    const containerMobFirst = document.getElementById('profile-stats-container-mob-first');
+    if(containerMobFirst) containerMobFirst.innerHTML = mobileHtml;
 }
 
 function openProfileMenu() {
@@ -1697,6 +1780,15 @@ function openProfileMenu() {
         const copyBtn = profileWipeToast.querySelector('#btn-wipe-profile-only');
         if(wipeAllBtn) wipeAllBtn.innerText = "Make a new blank profile";
         if(copyBtn) copyBtn.innerText = "Make a copy of this profile";
+    }
+
+    const mobileStats = document.getElementById('profile-stats-container-mob');
+    if(mobileStats && !document.getElementById('profile-mobile-help')) {
+        const help = document.createElement('div');
+        help.id = 'profile-mobile-help';
+        help.className = 'profile-mobile-help mobile-only';
+        help.innerHTML = `<h4 class="display-font" style="color:var(--primary-blue); margin-bottom:8px;">Hi ${userProfile.name || 'Guest'},</h4><p>Your profile, favourites, shortlists, saved events and travel pins are stored locally in this browser. Export your profile if you want a backup.</p>`;
+        mobileStats.parentNode.appendChild(help);
     }
 
     profileModal?.classList.remove('hidden');
@@ -1841,6 +1933,7 @@ function renderListings(data, isContextView = false, targetContainer = resultsCo
             let nearest = null;
             let minDist = Infinity;
             getPublicVenues().forEach(v => {
+                if(!hasFixedCoordinates(v)) return;
                 const dist = getDistanceFromLatLonInKm(userLat, userLon, parseFloat(v.Latitude), parseFloat(v.Longitude));
                 if (dist < minDist) { minDist = dist; nearest = v; }
             });
@@ -1850,8 +1943,8 @@ function renderListings(data, isContextView = false, targetContainer = resultsCo
                 emptyHtml = `<p style="text-align:center; color:var(--label-grey); margin-top:20px; width: 100%; grid-column: 1 / -1;">
                     <img src="location.png" style="width:40px; margin-bottom:10px;"><br>
                     <span style="color: var(--bright-red-orange); font-family: 'Antonio', sans-serif; font-size: 1.5rem; text-transform: uppercase;">No venues found nearby</span><br><br>
-                    <a href="javascript:void(0)" onclick="const s = document.getElementById('search-input'); if(s) s.value='${nearest.City}'; window.location.hash='#results'; applyFilters();" style="color:var(--primary-blue); font-weight:bold; font-size:1.1rem; text-decoration:underline;">
-                        Closest venue is ${distRounded} km away in ${nearest.City}.<br>Click here to load ${nearest.City}.
+                    <a href="javascript:void(0)" onclick="const s = document.getElementById('search-input'); if(s) s.value='${getCityTokens(nearest)[0] || nearest.City}'; window.location.hash='#results'; applyFilters();" style="color:var(--primary-blue); font-weight:bold; font-size:1.1rem; text-decoration:underline;">
+                        Closest venue is ${distRounded} km away in ${getCityTokens(nearest)[0] || nearest.City}.<br>Click here to load ${getCityTokens(nearest)[0] || nearest.City}.
                     </a>
                 </p>`;
             }
@@ -1885,7 +1978,7 @@ function renderListings(data, isContextView = false, targetContainer = resultsCo
             </div>
             <div class="card-inner-content">
                 <div class="card-header">
-                    <div><h3 class="card-title display-font">${venue.Name || 'Unnamed venue'}</h3><div class="card-meta"><img src="location.png" style="width:14px; vertical-align:middle;"> ${venue.City || ''}</div></div>
+                    <div><h3 class="card-title display-font">${venue.Name || 'Unnamed venue'}</h3><div class="card-meta"><img src="location.png" style="width:14px; vertical-align:middle;"> ${formatVenueLocation(venue)}</div></div>
                     <div class="status-badge ${badgeClass}">${badgeLabel}</div>
                 </div>
                 <div class="card-about">${shortDesc}</div>
@@ -1938,22 +2031,27 @@ function getRatingTooltip(type, val) {
 }
 
 function getRatingCells(val, type) {
-    if (val === 'NA' || val === 'N/A' || val === null || val === undefined || val === 0) {
-        return `<div style="grid-column: span 5; text-align: center; color: var(--label-grey); font-style: italic; font-size: 0.9rem;">Not yet rated</div>`;
+    const raw = val;
+    const isBlank = raw === null || raw === undefined || String(raw).trim() === '' || String(raw).toUpperCase() === 'NA' || String(raw).toUpperCase() === 'N/A';
+    if (isBlank) {
+        return `<div class="rating-not-rated">not yet rated</div>`;
+    }
+
+    const numericVal = parseInt(raw, 10);
+    if (type === 'Darkroom' && numericVal === 0) {
+        return `<div class="rating-no-darkroom" title="No darkroom">🚫</div>`;
+    }
+    if (Number.isNaN(numericVal) || numericVal <= 0) {
+        return `<div class="rating-not-rated">not yet rated</div>`;
     }
 
     let html = '';
     for(let i=1; i<=5; i++) {
-        const op = i <= val ? '1' : '0.25';
+        const op = i <= numericVal ? '1' : '0.25';
         let asset = '';
-        
         let iconSize = '26px';
-        if (type === 'Age' || type === 'Popularity') {
-            iconSize = '31.2px';
-        }
-        
+        if (type === 'Age' || type === 'Popularity') iconSize = '31.2px';
         const tooltip = getRatingTooltip(type, i);
-        
         if (type === 'Size') {
             asset = `<img src="Emoji/size0${i}.png" title="${tooltip}" style="width:${iconSize}; height:${iconSize}; vertical-align:middle; object-fit:contain;">`;
         } else if (type === 'Age') {
@@ -1963,7 +2061,6 @@ function getRatingCells(val, type) {
             const prefix = map[type] || 'eggplant';
             asset = `<img src="Emoji/${prefix}0${i}.png" title="${tooltip}" style="width:${iconSize}; height:${iconSize}; vertical-align:middle; object-fit:contain;">`;
         }
-        
         html += `<div class="rating-cell-target" style="opacity:${op}; display:flex; align-items:center; justify-content:center; cursor:pointer;" ontouchstart="event.preventDefault(); this.classList.add('flash-glow'); setTimeout(() => this.classList.remove('flash-glow'), 500); showToast('${tooltip.replace(/'/g, "\\'")}')">${asset}</div>`;
     }
     return html;

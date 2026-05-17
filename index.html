@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Backroom - v0.60</title>
+    <title>Backroom - v0.61</title>
     
     <meta name="description" content="Backroom - The comprehensive local guide to gay venues, cruise clubs, and events.">
     <meta name="keywords" content="gay guide, cruising, gay clubs, darkroom, fetish, gay events, queer venues">
@@ -15,7 +15,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Antonio:wght@400;700&family=Barlow+Condensed:wght@400;500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
-    <link rel="stylesheet" href="style.css?v=0.60">
+    <link rel="stylesheet" href="style.css?v=0.61">
 </head>
 <body>
 
@@ -124,6 +124,9 @@
                     <div class="sidebar-item tooltip" title="Home" onclick="window.location.hash='';">
                         <span class="icon">🏠</span><span class="sidebar-text display-font">Home</span>
                     </div>
+                    <div class="sidebar-item tooltip" title="Results" id="btn-sidebar-results" onclick="window.location.hash='#results';">
+                        <span class="icon">🔍</span><span class="sidebar-text display-font">Results</span>
+                    </div>
                     <div class="sidebar-item tooltip" title="Featured" onclick="window.location.hash='#featured';">
                         <span class="icon">🏛️</span><span class="sidebar-text display-font">Featured</span>
                     </div>
@@ -133,6 +136,9 @@
                     <div id="travel-dropdown" class="sidebar-submenu hidden">
                         <div class="submenu-item" onclick="window.location.hash='#discounts'"><span class="icon" style="font-size:1rem;">💰</span> Discounts</div>
                         <div id="travel-cities-list" class="travel-fav-box hidden"></div>
+                    </div>
+                    <div class="sidebar-item tooltip" title="Cruising Guide" onclick="window.location.hash='#cruising-guide';">
+                        <span class="icon">🔥</span><span class="sidebar-text display-font">Cruising Guide</span>
                     </div>
                     <div class="sidebar-item tooltip" title="Events" onclick="window.location.hash='#myevents';">
                         <span class="icon">💖</span><span class="sidebar-text display-font">Events</span>
@@ -189,6 +195,11 @@
                     <div id="discounts-container" class="hidden" style="background:var(--panel-dark); border-radius:var(--radius-card); padding:25px; border:1px solid var(--panel-mid);">
                         <h2 class="display-font" style="color:var(--primary-blue); margin-bottom:15px;">TRAVEL DISCOUNTS</h2>
                         <p class="body-font">Exclusive travel codes and discounts will appear here.</p>
+                    </div>
+
+                    <div id="cruising-guide-container" class="hidden" style="background:var(--panel-dark); border-radius:var(--radius-card); padding:25px; border:1px solid var(--panel-mid);">
+                        <h2 class="display-font" style="color:var(--primary-blue); margin-bottom:15px;">CRUISING GUIDE 🔥</h2>
+                        <p class="body-font">Loading content...</p>
                     </div>
 
                     <div id="about-container" class="hidden" style="background:var(--panel-dark); border-radius:var(--radius-card); padding:25px; border:1px solid var(--panel-mid);">
@@ -249,7 +260,10 @@
                     <input type="text" id="loc-city" class="form-input pill-input" placeholder="City" list="city-suggestions" style="flex-grow:1;" data-lat="" data-lon="">
                     <button class="btn secondary-btn pill-btn" id="btn-search-map" style="width:auto; padding: 10px 15px;">🔍</button>
                 </div>
-                <input type="text" id="loc-postcode" class="form-input pill-input" placeholder="Postcode (Optional)">
+                <div class="location-postcode-row" style="display:flex; gap:10px; align-items:center;">
+                    <input type="text" id="loc-postcode" class="form-input pill-input" placeholder="Postcode" maxlength="8" style="flex:0 0 30%; max-width:30%; min-width:90px;">
+                    <button type="button" id="btn-close-to-me-location" class="btn secondary-btn pill-btn" style="flex:1; border:1px solid var(--primary-blue);">Venues close to me</button>
+                </div>
                 
                 <div id="map-preview-placeholder" class="map-preview">
                     <img src="location.png" style="width:32px; opacity:0.6; margin-bottom:5px;"><br>Map Preview<br><small>Click Search or GPS to load</small>
@@ -304,6 +318,7 @@
                                     <option value="">Switch Profile...</option>
                                 </select>
                             </div>
+                            <div id="profile-stats-container-mob-first" class="mobile-only" style="margin-top:15px;"></div>
                         </div>
                     </div>
 
@@ -374,32 +389,37 @@
         <div class="modal-content small-modal">
             <button class="btn-close close-modal-btn">❌</button>
             <div class="modal-header"><h2 class="display-font">SETTINGS</h2></div>
-            <div class="modal-body body-font">
-                <h3 style="color: var(--primary-blue); margin-bottom: 5px;">Help & Privacy</h3>
-                <p class="meta-text" style="margin-bottom: 15px; font-size: 0.95rem;">All your favorites, shortlists, and location settings are strictly saved locally on your current browser. No accounts are required.</p>
-                
-                <button class="btn secondary-btn pill-btn" onclick="window.flagListing('N/A', 'General Message', 'General Support')" style="margin-bottom: 10px;">✉️ Email Support</button>
-                
-                <button class="btn secondary-btn pill-btn" style="margin-bottom:20px;" onclick="window.open('https://www.instagram.com/the.backroom.guide/', '_blank')">
-                    <img src="https://i.postimg.cc/Ls6MW6B3/free-instagram-icon-svg-download-png-7574395-1.png" style="height:20px; vertical-align:middle; margin-right:8px;"> Follow us on Instagram
-                </button>
-                
-                <h3 style="color: var(--primary-blue); margin-bottom: 5px;">Quick Edit</h3>
-                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-bottom:15px;">
-                    <button class="btn secondary-btn pill-btn" style="font-size:0.9rem;" onclick="document.getElementById('settings-modal').classList.add('hidden'); window.location.hash='#mytravel';">🚄 Edit Travel</button>
-                    <button class="btn secondary-btn pill-btn" style="font-size:0.9rem;" onclick="document.getElementById('settings-modal').classList.add('hidden'); window.location.hash='#favorites';">⚜️ Edit Favourites</button>
-                    <button class="btn secondary-btn pill-btn" style="font-size:0.9rem;" onclick="document.getElementById('settings-modal').classList.add('hidden'); document.getElementById('btn-profile-menu').click();">👤 Edit Profile</button>
-                    <button class="btn secondary-btn pill-btn" style="font-size:0.9rem;" onclick="document.getElementById('settings-modal').classList.add('hidden'); window.location.hash='#myshortlists';">📑 Edit Shortlists</button>
+            <div class="modal-body body-font settings-sections">
+                <h3 class="settings-heading">Quick Edit</h3>
+                <div class="settings-button-grid">
+                    <button class="btn secondary-btn pill-btn" onclick="document.getElementById('settings-modal').classList.add('hidden'); window.location.hash='#mytravel';">🚄 Edit Travel</button>
+                    <button class="btn secondary-btn pill-btn" onclick="document.getElementById('settings-modal').classList.add('hidden'); window.location.hash='#favorites';">⚜️ Edit Favourites</button>
+                    <button class="btn secondary-btn pill-btn" onclick="document.getElementById('settings-modal').classList.add('hidden'); document.getElementById('btn-profile-menu').click();">👤 Edit Profile</button>
+                    <button class="btn secondary-btn pill-btn" onclick="document.getElementById('settings-modal').classList.add('hidden'); window.location.hash='#myshortlists';">📑 Edit Shortlists</button>
                 </div>
-<hr class="divider">
 
-                <button class="btn primary-btn pill-btn btn-export-trigger" style="margin-bottom:10px;">💾 Export My Data</button>
-                <label for="import-data-file" class="btn secondary-btn pill-btn" style="display:block; text-align:center; margin-bottom:10px; cursor:pointer;">📂 Import Data</label>
+                <hr class="settings-red-divider">
+                <h3 class="settings-heading">About</h3>
+                <button class="btn secondary-btn pill-btn" onclick="document.getElementById('settings-modal').classList.add('hidden'); window.location.hash='#about';">ℹ️ Open About Page</button>
+
+                <hr class="settings-red-divider">
+                <h3 class="settings-heading">Contact</h3>
+                <button class="btn secondary-btn pill-btn" onclick="window.flagListing('N/A', 'General Message', 'General Support')">✉️ Email Support</button>
+                <button class="btn secondary-btn pill-btn" onclick="window.open('https://www.instagram.com/the.backroom.guide/', '_blank')">
+                    <img src="Emoji/instagram_url.png" onerror="this.src='https://i.postimg.cc/Ls6MW6B3/free-instagram-icon-svg-download-png-7574395-1.png'" style="height:20px; vertical-align:middle; margin-right:8px;"> Follow us on Instagram
+                </button>
+
+                <hr class="settings-red-divider">
+                <h3 class="settings-heading">Help, Privacy & Backup</h3>
+                <p class="meta-text" style="margin-bottom: 12px; font-size: 0.95rem;">All your favorites, shortlists, events, travel pins and profile settings are stored locally in this browser only. Export your data if you want a backup or want to move it to another browser.</p>
+                <button class="btn primary-btn pill-btn btn-export-trigger">💾 Export My Data</button>
+                <label for="import-data-file" class="btn secondary-btn pill-btn" style="display:block; text-align:center; cursor:pointer;">📂 Import Data</label>
                 <input type="file" id="import-data-file" class="hidden" accept=".json">
                 <div id="import-preview-info" class="meta-text hidden" style="margin-bottom:10px; background:var(--panel-dark); padding:10px; border-radius:var(--radius-card); font-size:0.9rem;"></div>
-                
-                <hr class="divider">
-                <button id="btn-reset-age" class="btn secondary-btn pill-btn" style="margin-bottom:10px;">Reset 18+ Age Gate</button>
+
+                <hr class="settings-red-divider">
+                <h3 class="settings-heading">Reset / Delete</h3>
+                <button id="btn-reset-age" class="btn secondary-btn pill-btn">Reset 18+ Age Gate</button>
                 <button id="btn-clear-data" class="btn pill-btn" style="background-color: var(--dark-red); color: #fff;">Delete All Local Data</button>
             </div>
         </div>
@@ -445,7 +465,7 @@
     </div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
-    <script src="app.js?v=0.60"></script>
+    <script src="app.js?v=0.61"></script>
 
 
 </body>

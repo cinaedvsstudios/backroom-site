@@ -427,3 +427,48 @@ td.hidden-col * { display: none !important; }
     border: 3px solid var(--bg-color);
     border-radius: 999px;
 }
+
+
+/* v0.61 cleanup overrides */
+.settings-sections { display:flex; flex-direction:column; gap:10px; }
+.settings-heading { color: var(--primary-blue); margin: 0 0 4px; font-size: 1.15rem; }
+.settings-red-divider { border:0; height:2px; background:var(--bright-red-orange); margin:12px 0; width:100%; }
+.settings-button-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+.settings-sections .btn { font-size:0.98rem; }
+.location-postcode-row .form-input { margin-bottom:10px; }
+.location-postcode-row .btn { margin-bottom:10px; }
+
+#profile-mobile-tabs div { border: none !important; outline: none !important; box-shadow: none !important; background: transparent !important; }
+#profile-mobile-tabs div.active-profile-tab { background: var(--panel-mid) !important; border-radius: var(--radius-pill) !important; color:#fff !important; }
+#profile-mobile-tabs div.active-profile-tab span { color:#fff !important; }
+.profile-modal-fixed-top { position: sticky; top: 0; z-index: 20; background: var(--panel-standard); }
+.profile-mobile-help { background: var(--panel-dark); padding: 18px; border-radius: var(--radius-card); border:1px solid var(--panel-mid); color: var(--text-light); line-height:1.45; }
+.avatar-grid { background: #000 !important; }
+.avatar-item img { opacity:1 !important; filter:none !important; background:transparent !important; }
+.avatar-item.selected img { border-color: var(--primary-blue); box-shadow: 0 0 14px rgba(44,168,212,.65); }
+
+.result-back-hidden { display:none !important; }
+
+.admin-main .btn, .admin-sidebar .btn { font-size:0.86rem !important; line-height:1.1; }
+.highlight-toggle-btn { cursor:pointer; display:inline-flex; align-items:center; justify-content:center; width:22px; height:22px; border-radius:999px; color:#ff4fd8 !important; border:1px solid rgba(255,79,216,.6); margin-right:4px; }
+.highlight-toggle-btn:hover { background:rgba(255,79,216,.18); }
+.magenta-highlight, .magenta-highlight td, td.magenta-highlight, th.magenta-highlight { background:rgba(255,0,190,.35) !important; outline:2px solid #ff4fd8 !important; }
+#admin-table-container { scrollbar-width: auto; scrollbar-color: var(--primary-blue) var(--bg-color); }
+#admin-table-container::-webkit-scrollbar, .table-wrapper::-webkit-scrollbar, .admin-main::-webkit-scrollbar { width:18px !important; height:18px !important; }
+#admin-table-container::-webkit-scrollbar-thumb, .table-wrapper::-webkit-scrollbar-thumb, .admin-main::-webkit-scrollbar-thumb { background: var(--primary-blue) !important; border:3px solid var(--bg-color); border-radius:999px; }
+#admin-table-container::-webkit-scrollbar-track, .table-wrapper::-webkit-scrollbar-track, .admin-main::-webkit-scrollbar-track { background: var(--near-black); }
+
+.rating-no-darkroom { grid-column: span 5; text-align:center; font-size:1.4rem; color:var(--bright-red-orange); }
+.rating-not-rated { grid-column: span 5; text-align:center; color:var(--label-grey); font-style:italic; font-size:.9rem; }
+
+@media (max-width: 768px) {
+    .location-postcode-row { flex-wrap:nowrap; }
+    .location-postcode-row #loc-postcode { flex-basis:30% !important; max-width:30% !important; }
+    .location-postcode-row #btn-close-to-me-location { font-size:.92rem; padding-left:10px; padding-right:10px; }
+    #profile-modal .modal-body { padding-top: 12px; }
+    #profile-mob-view-2 { display:flex; flex-direction:column; min-height:0; }
+    #profile-mob-view-2 > div { display:flex; flex-direction:column; min-height:0; }
+    #avatar-filters { position: sticky; top: 0; z-index: 12; background:#000; padding:8px 0; }
+    #avatar-grid { max-height: 52vh !important; overflow-y:auto !important; }
+    #profile-stats-container-mob { margin-top:15px; }
+}
