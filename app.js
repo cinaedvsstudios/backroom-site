@@ -1,9 +1,9 @@
 // --- Application State ---
-const APP_VERSION = "v0.58";
+const APP_VERSION = "v0.59";
 const APP_DATE = "May 2026";
 
 let systemInfo = {}, designTheme = {}, venues = [], events = [];
-let activeFilters = []; // v0.58 Multi-select Array
+let activeFilters = [];
 let selectedCardId = null;
 let currentTargetVenue = null; 
 let currentEventCityFilter = 'All';
@@ -44,18 +44,65 @@ const sidebar = document.getElementById('sidebar');
 const hitArea = document.getElementById('sidebar-hit-area');
 let sidebarTimeout;
 
-const MASTER_VIBE_TAGS = ["Cruise", "Darkroom", "Fetish", "Leather", "Rubber", "Gear", "Sportswear", "Sneakers", "Naked", "Underwear", "Dresscode", "Men Only", "Bear", "Mature", "Young Crowd", "Queer", "Drag", "Karaoke", "Pop/Dance", "Techno", "Sauna", "Puppy"];
-const SHORTLIST_EMOJIS = ['🤠','🚄','👑','🥂','🦄','🫦','💪','🪇','🔥','🍆','🍑','💄','🛁','✈️','💥','💦','🗝️','🧿','🎧','🧭','⛓️','🎼'];
 const PLACEHOLDER_POOL = ['placeholder_venue.jpg', 'placeholder_venue01.jpg', 'placeholder_venue02.jpg', 'placeholder_venue03.jpg', 'placeholder_venue04.jpg', 'placeholder_venue05.jpg', 'placeholder_venue06.jpg', 'placeholder_venue07.jpg'];
+const SHORTLIST_EMOJIS = ['🤠','🚄','👑','🥂','🦄','🫦','💪','🪇','🔥','🍆','🍑','💄','🛁','✈️','💥','💦','🗝️','🧿','🎧','🧭','⛓️','🎼'];
+
+function normalizeFeaturedLevel(venue) {
+    return String(venue?.Feature_Playroom || '').trim();
+}
+
+function getPublicVenues(source = venues) {
+    return (source || []).filter(v => String(v.Status || '').trim() !== 'Hold' && String(v.Status || '').trim() !== 'Flag');
+}
+
+function getVenueTags(venue) {
+    const tags = [];
+    if (venue?.Vibe_Tags) tags.push(...String(venue.Vibe_Tags).split(',').map(t => t.trim()));
+    if (venue?.Category) tags.push(String(venue.Category).trim());
+    const featureMap = {
+        Feature_Darkroom: 'Darkroom',
+        Feature_Dresscode: 'Dresscode',
+        Feature_Men_Only: 'Men Only',
+        Feature_Dancefloor: 'Dancefloor',
+        Feature_Smoking_Area: 'Smoking Area',
+        Feature_Cocktails: 'Cocktails',
+        Feature_Cruise_Focused: 'Cruising',
+        Feature_Sauna: 'Sauna'
+    };
+    Object.entries(featureMap).forEach(([field, label]) => {
+        if (venue && (venue[field] === true || String(venue[field]).toLowerCase() === 'true')) tags.push(label);
+    });
+    const seen = new Set();
+    return tags.map(t => String(t || '').trim()).filter(t => {
+        if (!t || seen.has(t)) return false;
+        seen.add(t);
+        return true;
+    });
+}
 
 function getTagColorClass(tag) {
-    const red = ['Cruise', 'Darkroom', 'Fetish', 'Leather', 'Rubber', 'Gear', 'Naked', 'Underwear', 'Men Only', 'Sauna', 'Cinema'];
-    const blue = ['Bar', 'Club', 'Dancefloor', 'Party', 'Smoking_Area', 'Sportswear', 'Sneakers', 'Dresscode', 'Bear', 'Mature', 'Techno', 'Puppy'];
-    const yellow = ['Young Crowd', 'Queer', 'Drag', 'Karaoke', 'Pop/Dance', 'Shop'];
+    const red = ['Cruise', 'Cruising', 'Darkroom', 'Fetish', 'Dresscode', 'Leather', 'Rubber', 'Men Only', 'Naked', 'Underwear', 'Sneakers', 'Sportswear', 'Smoking Area'];
+    const yellow = ['Queer', 'Drag', 'Karaoke', 'Bear', 'Mature', 'Young Crowd'];
+    const blue = ['Bar', 'Club', 'Shop', 'Cinema', 'Party', 'Community', 'Dancefloor', 'Cocktails', 'Techno', 'Pop/Dance', 'Gear', 'Sauna', 'Cruise Club'];
     if (red.includes(tag)) return 'tag-adult-red';
-    if (blue.includes(tag)) return 'tag-venue-blue';
     if (yellow.includes(tag)) return 'tag-social-yellow';
-    return '';
+    if (blue.includes(tag)) return 'tag-venue-blue';
+    return 'tag-venue-blue';
+}
+
+function getPlaceholderForVenue(venue) {
+    const tags = getVenueTags(venue);
+    if (tags.includes('Shop')) return 'placeholder_venue08.jpg';
+    if (tags.includes('Techno')) return 'placeholder_venue04.jpg';
+    if (tags.includes('Pop') || tags.includes('Pop/Dance')) return 'placeholder_venue06.jpg';
+    if (tags.includes('Queer')) return 'placeholder_venue03.jpg';
+    if (tags.includes('Cinema')) return 'placeholder_venue10.jpg';
+    if (tags.includes('Bar')) return 'placeholder_venue02.jpg';
+    return PLACEHOLDER_POOL[Math.floor(Math.random() * PLACEHOLDER_POOL.length)];
+}
+
+function renderTagPills(tags, extraStyle = '') {
+    return (tags || []).map(tag => `<span class="chip pill-btn ${getTagColorClass(tag)}" title="${tag}" style="font-size:0.85rem; padding: 4px 10px; ${extraStyle}">${tag}</span>`).join('');
 }
 
 function showToast(message) {
@@ -215,6 +262,17 @@ function setupCriticalListeners() {
         appShell?.classList.remove('hidden');
         showToast("Backroom " + APP_VERSION);
     }
+
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            const vm = document.getElementById('venue-modal');
+            if (vm && !vm.classList.contains('hidden')) {
+                vm.classList.add('hidden');
+                window.history.pushState(null, '', window.location.pathname + window.location.search);
+                handleRouting();
+            }
+        }
+    });
 }
 
 async function initApp() {
@@ -359,7 +417,7 @@ function renderSharedListView(name, emoji, ids) {
     
     resultsContainer.appendChild(sharedHeader);
 
-    const matchingVenues = venues.filter(v => ids.includes(v.Venue_ID));
+    const matchingVenues = getPublicVenues().filter(v => ids.includes(v.Venue_ID));
     if (matchingVenues.length === 0) {
         resultsContainer.innerHTML += `<p style="text-align:center; color: var(--label-grey); grid-column: 1 / -1;">No active venues found in this list.</p>`;
     } else {
@@ -393,31 +451,36 @@ function renderSharedListView(name, emoji, ids) {
     });
 }
 
+async function loadStaticPage(pageName) {
+    const container = document.getElementById(`${pageName}-container`);
+    if (!container) return;
+    try {
+        const res = await fetch(`${pageName}.html?v=${Date.now()}`);
+        if (res.ok) container.innerHTML = await res.text();
+        else container.innerHTML = `<h2 class="display-font" style="color:var(--primary-blue);">Content not found</h2>`;
+    } catch (e) {
+        container.innerHTML = `<h2 class="display-font" style="color:var(--primary-blue);">Failed to load page</h2>`;
+    }
+}
+
 function handleRouting() {
-    if (checkSharedListRoute()) return; 
+    if (checkSharedListRoute()) return;
 
     const hash = window.location.hash;
-    const query = searchInput?.value.trim() || '';
-    
-    document.querySelectorAll('.modal').forEach(m => m.classList.add('hidden'));
+    document.querySelectorAll('.modal').forEach(m => { if (m.id !== 'tutorial-toast') m.classList.add('hidden'); });
     contextHeader?.classList.add('hidden');
     document.getElementById('event-city-filters')?.classList.add('hidden');
     document.getElementById('btn-new-shortlist-view')?.classList.add('hidden');
     document.getElementById('main-filters')?.classList.remove('hidden');
-    document.getElementById('discounts-container')?.classList.add('hidden');
-    
-    // V0.58 Blank Page Handlers
-    const aboutContainer = document.getElementById('about-container');
-    const featuredContainer = document.getElementById('featured-container');
-    if(aboutContainer) aboutContainer.classList.add('hidden');
-    if(featuredContainer) featuredContainer.classList.add('hidden');
-    
+    ['discounts', 'about', 'featured', 'cruising-guide'].forEach(page => document.getElementById(`${page}-container`)?.classList.add('hidden'));
     welcomeScreen?.classList.add('hidden');
     document.getElementById('profile-wipe-toast')?.classList.add('hidden');
 
-    if (hash === '' && query === '' && activeFilters.length === 0 && sessionStorage.getItem('br_welcome_dismissed') !== 'true') {
+    if (hash === '') {
+        if (searchInput) searchInput.value = '';
+        activeFilters = [];
         document.getElementById('main-filters')?.classList.add('hidden');
-        if(resultsContainer) resultsContainer.innerHTML = '';
+        if (resultsContainer) resultsContainer.innerHTML = '';
         renderWelcomeScreen();
         return;
     }
@@ -425,8 +488,17 @@ function handleRouting() {
     if (hash.startsWith('#venue=')) {
         const id = hash.replace('#venue=', '');
         const venue = venues.find(v => v.Venue_ID === id);
-        if (venue) { openVenueModal(venue); applyFilters(); } 
-        else window.location.hash = ''; 
+        if (venue && venue.Status !== 'Hold' && venue.Status !== 'Flag') {
+            openVenueModal(venue);
+            applyFilters();
+        } else {
+            showToast('Venue not available or under review');
+            window.location.hash = '#results';
+            return;
+        }
+    } else if (hash === '#results') {
+        recordUserInteraction();
+        applyFilters();
     } else if (hash === '#favorites') {
         recordUserInteraction();
         renderFavoritesView();
@@ -439,15 +511,19 @@ function handleRouting() {
     } else if (hash === '#mytravel') {
         recordUserInteraction();
         renderTravelFullView();
-    } else if (hash === '#discounts') {
-        recordUserInteraction();
-        renderDiscountsView();
-    } else if (hash === '#about') {
-        recordUserInteraction();
-        renderBlankPageView('about');
     } else if (hash === '#featured') {
         recordUserInteraction();
-        renderBlankPageView('featured');
+        renderFeaturedView();
+    } else if (['#discounts', '#about', '#cruising-guide'].includes(hash)) {
+        recordUserInteraction();
+        const page = hash.replace('#', '');
+        document.getElementById('main-filters')?.classList.add('hidden');
+        if (resultsContainer) resultsContainer.innerHTML = '';
+        const container = document.getElementById(`${page}-container`);
+        if (container) {
+            container.classList.remove('hidden');
+            loadStaticPage(page);
+        }
     } else if (hash.startsWith('#shortlist=')) {
         recordUserInteraction();
         const name = decodeURIComponent(hash.replace('#shortlist=', ''));
@@ -455,23 +531,43 @@ function handleRouting() {
     } else {
         applyFilters();
     }
-    
     updateTravelSidebarHighlight();
 }
 
 function renderSingleShortlist(name) {
     document.getElementById('main-filters')?.classList.add('hidden');
     contextHeader?.classList.remove('hidden');
-    
     const cTitle = document.getElementById('context-title');
     const cDesc = document.getElementById('context-desc');
     const eIcon = userShortlistEmojis[name] || '📑';
     if(cTitle) cTitle.innerHTML = `${eIcon} ${name}`;
-    if(cDesc) cDesc.innerText = "A saved shortlist collection.";
-    
+    if(cDesc) cDesc.innerText = 'A saved shortlist collection.';
     const listIds = userShortlists[name] || [];
-    const matchingVenues = (venues||[]).filter(v => listIds.includes(v.Venue_ID));
+    const matchingVenues = getPublicVenues().filter(v => listIds.includes(v.Venue_ID));
     renderListings(matchingVenues, true);
+}
+
+function renderFeaturedView() {
+    document.getElementById('main-filters')?.classList.add('hidden');
+    if (resultsContainer) resultsContainer.innerHTML = '';
+    const container = document.getElementById('featured-container');
+    if (!container) return;
+    container.classList.remove('hidden');
+    const featVenues = getPublicVenues().filter(v => ['1','2','3'].includes(normalizeFeaturedLevel(v)));
+    const cities = [...new Set(featVenues.map(v => v.City).filter(Boolean))].sort();
+    let html = `<h2 class="display-font" style="color:var(--primary-blue); margin-bottom:5px;">🏛️ FEATURED VENUES</h2>`;
+    html += `<p class="body-font" style="margin-bottom:15px; color:#fff;">Below are some of our favourite venues that we know you will love, visit if you are nearby or plan a trip soon!</p>`;
+    html += `<div style="display:flex; gap:8px; margin-bottom:20px; overflow-x:auto; flex-wrap:wrap;">${cities.map(c => `<button class="chip pill-btn" onclick="const s=document.getElementById('search-input'); if(s) s.value='${c.replace(/'/g, "\'")}'; window.location.hash='#results'; handleRouting();">${c}</button>`).join('')}</div>`;
+    ['1','2','3'].forEach(level => {
+        const boxVenues = featVenues.filter(v => normalizeFeaturedLevel(v) === level);
+        html += `<div class="featured-box" style="margin-bottom:30px; background:var(--near-black); border:1px solid var(--panel-mid); padding:20px; border-radius:var(--radius-card);"><h3 class="display-font" style="margin-bottom:15px; color:var(--primary-blue);">Featured Level ${level}</h3><div id="featured-level-${level}" class="featured-grid" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(300px, 1fr)); gap:20px;"></div></div>`;
+    });
+    container.innerHTML = html;
+    ['1','2','3'].forEach(level => {
+        const grid = document.getElementById(`featured-level-${level}`);
+        const boxVenues = featVenues.filter(v => normalizeFeaturedLevel(v) === level);
+        renderListings(boxVenues, true, grid);
+    });
 }
 
 function renderBlankPageView(page) {
@@ -484,15 +580,12 @@ function renderBlankPageView(page) {
 function renderWelcomeScreen() {
     const wName = document.getElementById('welcome-name');
     const wAvatar = document.getElementById('welcome-avatar');
-    // V0.58 Dynamic Fallback Name
     let dispName = 'GUEST';
-    if (userProfile.name) {
-        dispName = userProfile.name;
-    } else if (userProfile.avatar && userProfile.avatar !== 'noavatar01.png') {
+    if (userProfile.name) dispName = userProfile.name;
+    else if (userProfile.avatar && userProfile.avatar !== 'noavatar01.png') {
         const found = avatarData.find(a => a.file === userProfile.avatar);
         if(found) dispName = found.label;
     }
-    
     if(wName) wName.innerText = dispName;
     if(wAvatar && userProfile.avatar) wAvatar.src = `Profile_images/${userProfile.avatar}`;
     welcomeScreen?.classList.remove('hidden');
@@ -512,10 +605,10 @@ let currentTutorialType = '';
 function startTutorial(type) {
     isTutorialRunning = true; 
     
-    // V0.58 Tutorial Reset & Hardcode Anchor
+    // V0.59 Tutorial Reset & Hardcode Anchor
     if (type === 'general') {
-        window.location.hash = ''; // Clear views
-        activeFilters = []; // Clear filters
+        window.location.hash = '#results';
+        activeFilters = [];
         const searchInputEl = document.getElementById('search-input');
         if(searchInputEl) {
             searchInputEl.value = "Berlin";
@@ -667,6 +760,18 @@ window.flagListing = function(id, name, type="Venue/Event") {
         if(fsName) fsName.value = name;
         if(fsType) fsType.value = type;
         if(fsUrl) fsUrl.value = window.location.href;
+        const nameInp = modal.querySelector('input[name="name"]');
+        const emailInp = modal.querySelector('input[name="email"]');
+        if(nameInp) {
+            let defaultName = 'Backroom User';
+            if(userProfile.name) defaultName = userProfile.name;
+            else if(userProfile.avatar && userProfile.avatar !== 'noavatar01.png') {
+                const found = avatarData.find(a => a.file === userProfile.avatar);
+                if(found) defaultName = found.label;
+            }
+            nameInp.value = defaultName;
+        }
+        if(emailInp) emailInp.value = 'your@email.com';
         
         modal.classList.remove('hidden');
     }
@@ -688,7 +793,6 @@ function setupEventListeners() {
     });
 
     addEvt('btn-location', 'click', () => {
-        if(window.location.hash !== '') window.location.hash = '';
         locModal?.classList.remove('hidden');
     });
     
@@ -709,7 +813,7 @@ function setupEventListeners() {
     addEvt('btn-language', 'click', () => showToast("Coming soon!")); 
     addEvt('btn-back-to-results', 'click', () => {
         if(searchInput) searchInput.value = '';
-        window.location.hash = '';
+        window.location.hash = '#results';
         updateTravelSidebarHighlight();
     });
 
@@ -899,8 +1003,29 @@ function setupEventListeners() {
     }
 
     if(searchInput) {
-        searchInput.addEventListener('input', () => { recordUserInteraction(); window.location.hash=''; handleRouting(); });
+        searchInput.addEventListener('input', () => { recordUserInteraction(); window.location.hash='#results'; handleRouting(); });
     }
+
+    document.getElementById('btn-sidebar-results')?.addEventListener('click', () => { window.location.hash = '#results'; });
+
+    const fsForm = document.getElementById('fs-form');
+    if (fsForm) {
+        fsForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const formData = new FormData(fsForm);
+            fetch('https://formsubmit.cloud/f/ae0e141d-ad94-47fe-ac46-55702c6534a6/', { method: 'POST', body: formData })
+                .then(res => {
+                    if(!res.ok) throw new Error('FormSubmit request failed');
+                    showToast('Thanks, your report has been submitted.');
+                    fsForm.reset();
+                    document.getElementById('formsubmit-modal')?.classList.add('hidden');
+                })
+                .catch(() => {
+                    window.open('thanks.html', '_blank', 'width=420,height=420');
+                });
+        });
+    }
+
 }
 
 function initLeafletMap(lat, lng) {
@@ -935,7 +1060,7 @@ function updateProfileDisplay() {
         dispName = userProfile.name;
     } else if (userProfile.avatar && userProfile.avatar !== 'noavatar01.png') {
         const found = avatarData.find(a => a.file === userProfile.avatar);
-        if(found) dispName = found.label; // V0.58 Fallback Name Logic
+        if(found) dispName = found.label; // V0.59 Fallback Name Logic
     }
 
     topName.innerText = dispName;
@@ -964,7 +1089,7 @@ function renderTravelDropdown() {
         const item = document.createElement('div');
         const isActive = query === city.toLowerCase() ? 'active-travel' : '';
         item.className = `submenu-item ${isActive}`;
-        item.innerHTML = `<span style="flex-grow:1;" onclick="const s = document.getElementById('search-input'); if(s) s.value='${city}'; window.location.hash=''; handleRouting();">${city}</span>`;
+        item.innerHTML = `<span style="flex-grow:1;" onclick="const s = document.getElementById('search-input'); if(s) s.value='${city}'; window.location.hash='#results'; handleRouting();">${city}</span>`;
         list.appendChild(item);
     });
 }
@@ -994,41 +1119,25 @@ window.removeTravel = function(city) {
 function renderDynamicFilters(filteredData) {
     const container = document.getElementById('filter-chips');
     if(!container) return;
-    
-    let activeTags = new Set();
-    filteredData.forEach(v => {
-        if(v.Vibe_Tags) {
-            v.Vibe_Tags.split(',').forEach(t => activeTags.add(t.trim()));
-        }
-        if(v.Feature_Darkroom) activeTags.add('Darkroom');
-        if(v.Feature_Men_Only) activeTags.add('Men Only');
-        if(v.Feature_Dresscode) activeTags.add('Dresscode');
-    });
-    
+    const activeTags = new Set();
+    (filteredData || []).forEach(v => getVenueTags(v).forEach(t => activeTags.add(t)));
     let html = `<button class="chip pill-btn ${activeFilters.length === 0 ? 'active' : ''}" data-filter="All">All</button>`;
-    
-    MASTER_VIBE_TAGS.forEach(tag => {
-        if(activeTags.has(tag) || activeFilters.includes(tag)) {
-            const colorClass = getTagColorClass(tag);
-            html += `<button class="chip pill-btn ${colorClass} ${activeFilters.includes(tag) ? 'active' : ''}" data-filter="${tag}">${tag}</button>`;
-        }
+    Array.from(activeTags).sort().forEach(tag => {
+        const colorClass = getTagColorClass(tag);
+        html += `<button class="chip pill-btn ${colorClass} ${activeFilters.includes(tag) ? 'active' : ''}" data-filter="${tag}">${tag}</button>`;
     });
     container.innerHTML = html;
-    
     container.querySelectorAll('.chip').forEach(chip => {
         chip.addEventListener('click', (e) => {
             recordUserInteraction();
-            const tag = e.target.getAttribute('data-filter');
-            
-            // V0.58 Multi-Select AND Logic
-            if(tag === 'All') {
-                activeFilters = [];
-            } else {
+            const tag = e.currentTarget.getAttribute('data-filter');
+            if(tag === 'All') activeFilters = [];
+            else {
                 const idx = activeFilters.indexOf(tag);
                 if(idx > -1) activeFilters.splice(idx, 1);
                 else activeFilters.push(tag);
             }
-            window.location.hash=''; 
+            window.location.hash = '#results';
             handleRouting();
         });
     });
@@ -1036,55 +1145,42 @@ function renderDynamicFilters(filteredData) {
 
 function applyFilters() {
     const query = searchInput?.value || '';
-    let filteredVenues = venues || [];
+    let filteredVenues = getPublicVenues();
     selectedCardId = null;
 
-    // V0.58 Multi-Select AND Logic Implementation
     if(activeFilters.length > 0) {
         filteredVenues = filteredVenues.filter(v => {
-            let tags = [];
-            if(v.Vibe_Tags) tags = v.Vibe_Tags.split(',').map(t => t.trim());
-            if(v.Feature_Darkroom) tags.push('Darkroom');
-            if(v.Feature_Men_Only) tags.push('Men Only');
-            if(v.Feature_Dresscode) tags.push('Dresscode');
-            
+            const tags = getVenueTags(v);
             return activeFilters.every(af => tags.includes(af));
         });
     }
 
     if(query.trim() !== '') {
-        filteredVenues = filteredVenues.filter(v => fuzzyMatch(v.Name + " " + v.Description + " " + v.Vibe_Tags + " " + v.City, query));
+        filteredVenues = filteredVenues.filter(v => fuzzyMatch(`${v.Name || ''} ${v.Description || ''} ${v.Vibe_Tags || ''} ${v.City || ''} ${v.Category || ''}`, query));
     }
 
-    // V0.58 Sorting Algorithm
     filteredVenues.sort((a, b) => {
-        const aShop = (a.Category === 'Shop') ? 1 : 0;
-        const bShop = (b.Category === 'Shop') ? 1 : 0;
-        if (aShop !== bShop) return aShop - bShop;
-
-        const aHasImg = (a.Image_URL && a.Image_URL.trim() !== '') ? 1 : 0;
-        const bHasImg = (b.Image_URL && b.Image_URL.trim() !== '') ? 1 : 0;
-        if (aHasImg !== bHasImg) return bHasImg - aHasImg; 
-
+        const aFeat = normalizeFeaturedLevel(a);
+        const bFeat = normalizeFeaturedLevel(b);
+        const featRank = { '1': 3, '2': 2, '3': 0, '': 0 };
+        if ((featRank[aFeat] || 0) !== (featRank[bFeat] || 0)) return (featRank[bFeat] || 0) - (featRank[aFeat] || 0);
+        const aShop = a.Category === 'Shop' ? 1 : 0;
+        const bShop = b.Category === 'Shop' ? 1 : 0;
+        if(aShop !== bShop) return aShop - bShop;
+        const aHasImg = a.Image_URL && String(a.Image_URL).trim() !== '' ? 1 : 0;
+        const bHasImg = b.Image_URL && String(b.Image_URL).trim() !== '' ? 1 : 0;
+        if(aHasImg !== bHasImg) return bHasImg - aHasImg;
         const aSize = parseInt(a.Rating_Size) || 0;
         const bSize = parseInt(b.Rating_Size) || 0;
-        if (aSize !== bSize) return bSize - aSize; 
-
+        if(aSize !== bSize) return bSize - aSize;
         const aPop = parseInt(a.Rating_Busyness || a.Rating_Popularity) || 0;
         const bPop = parseInt(b.Rating_Busyness || b.Rating_Popularity) || 0;
-        return bPop - aPop; 
+        return bPop - aPop;
     });
 
     renderListings(filteredVenues);
     renderDynamicFilters(filteredVenues);
     updateTravelSidebarHighlight();
-
-    if(filteredVenues.length >= 10 && query.trim() !== '' && !isTutorialRunning) {
-        const hideWarning = localStorage.getItem('br_hide_search_warning') === 'true';
-        if (!hideWarning && typeof triggerSearchTagsPopup === 'function') {
-            triggerSearchTagsPopup(filteredVenues.length, document.getElementById('loc-city')?.value || query || 'this area');
-        }
-    }
 }
 
 function getLevenshteinDistance(a, b) {
@@ -1164,7 +1260,7 @@ function renderFavoritesView() {
     if(cTitle) cTitle.innerHTML = "⚜️ MY FAVOURITES";
     if(cDesc) cDesc.innerText = "Venues you have starred locally.";
     
-    const favVenues = (venues||[]).filter(v => userFavorites.includes(v.Venue_ID));
+    const favVenues = getPublicVenues().filter(v => userFavorites.includes(v.Venue_ID));
     renderListings(favVenues, true);
 }
 
@@ -1262,7 +1358,7 @@ function renderTravelFullView() {
         card.style.cursor = 'pointer';
         card.innerHTML = `
             <div class="card-inner-content" style="flex-direction:row; justify-content:space-between; align-items:center;">
-                <div onclick="const s = document.getElementById('search-input'); if(s) s.value='${city}'; window.location.hash=''; handleRouting();" style="flex-grow:1;">
+                <div onclick="const s = document.getElementById('search-input'); if(s) s.value='${city}'; window.location.hash='#results'; handleRouting();" style="flex-grow:1;">
                     <h3 class="card-title display-font" style="color:var(--primary-blue);">${city}</h3>
                 </div>
                 <button class="icon-btn" style="color:var(--bright-red-orange);" onclick="event.stopPropagation(); if(confirm('Delete ${city}?')){ removeTravel('${city}'); }">❌</button>
@@ -1396,15 +1492,11 @@ function renderProfileAvatars() {
     const grid = document.getElementById('avatar-grid');
     if(!grid) return;
     grid.innerHTML = '';
-    
     const switcher = document.getElementById('profile-switcher');
     if (switcher) {
         switcher.innerHTML = '<option value="">Switch Profile...</option>';
-        Object.keys(savedProfiles).forEach(pName => {
-            switcher.innerHTML += `<option value="${pName}">${pName}</option>`;
-        });
+        Object.keys(savedProfiles).forEach(pName => { switcher.innerHTML += `<option value="${pName}">${pName}</option>`; });
     }
-
     let filterContainer = document.getElementById('avatar-filters');
     if (!filterContainer) {
         filterContainer = document.createElement('div');
@@ -1416,21 +1508,20 @@ function renderProfileAvatars() {
         filterContainer.style.marginBottom = '15px';
         grid.parentNode.insertBefore(filterContainer, grid);
     }
-    
-    const ageTags = ['Young', 'Prime', 'Mature'];
-    const fetishTags = ['Ink', 'Leather', 'Rubber', 'Puppy'];
-    
-    let html = `<div class="tag-row-blue" style="display:flex; justify-content:center; gap:8px;">`;
-    html += `<button class="chip pill-btn ${activeAvatarCategories.length === 0 ? 'active' : ''}" style="padding: 4px 10px; font-size: 0.85rem; flex-shrink:0;" data-val="All">All</button>`;
-    html += ageTags.map(c => `<button class="chip pill-btn ${activeAvatarCategories.includes(c) ? 'active' : ''}" style="padding: 4px 10px; font-size: 0.85rem; color: var(--primary-blue); border-color: var(--primary-blue); flex-shrink:0;" data-val="${c}">${c}</button>`).join('');
-    html += `</div><div class="tag-row-red" style="display:flex; justify-content:center; gap:8px;">`;
-    html += fetishTags.map(c => `<button class="chip pill-btn ${activeAvatarCategories.includes(c) ? 'active' : ''}" style="padding: 4px 10px; font-size: 0.85rem; color: var(--bright-red-orange); border-color: var(--bright-red-orange); flex-shrink:0;" data-val="${c}">${c}</button>`).join('');
+    const allCategories = new Set();
+    (avatarData || []).forEach(a => {
+        let cats = Array.isArray(a.category) ? a.category : String(a.category || '').split(',');
+        cats.map(c => String(c).trim()).filter(Boolean).forEach(c => allCategories.add(c));
+    });
+    let html = `<div class="tag-row-blue" style="display:flex; justify-content:center; flex-wrap:wrap; gap:8px;">`;
+    html += `<button class="chip pill-btn ${activeAvatarCategories.length === 0 ? 'active' : ''}" style="padding:4px 10px; font-size:0.85rem; flex-shrink:0;" data-val="All">All</button>`;
+    Array.from(allCategories).sort().forEach(c => {
+        html += `<button class="chip pill-btn ${activeAvatarCategories.includes(c) ? 'active' : ''}" style="padding:4px 10px; font-size:0.85rem; color:var(--primary-blue); border-color:var(--primary-blue); flex-shrink:0;" data-val="${c}">${c}</button>`;
+    });
     html += `</div>`;
-
     filterContainer.innerHTML = html;
-    
     filterContainer.querySelectorAll('.chip').forEach(btn => {
-        btn.onclick = () => { 
+        btn.onclick = () => {
             const val = btn.getAttribute('data-val');
             if(val === 'All') activeAvatarCategories = [];
             else {
@@ -1438,49 +1529,40 @@ function renderProfileAvatars() {
                 if(idx > -1) activeAvatarCategories.splice(idx, 1);
                 else activeAvatarCategories.push(val);
             }
-            renderProfileAvatars(); 
+            renderProfileAvatars();
         };
     });
-
-    let displayData = [...avatarData];
-    if (activeAvatarCategories.length === 0) {
-        displayData.unshift({ file: 'noavatar01.png', label: 'Default', category: [] });
-    }
-
+    const displayData = [...(avatarData || [])];
     const filteredData = activeAvatarCategories.length === 0 ? displayData : displayData.filter(a => {
-        let cats = Array.isArray(a.category) ? a.category : [a.category];
+        let cats = Array.isArray(a.category) ? a.category : String(a.category || '').split(',');
+        cats = cats.map(c => String(c).trim()).filter(Boolean);
         return activeAvatarCategories.every(cat => cats.includes(cat));
     });
-
+    if(filteredData.length === 0) {
+        grid.style.minHeight = '300px';
+        showToast('No results! Message admin to request your favourite.');
+    } else {
+        grid.style.minHeight = '';
+    }
     filteredData.forEach(avatar => {
         const item = document.createElement('div');
         item.className = 'avatar-item';
-        
-        // V0.58 Title fallback for desktop span hiding
         item.innerHTML = `<img src="Profile_images/${avatar.file}" onerror="this.parentElement.style.display='none';" alt="${avatar.label}" title="${avatar.label}"><span>${avatar.label}</span>`;
-        
         item.addEventListener('click', () => {
             userProfile.avatar = avatar.file;
             const previewImg = document.getElementById('profile-avatar-preview');
-            if(previewImg) {
-                previewImg.src = `Profile_images/${avatar.file}`;
-                previewImg.parentElement.classList.remove('hidden');
-            }
-            
+            if(previewImg) { previewImg.src = `Profile_images/${avatar.file}`; previewImg.parentElement.classList.remove('hidden'); }
             document.querySelectorAll('.avatar-item').forEach(el => el.classList.remove('selected'));
             item.classList.add('selected');
         });
         grid.appendChild(item);
     });
-    
     const initialPreviewImg = document.getElementById('profile-avatar-preview');
     if(initialPreviewImg) {
         if(userProfile.avatar && userProfile.avatar !== 'noavatar01.png') {
             initialPreviewImg.src = `Profile_images/${userProfile.avatar}`;
             initialPreviewImg.parentElement.classList.remove('hidden');
-        } else {
-            initialPreviewImg.parentElement.classList.add('hidden');
-        }
+        } else initialPreviewImg.parentElement.classList.add('hidden');
     }
 }
 
@@ -1540,18 +1622,18 @@ function openProfileMenu() {
         window.switchProfileTab(1);
     }
     
-    // V0.58 Dynamic Fallback welcome string
+    // V0.59 Dynamic Fallback welcome string
     const privacyGreeting = document.getElementById('profile-privacy-greeting');
-    if(privacyGreeting) {
-        let dispName = 'Guest';
-        if (userProfile.name) {
-            dispName = userProfile.name;
-        } else if (userProfile.avatar && userProfile.avatar !== 'noavatar01.png') {
-            const found = avatarData.find(a => a.file === userProfile.avatar);
-            if(found) dispName = found.label; 
-        }
-        privacyGreeting.innerText = `Hi ${dispName},`;
+    const privacyGreetingMob = document.getElementById('profile-privacy-greeting-mob');
+    let dispName = 'Guest';
+    if (userProfile.name) {
+        dispName = userProfile.name;
+    } else if (userProfile.avatar && userProfile.avatar !== 'noavatar01.png') {
+        const found = avatarData.find(a => a.file === userProfile.avatar);
+        if(found) dispName = found.label;
     }
+    if(privacyGreeting) privacyGreeting.innerText = `Hi ${dispName},`;
+    if(privacyGreetingMob) privacyGreetingMob.innerText = `Hi ${dispName},`;
 
     const profileWipeToast = document.getElementById('profile-wipe-toast');
     if(profileWipeToast) {
@@ -1660,68 +1742,63 @@ function checkImportPreview() {
     }
 }
 
-// V0.58 Random Placeholder Infinite Loop Breaker
-function handleImageCarousel(imgElement) {
+// V0.59 Random Placeholder Infinite Loop Breaker
+function handleImageCarousel(imgElement, venue) {
+    if(!imgElement) return;
     imgElement.addEventListener('click', (e) => {
-        e.stopPropagation(); 
+        e.stopPropagation();
         const id = imgElement.getAttribute('data-id');
         let index = parseInt(imgElement.getAttribute('data-index') || '1') + 1;
         let numStr = index < 10 ? '0' + index : index;
         let newSrc = `Venue_images/${id}-${numStr}.jpg`;
-        
         let tempImg = new Image();
         tempImg.onload = () => {
             imgElement.src = newSrc;
             imgElement.setAttribute('data-index', index);
-            showToast("Double tap the venue name to open");
+            showToast('Double tap the venue name to open');
         };
         tempImg.onerror = () => {
-            // V0.58 Random image pool selection
-            const randomFallback = PLACEHOLDER_POOL[Math.floor(Math.random() * PLACEHOLDER_POOL.length)];
-            imgElement.onerror = null; 
-            imgElement.src = randomFallback;
+            imgElement.onerror = null;
+            imgElement.src = getPlaceholderForVenue(venue);
             imgElement.setAttribute('data-index', 1);
-            showToast("Double tap the venue name to open");
+            showToast('Double tap the venue name to open');
         };
         tempImg.src = newSrc;
     });
 }
 
-function renderListings(data, isContextView = false) {
-    if(resultsContainer) resultsContainer.innerHTML = '';
+
+function setupBottomControls() {
+    let controls = document.getElementById('bottom-controls');
+    if(!controls) {
+        controls = document.createElement('div');
+        controls.id = 'bottom-controls';
+        controls.innerHTML = `
+            <div id="results-count-box">0 results</div>
+            <button class="btn primary-btn pill-btn" onclick="window.scrollTo({top:0, behavior:'smooth'})" title="Top of page">⬆️</button>
+            <button class="btn primary-btn pill-btn" onclick="window.scrollTo({top:document.body.scrollHeight, behavior:'smooth'})" title="Bottom of page">⬇️</button>
+        `;
+        document.body.appendChild(controls);
+    }
+}
+
+function renderListings(data, isContextView = false, targetContainer = null) {
+    const target = targetContainer || resultsContainer;
+    if(target) target.innerHTML = '';
     const today = new Date(); today.setHours(0,0,0,0);
 
-    if(!data || data.length === 0) {
-        if (!isContextView && activeAvatarCategories && activeAvatarCategories.length > 0 && typeof userProfile !== 'undefined' && document.getElementById('avatar-grid') && !document.getElementById('profile-modal')?.classList.contains('hidden')) {
-             showToast("No results! Message admin to request your favourite.");
+    if(!targetContainer) {
+        setupBottomControls();
+        const countBox = document.getElementById('results-count-box');
+        if(countBox) {
+            const total = getPublicVenues().length;
+            countBox.innerText = activeFilters.length > 0 ? `${(data || []).length}/${total} results` : `${(data || []).length} results found`;
         }
+    }
 
-        let emptyHtml = `<p style="text-align:center; color:var(--label-grey); margin-top:20px; width: 100%; grid-column: 1 / -1;">No venues found.</p>`;
-        
-        const cityInput = document.getElementById('loc-city');
-        const userLat = parseFloat(cityInput?.dataset.lat || 'NaN');
-        const userLon = parseFloat(cityInput?.dataset.lon || 'NaN');
-        
-        if (!isNaN(userLat) && !isNaN(userLon) && venues.length > 0) {
-            let nearest = null;
-            let minDist = Infinity;
-            venues.forEach(v => {
-                const dist = getDistanceFromLatLonInKm(userLat, userLon, parseFloat(v.Latitude), parseFloat(v.Longitude));
-                if (dist < minDist) { minDist = dist; nearest = v; }
-            });
-            
-            if (nearest && minDist !== Infinity) {
-                const distRounded = Math.round(minDist);
-                emptyHtml = `<p style="text-align:center; color:var(--label-grey); margin-top:20px; width: 100%; grid-column: 1 / -1;">
-                    <img src="location.png" style="width:40px; margin-bottom:10px;"><br>
-                    <span style="color: var(--bright-red-orange); font-family: 'Antonio', sans-serif; font-size: 1.5rem; text-transform: uppercase;">No venues found nearby</span><br><br>
-                    <a href="javascript:void(0)" onclick="const s = document.getElementById('search-input'); if(s) s.value='${nearest.City}'; applyFilters();" style="color:var(--primary-blue); font-weight:bold; font-size:1.1rem; text-decoration:underline;">
-                        Closest venue is ${distRounded} km away in ${nearest.City}.<br>Click here to load ${nearest.City}.
-                    </a>
-                </p>`;
-            }
-        }
-        if(resultsContainer) resultsContainer.innerHTML = emptyHtml;
+    if(!data || data.length === 0) {
+        const emptyHtml = `<p style="text-align:center; color:var(--label-grey); margin-top:20px; width: 100%; grid-column: 1 / -1;">No venues found.</p>`;
+        if(target) target.innerHTML = emptyHtml;
         return;
     }
 
@@ -1735,52 +1812,59 @@ function renderListings(data, isContextView = false) {
         }
 
         const isFav = userFavorites.includes(venue.Venue_ID);
-        const shortDesc = venue.Description.length > 90 ? venue.Description.substring(0, 90) + '...' : venue.Description;
+        const isShortlisted = Object.values(userShortlists).some(list => list.includes(venue.Venue_ID));
+        const desc = venue.Description || '';
+        const shortDesc = desc.length > 90 ? desc.substring(0, 90) + '...' : desc;
         const card = document.createElement('div');
         card.className = 'card';
-        
-        const baseImageSrc = `Venue_images/${venue.Venue_ID}-01.jpg`;
-        
+        const baseImageSrc = (venue.Image_URL && String(venue.Image_URL).trim() !== '') ? `Venue_images/${venue.Venue_ID}-01.jpg` : getPlaceholderForVenue(venue);
+
+        let statusBadgeHtml = '';
+        if (venue.Status === 'Closed') {
+            statusBadgeHtml = `<div class="status-badge closed">CLOSED</div>`;
+        } else {
+            const pillText = activeFilters.length > 0 ? activeFilters.slice(0, 3).join(', ') : 'ALL';
+            statusBadgeHtml = `<div class="status-badge live" style="background-color:var(--panel-mid); color:#fff;">${pillText}</div>`;
+        }
+
         card.innerHTML = `
             <div class="card-image-wrapper">
-                <img class="venue-image centered-image" src="${baseImageSrc}" onerror="this.onerror=null; this.src='${PLACEHOLDER_POOL[Math.floor(Math.random() * PLACEHOLDER_POOL.length)]}'" data-id="${venue.Venue_ID}" data-index="1" title="Tap to see next photo">
+                <img class="venue-image centered-image" src="${baseImageSrc}" onerror="this.onerror=null; this.src='${getPlaceholderForVenue(venue)}'" data-id="${venue.Venue_ID}" data-index="1" title="Tap to see next photo">
             </div>
             <div class="card-inner-content">
                 <div class="card-header">
-                    <div><h3 class="card-title display-font">${venue.Name}</h3><div class="card-meta"><img src="location.png" style="width:14px; vertical-align:middle;"> ${venue.City}</div></div>
-                    <div class="status-badge ${venue.Status.toLowerCase()}">${venue.Status.toUpperCase()}</div>
+                    <div><h3 class="card-title display-font">${venue.Name}</h3><div class="card-meta"><img src="location.png" style="width:14px; vertical-align:middle;"> ${venue.City || ''}</div></div>
+                    ${statusBadgeHtml}
                 </div>
                 <div class="card-about">${shortDesc}</div>
                 ${nextEventHtml}
+                <div class="card-tags tag-wrapper" style="display:flex; flex-wrap:wrap; gap:5px; margin-bottom:12px; overflow:hidden;">${renderTagPills(getVenueTags(venue))}</div>
                 <div class="card-stats">
                     <span>🌈 ${systemInfo.labels?.rated_by_gays || 'Rated by gays'}</span><span>👁️ ${venue.Views || 0}</span>
                     <div style="margin-left:auto; display:flex; gap:10px; align-items:center;">
-                        <span class="icon-btn" onclick="event.stopPropagation(); shareURL('${window.location.origin}${window.location.pathname}?venue=${venue.Venue_ID}#venue=${venue.Venue_ID}', '${venue.Name.replace(/'/g, "\\'")}')" title="Share" style="font-size:1.5rem;">📣</span>
-                        <span class="icon-btn" onclick="event.stopPropagation(); window.flagListing('${venue.Venue_ID}', '${venue.Name.replace(/'/g, "\\'")}', 'Venue Report')" title="Report" style="display:flex; align-items:center; justify-content:center;"><img src="report.png" style="width:24px; height:24px; object-fit:contain;"></span>
-                        <span class="star-btn icon-btn fav-btn ${isFav ? 'active-star' : ''}" style="font-size:1.8rem; line-height:1;">⚜️</span>
+                        <span class="icon-btn tooltip" onclick="event.stopPropagation(); shareURL('${window.location.origin}${window.location.pathname}?venue=${venue.Venue_ID}#venue=${venue.Venue_ID}', '${String(venue.Name || '').replace(/'/g, "\'")}')" title="Share" style="font-size:1.5rem;">📣</span>
+                        <span class="icon-btn tooltip" onclick="event.stopPropagation(); window.flagListing('${venue.Venue_ID}', '${String(venue.Name || '').replace(/'/g, "\'")}', 'Venue Report')" title="Report" style="display:flex; align-items:center; justify-content:center;"><img src="report.png" style="width:24px; height:24px; object-fit:contain;"></span>
+                        <span class="icon-btn fav-btn tooltip ${isShortlisted ? 'active-star' : ''}" title="Add to Shortlist" onclick="event.stopPropagation(); promptAddToShortlist({Venue_ID: '${venue.Venue_ID}', Name: '${String(venue.Name || '').replace(/'/g, "\'")}'})"><img src="shortlist.png" style="width:24px;"></span>
+                        <span class="star-btn icon-btn fav-btn tooltip ${isFav ? 'active-star' : ''}" title="Toggle Favourite" style="font-size:1.8rem; line-height:1;" onclick="event.stopPropagation(); toggleFavorite('${venue.Venue_ID}', this)">⚜️</span>
                     </div>
                 </div>
             </div>
         `;
-        
-        handleImageCarousel(card.querySelector('.venue-image'));
-
-        card.addEventListener('click', (e) => { 
-            if(e.target.classList.contains('star-btn')) {
-                toggleFavorite(venue.Venue_ID, e.target);
-            } else if (!e.target.classList.contains('venue-image')) {
+        handleImageCarousel(card.querySelector('.venue-image'), venue);
+        card.addEventListener('click', (e) => {
+            if (!e.target.classList.contains('venue-image') && !e.target.closest('.icon-btn')) {
                 if(selectedCardId === venue.Venue_ID) {
                     recordUserInteraction();
-                    window.location.hash = `#venue=${venue.Venue_ID}`; 
+                    window.location.hash = `#venue=${venue.Venue_ID}`;
                 } else {
                     document.querySelectorAll('.card.selected').forEach(c => c.classList.remove('selected'));
                     card.classList.add('selected');
                     selectedCardId = venue.Venue_ID;
-                    showToast("Double tap the venue name to open");
+                    showToast('Double tap the venue name to open');
                 }
-            } 
+            }
         });
-        if(resultsContainer) resultsContainer.appendChild(card);
+        if(target) target.appendChild(card);
     });
 }
 
@@ -1838,12 +1922,7 @@ function openVenueModal(venue) {
     const dynamicLayout = document.getElementById('modal-dynamic-layout');
     if(!dynamicLayout) return;
 
-    const features = [];
-    if(venue.Feature_Darkroom) features.push('Darkroom');
-    if(venue.Feature_Men_Only) features.push('Men Only');
-    if(venue.Feature_Dancefloor) features.push('Dancefloor');
-    if(venue.Feature_Sauna) features.push('Sauna');
-    const featureHtml = features.map(f => `<span class="chip pill-btn ${getTagColorClass(f)}" style="font-size:0.85rem; padding: 4px 10px;">${f}</span>`).join('');
+    const featureHtml = renderTagPills(getVenueTags(venue));
 
     const statsHtml = `
         <div class="public-stats-block">
@@ -1943,7 +2022,7 @@ function openVenueModal(venue) {
         <div class="modal-top-split">
             <div class="modal-left-col">
                 <div class="modal-image-container">
-                    <img id="modal-venue-image" class="venue-image centered-image" src="Venue_images/${venue.Venue_ID}-01.jpg" onerror="this.onerror=null; this.src='${PLACEHOLDER_POOL[Math.floor(Math.random() * PLACEHOLDER_POOL.length)]}'" data-id="${venue.Venue_ID}" data-index="1" title="Tap for next image">
+                    <img id="modal-venue-image" class="venue-image centered-image" src="${(venue.Image_URL && String(venue.Image_URL).trim() !== '') ? `Venue_images/${venue.Venue_ID}-01.jpg` : getPlaceholderForVenue(venue)}" onerror="this.onerror=null; this.src='${getPlaceholderForVenue(venue)}'" data-id="${venue.Venue_ID}" data-index="1" title="Tap for next image">
                 </div>
                 
                 <div class="desktop-stats">
@@ -1980,7 +2059,7 @@ function openVenueModal(venue) {
     `;
 
     const img = document.getElementById('modal-venue-image');
-    if(img) handleImageCarousel(img);
+    if(img) handleImageCarousel(img, venue);
 
     const starBtn = document.getElementById('modal-star');
     if(starBtn) {

@@ -2,7 +2,8 @@ let liveData = [];
 let draftData = [];
 let currentMode = 'venues'; // 'venues', 'events', 'editor', 'avatars'
 let lastSavedDate = localStorage.getItem('br_admin_timestamp') || 'Never';
-let activeTableFilters = {}; 
+let activeTableFilters = {};
+let currentReviewFilter = 'all'; 
 
 let avatarAdminData = [];
 let tempMergeData = []; 
@@ -100,7 +101,7 @@ window.switchView = function(view) {
     if(view === 'editor') {
         views['editor'].style.display = 'flex';
         views['editor'].classList.remove('hidden');
-        document.getElementById('btn-formatting-guide')?.classList.remove('hidden');
+        document.getElementById('btn-formatting-guide')?.classList.add('hidden');
         saveEditorState(); 
     } else if (view === 'avatars') {
         views['avatars'].style.display = 'flex';
@@ -112,8 +113,9 @@ window.switchView = function(view) {
         views['tables'].classList.remove('hidden');
         const title = document.getElementById('summary-title');
         if(title) title.innerText = view === 'venues' ? 'VENUE DATA' : 'EVENT DATA';
-        document.getElementById('btn-formatting-guide')?.classList.add('hidden');
+        document.getElementById('btn-formatting-guide')?.classList.remove('hidden');
         activeTableFilters = {};
+        currentReviewFilter = 'all';
         loadDraftsFromLocal();
     }
 };
@@ -235,9 +237,22 @@ window.unhideAllColumns = function() {
     document.querySelectorAll('.hidden-col').forEach(c => c.classList.remove('hidden-col'));
 };
 
+window.toggleMagentaRow = function(btnElement) {
+    const tr = btnElement.closest('tr');
+    if(tr) tr.classList.toggle('magenta-highlight');
+};
+
+window.toggleMagentaCol = function(btnElement, idx) {
+    const table = document.getElementById('admin-table-container');
+    if(!table) return;
+    const th = table.querySelector(`th.col-idx-${idx}`);
+    if(th) th.classList.toggle('magenta-highlight');
+    table.querySelectorAll(`td.col-idx-${idx}`).forEach(td => td.classList.toggle('magenta-highlight'));
+};
+
 const headerMapping = {
     "Event_Start_Time": "Start Time", "Event_End_Time": "End Time", "Venue_ID": "ID", "Event_ID": "ID",
-    "Description": "Desc", "Event_Description": "Desc", "Rating_General": "Gen", "Rating_Darkroom": "Dark"
+    "Description": "Desc", "Event_Description": "Desc", "Rating_General": "Gen", "Rating_Darkroom": "Dark", "Feature_Playroom": "Featured Level"
 };
 
 function renderFilters() {
@@ -313,12 +328,15 @@ function generateTableHTML(dataObj, isMainTable) {
         const displayName = headerMapping[col] || col;
         html += `<th class="col-idx-${idx}">
             <div style="display:flex; justify-content:space-between; align-items:center;">
+                <span class="highlight-toggle-btn" title="Highlight Column" onclick="toggleMagentaCol(this, ${idx})">🖍️</span>
                 <span class="eye-btn" onclick="toggleColumn(${idx})" title="Toggle Hide">👁️</span>
                 <span class="col-title" style="flex-grow:1;">${displayName}</span>
             </div>`;
         
         if (col === 'Status') {
             html += `<select class="filter-header-select filter-dropdown" data-col="${col}"><option value="">Filter...</option><option value="Live">Live</option><option value="Closed">Closed</option><option value="Hold">Hold</option><option value="Flag">Flag</option></select>`;
+        } else if (col === 'Feature_Playroom') {
+            html += `<select class="filter-header-select filter-dropdown" data-col="${col}"><option value="">Filter...</option><option value="1">1</option><option value="2">2</option><option value="3">3</option></select>`;
         } else if (col.startsWith('Feature_')) {
             html += `<select class="filter-header-select filter-dropdown" data-col="${col}"><option value="">Filter...</option><option value="true">True</option><option value="false">False</option></select>`;
         } else if (col.startsWith('Rating_')) {
@@ -335,6 +353,8 @@ function generateTableHTML(dataObj, isMainTable) {
     dataObj.forEach((row, rowIndex) => {
         const idField = currentMode === 'venues' ? 'Venue_ID' : 'Event_ID';
         const id = row[idField] || rowIndex;
+        const actualIndex = draftData.findIndex(d => d[idField] === id);
+        const editIndex = actualIndex >= 0 ? actualIndex : rowIndex;
         
         let isNew = false;
         if(liveData.length > 0) isNew = !liveData.some(l => l[idField] === id);
@@ -343,6 +363,7 @@ function generateTableHTML(dataObj, isMainTable) {
         
         const needsReview = (!row.Share_URL || String(row.Share_URL) === 'false' || String(row.Share_URL) === 'PENDING');
         html += `<td style="text-align:center;">
+            <span class="highlight-toggle-btn" title="Highlight Row" onclick="toggleMagentaRow(this)">🖍️</span><br>
             ${needsReview ? `<button onclick="markReviewed('${id}')" style="background:var(--primary-blue); border:none; color:#fff; border-radius:4px; cursor:pointer; padding:2px 5px;" title="Mark Reviewed">✔️</button>` : ''}
             ${isNew ? `<br><span class="new-badge">NEW</span>` : ''}
         </td>`;
@@ -356,7 +377,7 @@ function generateTableHTML(dataObj, isMainTable) {
             
             const emptyClass = (!row[col] || String(row[col]).trim() === '') ? 'empty-cell' : '';
             const editedClass = isEdited ? 'edited-cell' : '';
-            html += `<td class="col-idx-${idx} ${editedClass} ${emptyClass}" onclick="editCell(this, ${rowIndex}, '${col}')">${String(row[col] || '')}</td>`;
+            html += `<td class="col-idx-${idx} ${editedClass} ${emptyClass}" onclick="editCell(this, ${editIndex}, '${col}')">${String(row[col] || '')}</td>`;
         });
         html += `</tr>`;
     });
@@ -374,7 +395,23 @@ function renderTable() {
         return;
     }
 
+    const sixMonthsAgo = new Date();
+    sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+
     const filteredData = draftData.filter(row => {
+        if (currentReviewFilter === 'pending') {
+            const pending = (!row.Share_URL || String(row.Share_URL).toLowerCase() === 'false' || String(row.Share_URL) === 'PENDING' || String(row.Status || '') === 'Draft');
+            if(!pending) return false;
+        } else if (currentReviewFilter === 'flaghold') {
+            if (row.Status !== 'Flag' && row.Status !== 'Hold') return false;
+        } else if (currentReviewFilter === 'old') {
+            const dateStr = row.Last_Updated || row.Date_Updated || '';
+            const parts = String(dateStr).split('-');
+            if(parts.length === 3) {
+                const rowDate = new Date(`${parts[2]}-${parts[1]}-${parts[0]}`);
+                if(rowDate > sixMonthsAgo) return false;
+            } else return false;
+        }
         for(let col in activeTableFilters) {
             const rowVal = String(row[col] || '').toLowerCase();
             const filterVal = activeTableFilters[col].toLowerCase();
@@ -426,7 +463,12 @@ window.editCell = function(td, rowIndex, col) {
     
     const currentVal = td.innerText.trim();
     
-    if(col === 'Status' || col.startsWith('Feature_') || col.startsWith('Rating_')) {
+    if (col === 'Feature_Playroom') {
+        let options = '<option value="">None / Normal</option><option value="1">Level 1</option><option value="2">Level 2</option><option value="3">Level 3</option>';
+        td.innerHTML = `<select class="cell-edit" onblur="saveCell(this, ${rowIndex}, '${col}')" onchange="saveCell(this, ${rowIndex}, '${col}')">${options}</select>`;
+        td.querySelector('select').value = currentVal.startsWith('Level') ? currentVal.match(/[123]/)?.[0] || '' : currentVal;
+        td.querySelector('select').focus();
+    } else if(col === 'Status' || col.startsWith('Feature_') || col.startsWith('Rating_')) {
         let options = '';
         if(col === 'Status') options = '<option value="Live">Live</option><option value="Closed">Closed</option><option value="Hold">Hold</option><option value="Flag">Flag</option>';
         else if(col.startsWith('Feature_')) options = '<option value="true">true</option><option value="false">false</option>';
@@ -463,8 +505,11 @@ window.saveCell = function(selectEl, rowIndex, col) {
     if(newVal === 'false') finalVal = false;
     if(col.startsWith('Rating_')) finalVal = parseInt(newVal);
 
-    draftData[rowIndex][col] = finalVal;
-    selectEl.parentElement.innerText = newVal;
+    draftData[rowIndex][col] = col === 'Feature_Playroom' ? String(newVal || '').trim() : finalVal;
+    if (col === 'Feature_Playroom') {
+        const texts = { '': '', '1': 'Level 1', '2': 'Level 2', '3': 'Level 3' };
+        selectEl.parentElement.innerText = texts[newVal] || newVal;
+    } else selectEl.parentElement.innerText = newVal;
     selectEl.parentElement.classList.add('edited-cell');
     saveDraftsToLocal();
 };
@@ -498,10 +543,18 @@ window.updatePreviewData = function(idx, col, el) {
     if(tempMergeData[idx]) tempMergeData[idx][col] = el.innerText.trim();
 }
 
+function normalizeAvatarCategories(raw) {
+    let values = [];
+    if(Array.isArray(raw)) raw.forEach(v => values.push(...String(v).split(',')));
+    else if(raw) values = String(raw).split(',');
+    const seen = new Set();
+    return values.map(v => String(v).trim()).filter(v => v && !seen.has(v) && seen.add(v));
+}
+
 async function loadAdminAvatars() {
     try {
         const res = await fetch('Profile_images/avatar_list.json?v=' + Date.now());
-        if(res.ok) avatarAdminData = await res.json();
+        if(res.ok) avatarAdminData = (await res.json()).map(a => ({ ...a, category: normalizeAvatarCategories(a.category) }));
         else avatarAdminData = [];
     } catch(e) { avatarAdminData = []; }
     renderAdminAvatars();
@@ -522,29 +575,29 @@ function renderAdminAvatars() {
     });
     
     let ages = new Set();
-    let fetishes = new Set();
+    let tages = new Set();
     avatarAdminData.forEach(a => {
         let cats = Array.isArray(a.category) ? a.category : [a.category];
         cats.forEach(c => {
             if(['Young', 'Prime', 'Mature'].includes(c)) ages.add(c);
-            else if(c) fetishes.add(c);
+            else if(c) tages.add(c);
         });
     });
-    const fetSel = document.getElementById('ac-fetish');
-    if(fetSel) { fetSel.innerHTML = '<option value="">None</option>' + Array.from(fetishes).map(f => `<option value="${f}">${f}</option>`).join(''); }
+    const fetSel = document.getElementById('ac-tag');
+    if(fetSel) { fetSel.innerHTML = '<option value="">None</option>' + Array.from(tages).map(f => `<option value="${f}">${f}</option>`).join(''); }
 }
 
-function renderFetishPills() {
+function renderTagPills() {
     if(activeAvatarIndex === -1) return;
     const av = avatarAdminData[activeAvatarIndex];
     const cats = Array.isArray(av.category) ? av.category : [av.category];
-    const fetishes = cats.filter(c => !['Young', 'Prime', 'Mature'].includes(c) && c);
+    const tages = cats.filter(c => !['Young', 'Prime', 'Mature'].includes(c) && c);
     
-    const pillsContainer = document.getElementById('ac-fetish-pills');
+    const pillsContainer = document.getElementById('ac-tag-pills');
     if(pillsContainer) {
         pillsContainer.innerHTML = '';
-        fetishes.forEach(f => {
-            pillsContainer.innerHTML += `<span style="background:var(--bright-red-orange); color:#fff; padding:4px 10px; border-radius:var(--radius-pill); font-size:0.85rem; display:flex; align-items:center; gap:6px; font-weight:bold;">${f} <span style="cursor:pointer; color:#000;" onclick="removeActiveFetish('${f}')">❌</span></span>`;
+        tages.forEach(f => {
+            pillsContainer.innerHTML += `<span style="background:var(--bright-red-orange); color:#fff; padding:4px 10px; border-radius:var(--radius-pill); font-size:0.85rem; display:flex; align-items:center; gap:6px; font-weight:bold;">${f} <span style="cursor:pointer; color:#000;" onclick="removeActiveTag('${f}')">❌</span></span>`;
         });
     }
 }
@@ -570,9 +623,9 @@ function selectAvatarForEditing(idx) {
     
     const cats = Array.isArray(av.category) ? av.category : [av.category];
     
-    const selectedAge = cats.find(c => ['Young', 'Prime', 'Mature'].includes(c)) || '';
+    const selectedAges = cats.filter(c => ['Young', 'Prime', 'Mature'].includes(c));
     document.querySelectorAll('.age-pill').forEach(p => {
-        if(p.dataset.val === selectedAge) {
+        if(selectedAges.includes(p.dataset.val)) {
             p.classList.remove('secondary-btn');
             p.style.backgroundColor = 'var(--bright-red-orange)';
             p.style.borderColor = 'var(--bright-red-orange)';
@@ -585,55 +638,44 @@ function selectAvatarForEditing(idx) {
         }
     });
     
-    renderFetishPills();
+    renderTagPills();
 }
 
-window.addActiveFetish = function() {
+window.addActiveTag = function() {
     if(activeAvatarIndex === -1) return;
-    const fetSel = document.getElementById('ac-fetish');
+    const fetSel = document.getElementById('ac-tag');
     if(!fetSel || !fetSel.value) return;
-    const newFetish = fetSel.value;
+    const newTag = fetSel.value;
     
     const av = avatarAdminData[activeAvatarIndex];
     let cats = Array.isArray(av.category) ? av.category : [av.category];
-    if(!cats.includes(newFetish)) {
-        cats.push(newFetish);
+    if(!cats.includes(newTag)) {
+        cats.push(newTag);
         av.category = cats;
-        renderFetishPills();
+        renderTagPills();
         renderAdminAvatars(); 
     }
 };
 
-window.removeActiveFetish = function(fetish) {
+window.removeActiveTag = function(tag) {
     if(activeAvatarIndex === -1) return;
     const av = avatarAdminData[activeAvatarIndex];
     let cats = Array.isArray(av.category) ? av.category : [av.category];
-    av.category = cats.filter(c => c !== fetish);
-    renderFetishPills();
+    av.category = cats.filter(c => c !== tag);
+    renderTagPills();
     renderAdminAvatars();
 };
 
 window.saveActiveAvatarEdits = function() {
     if(activeAvatarIndex === -1) return;
     const name = document.getElementById('ac-name')?.value || '';
-    
-    const activeAgePill = document.querySelector('.age-pill.active-age');
-    const age = activeAgePill ? activeAgePill.dataset.val : '';
-    
     const av = avatarAdminData[activeAvatarIndex];
-    let cats = Array.isArray(av.category) ? av.category : [av.category];
-    let fetishes = cats.filter(c => !['Young', 'Prime', 'Mature'].includes(c) && c);
-    
-    let newCats = [];
-    if(age) newCats.push(age);
-    newCats = newCats.concat(fetishes); 
-    
+    const selectedAges = Array.from(document.querySelectorAll('.age-pill.active-age')).map(p => p.dataset.val);
+    const existingTags = normalizeAvatarCategories(av.category).filter(c => !['Young', 'Prime', 'Mature'].includes(c));
     av.label = name;
-    av.category = newCats;
-    
+    av.category = normalizeAvatarCategories([...selectedAges, ...existingTags]);
     const previewName = document.getElementById('avatar-large-name');
     if(previewName) previewName.innerText = name || 'Unknown';
-    
     renderAdminAvatars();
 };
 
@@ -737,7 +779,7 @@ wysiwygContent?.addEventListener('input', () => {
 
 // V0.58 Page Selector Updated
 document.getElementById('editor-page-select')?.addEventListener('change', (e) => {
-    if(e.target.value === 'new') {
+    if(e.target.value === 'template.html') {
         const defaultText = `<h1>New Page</h1><p>Start typing... dont forget to have this page added to the menu it wont appear automatically</p>`;
         if(wysiwygContent) wysiwygContent.innerHTML = defaultText;
         if(wysiwygSource) wysiwygSource.value = defaultText;
@@ -837,16 +879,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
     document.querySelectorAll('.age-pill').forEach(pill => {
         pill.addEventListener('click', (e) => {
-            document.querySelectorAll('.age-pill').forEach(p => {
-                p.classList.add('secondary-btn');
-                p.style.backgroundColor = '';
-                p.style.borderColor = '';
-                p.classList.remove('active-age');
-            });
-            e.target.classList.remove('secondary-btn');
-            e.target.style.backgroundColor = 'var(--bright-red-orange)';
-            e.target.style.borderColor = 'var(--bright-red-orange)';
-            e.target.classList.add('active-age');
+            const target = e.currentTarget;
+            if(target.classList.contains('active-age')) {
+                target.classList.add('secondary-btn');
+                target.style.backgroundColor = '';
+                target.style.borderColor = '';
+                target.classList.remove('active-age');
+            } else {
+                target.classList.remove('secondary-btn');
+                target.style.backgroundColor = 'var(--bright-red-orange)';
+                target.style.borderColor = 'var(--bright-red-orange)';
+                target.classList.add('active-age');
+            }
             saveActiveAvatarEdits();
         });
     });
@@ -886,12 +930,16 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('nav-editor')?.addEventListener('click', () => switchView('editor'));
     document.getElementById('nav-avatars')?.addEventListener('click', () => switchView('avatars'));
 
+    document.getElementById('btn-sidebar-show-all')?.addEventListener('click', () => { currentReviewFilter = 'all'; renderTable(); });
     document.getElementById('btn-sidebar-pending')?.addEventListener('click', () => {
         document.getElementById('sidebar-pending-list').classList.toggle('hidden');
+        currentReviewFilter = 'pending'; renderTable();
     });
     document.getElementById('btn-sidebar-old')?.addEventListener('click', () => {
         document.getElementById('sidebar-old-list').classList.toggle('hidden');
+        currentReviewFilter = 'old'; renderTable();
     });
+    document.getElementById('btn-sidebar-flag-hold')?.addEventListener('click', () => { currentReviewFilter = 'flaghold'; renderTable(); });
     
     document.getElementById('btn-formatting-guide')?.addEventListener('click', () => {
         document.getElementById('formatting-guide-modal').classList.remove('hidden');
@@ -1043,3 +1091,5 @@ document.addEventListener('DOMContentLoaded', () => {
 
     document.querySelectorAll('.close-modal-btn').forEach(btn => btn.addEventListener('click', (e) => e.target.closest('.modal')?.classList.add('hidden')));
 });
+window.addActiveFetish = window.addActiveTag;
+window.removeActiveFetish = window.removeActiveTag;
