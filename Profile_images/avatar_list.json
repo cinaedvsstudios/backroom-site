@@ -89,7 +89,6 @@
   {"file": "rubber03.png", "label": "Rubber 3", "category": ["Young", "Rubber"]},
   {"file": "rubber04.png", "label": "Rubber 4", "category": ["Prime", "Rubber"]},
 
-  {"file": "transman01.png", "label": "Trans Man 1", "category": ["Young"]},
-{"file": "transman03.png", "label": "Trans Man 3", "category": ["Mature"]},
-  {"file": "transman02.png", "label": "Trans Man 2", "category": ["Prime"]}
+  {"file": "transman01.png", "label": "Trans Man 1", "category": ["Young", "Trans Man"]},
+  {"file": "transman02.png", "label": "Trans Man 2", "category": ["Prime", "Trans Man"]}
 ]

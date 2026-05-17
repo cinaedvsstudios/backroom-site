@@ -3,9 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Backroom Admin Dashboard - v0.59</title>
+    <title>Backroom Admin Dashboard - v0.60</title>
     <link href="https://fonts.googleapis.com/css2?family=Antonio:wght@400;700&family=Barlow+Condensed:wght@400;500;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="style.css?v=0.60">
     <style>
         .admin-layout { display: flex; height: 100vh; overflow: hidden; background: var(--bg-color); color: #fff; font-family: sans-serif; }
         .admin-sidebar { width: 250px; background: var(--panel-dark); border-right: 1px solid var(--panel-mid); padding: 20px 0; display:flex; flex-direction:column; flex-shrink:0; overflow-y:auto; }
@@ -145,7 +145,7 @@
 
     <div id="admin-shell" class="admin-layout hidden">
         <aside class="admin-sidebar">
-            <h2 class="display-font" style="color:var(--primary-blue); padding: 0 20px 20px; text-align:center;">BR ADMIN <span style="font-size: 0.9rem; color: var(--label-grey); margin-left: 5px;">v0.59</span></h2>
+            <h2 class="display-font" style="color:var(--primary-blue); padding: 0 20px 20px; text-align:center;">BR ADMIN <span style="font-size: 0.9rem; color: var(--label-grey); margin-left: 5px;">v0.60</span></h2>
             
             <div style="padding: 0 20px 15px; display:flex; gap:5px; justify-content:center;">
                 <button id="btn-text-size-down" class="btn secondary-btn" style="padding: 4px; font-size:0.9rem;">A-</button>
@@ -157,13 +157,14 @@
                 <div class="sidebar-item" id="nav-venues"><span class="icon">📍</span> <span class="sidebar-text">Venues</span></div>
                 <div class="sidebar-item" id="nav-events"><span class="icon">📅</span> <span class="sidebar-text">Events</span></div>
                 
-                <div class="sidebar-item" id="btn-sidebar-show-all"><span class="icon" style="color:var(--primary-blue);">📋</span> <span class="sidebar-text">Show All</span></div>
                 <div class="sidebar-item" id="btn-sidebar-pending" style="padding-bottom: 5px;"><span class="icon" style="color:var(--bright-red-orange);">🔍</span> <span class="sidebar-text">Pending Review</span></div>
                 <div id="sidebar-pending-list" class="sidebar-review-list hidden"></div>
                 
                 <div class="sidebar-item" id="btn-sidebar-old" style="padding-bottom: 5px;"><span class="icon" style="color:var(--label-grey);">⏳</span> <span class="sidebar-text">Review Old (>30d)</span></div>
                 <div id="sidebar-old-list" class="sidebar-review-list hidden"></div>
-                <div class="sidebar-item" id="btn-sidebar-flag-hold" style="padding-bottom: 5px;"><span class="icon" style="color:var(--bright-red-orange);">🚩</span> <span class="sidebar-text">Show Flag/Hold</span></div>
+
+                <div class="sidebar-item" id="btn-sidebar-flaghold" style="padding-bottom: 5px;"><span class="icon" style="color:var(--bright-red-orange);">🚩</span> <span class="sidebar-text">Show Flag/Hold</span></div>
+                <div class="sidebar-item" id="btn-sidebar-showall" style="padding-bottom: 5px;"><span class="icon">📋</span> <span class="sidebar-text">Show All</span></div>
 
                 <hr class="divider">
                 
@@ -173,7 +174,7 @@
                 <hr class="divider">
                 
                 <div class="sidebar-item" onclick="document.getElementById('clipboard-float').classList.toggle('hidden')"><span class="icon">📋</span> <span class="sidebar-text">Toggle Clipboard</span></div>
-                <div class="sidebar-item" onclick="window.open('https://chatgpt.com/', '_blank')"><span class="icon">🤖</span> <span class="sidebar-text">Scrape Info</span></div>
+                <div class="sidebar-item" onclick="window.open('https://chatgpt.com/g/g-p-6a037842e4788191ba71bfdd4c576803-gay-website/project', '_blank')"><span class="icon">🤖</span> <span class="sidebar-text">Scrape Info</span></div>
                 
                 <div class="sidebar-item" onclick="document.getElementById('file-preview-import').click()"><span class="icon">👁️</span> <span class="sidebar-text">Preview Import</span></div>
                 <input type="file" id="file-preview-import" class="hidden" accept=".json">
@@ -211,7 +212,7 @@
                     <button id="btn-export-csv" class="btn secondary-btn pill-btn" style="width:auto;">📊 Export CSV</button>
                     <button id="btn-export-json" class="btn secondary-btn pill-btn" style="width:auto;">💾 Export JSON</button>
                     <button class="btn secondary-btn pill-btn" style="width:auto;" onclick="unhideAllColumns()">👁️ Unhide Columns</button>
-                    <button id="btn-formatting-guide" class="btn secondary-btn pill-btn" style="width:auto;">📖 Formatting Guide</button>
+                    <button id="btn-show-hidden-fields" class="btn secondary-btn pill-btn" style="width:auto;" onclick="toggleHiddenFields()">👁️ Show Hidden Fields</button>
                 </div>
 
                 <div id="active-filters" class="active-filters-area"></div>
@@ -225,14 +226,14 @@
                 <div class="summary-bar" style="margin-bottom: 10px;">
                     <strong class="display-font" style="font-size:1.2rem; color:var(--primary-blue);">HTML PAGE EDITOR</strong>
                     <div style="display:flex; gap:10px; align-items:center;">
-                        <select id="editor-page-select" class="form-input pill-input" style="width:220px; margin:0; padding:4px 10px;">
-                            <option value="about.html">About Page</option>
-                            <option value="discounts.html">Discounts Page</option>
-                            <option value="cruising-guide.html">Cruising Guide</option>
-                            <option value="template.html">Blank Template</option>
-                            <option value="thanks.html">Thanks Page</option>
+                        <button id="btn-formatting-guide" class="btn secondary-btn pill-btn" style="padding: 4px 10px; width: auto; font-size: 0.9rem;">📖 Formatting Guide</button>
+                        <button id="btn-load-editor-page" class="btn secondary-btn pill-btn" style="padding:4px 12px; width:auto; font-size:0.9rem;">Load</button>
+                        <select id="editor-page-select" class="form-input pill-input" style="width:200px; margin:0; padding:4px 10px;">
+                            <option value="discounts">Discounts Page</option>
+                            <option value="about">About Page</option>
+                            <option value="featured">Featured Venues Page</option>
+                            <option value="new">New Blank Page</option>
                         </select>
-                        <button id="btn-load-html" class="btn secondary-btn pill-btn" style="padding: 4px 10px; width: auto; font-size: 0.9rem;">Load</button>
                     </div>
                 </div>
                 
@@ -322,12 +323,12 @@
                         </div>
                         
                         <div style="flex:1;">
-                            <label style="font-size:0.85rem; color:var(--text-light); margin-bottom:5px; display:block;">Extra Tags</label>
+                            <label style="font-size:0.85rem; color:var(--text-light); margin-bottom:5px; display:block;">Fetish Tags</label>
                             <div style="display:flex; gap:5px;">
-                                <select id="ac-tag" class="form-input" style="border-radius:4px; padding:8px; margin:0;"></select>
-                                <button id="btn-add-tag" class="btn secondary-btn pill-btn" style="width:auto; padding:0 10px;" onclick="addActiveTag()">+</button>
+                                <select id="ac-fetish" class="form-input" style="border-radius:4px; padding:8px; margin:0;"></select>
+                                <button id="btn-add-fetish" class="btn secondary-btn pill-btn" style="width:auto; padding:0 10px;" onclick="addActiveFetish()">+</button>
                             </div>
-                            <div id="ac-tag-pills" style="display:flex; flex-wrap:wrap; gap:5px; margin-top:8px;"></div>
+                            <div id="ac-fetish-pills" style="display:flex; flex-wrap:wrap; gap:5px; margin-top:8px;"></div>
                         </div>
                     </div>
 
@@ -342,6 +343,6 @@
         </main>
     </div>
 
-    <script src="admin.js"></script>
+    <script src="admin.js?v=0.60"></script>
 </body>
 </html>

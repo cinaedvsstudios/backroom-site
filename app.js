@@ -1,9 +1,9 @@
 // --- Application State ---
-const APP_VERSION = "v0.59";
-const APP_DATE = "May 2026";
+const APP_VERSION = "v0.60";
+const APP_DATE = "17 May 2026";
 
 let systemInfo = {}, designTheme = {}, venues = [], events = [];
-let activeFilters = [];
+let activeFilters = []; // v0.60 Multi-select Array
 let selectedCardId = null;
 let currentTargetVenue = null; 
 let currentEventCityFilter = 'All';
@@ -44,65 +44,79 @@ const sidebar = document.getElementById('sidebar');
 const hitArea = document.getElementById('sidebar-hit-area');
 let sidebarTimeout;
 
-const PLACEHOLDER_POOL = ['placeholder_venue.jpg', 'placeholder_venue01.jpg', 'placeholder_venue02.jpg', 'placeholder_venue03.jpg', 'placeholder_venue04.jpg', 'placeholder_venue05.jpg', 'placeholder_venue06.jpg', 'placeholder_venue07.jpg'];
+const MASTER_VIBE_TAGS = ["Bar","Party","Cinema","Sauna","Shop","Cruising","Darkroom","Men Only","Dresscode","Naked","Underwear","Dancefloor","Smoking Area","Cocktails","Fetish/Gear","Bear","Mature","Young Crowd","Queer","Drag","Karaoke","Pop/Dance","Techno"];
 const SHORTLIST_EMOJIS = ['🤠','🚄','👑','🥂','🦄','🫦','💪','🪇','🔥','🍆','🍑','💄','🛁','✈️','💥','💦','🗝️','🧿','🎧','🧭','⛓️','🎼'];
-
-function normalizeFeaturedLevel(venue) {
-    return String(venue?.Feature_Playroom || '').trim();
-}
-
-function getPublicVenues(source = venues) {
-    return (source || []).filter(v => String(v.Status || '').trim() !== 'Hold' && String(v.Status || '').trim() !== 'Flag');
-}
-
-function getVenueTags(venue) {
-    const tags = [];
-    if (venue?.Vibe_Tags) tags.push(...String(venue.Vibe_Tags).split(',').map(t => t.trim()));
-    if (venue?.Category) tags.push(String(venue.Category).trim());
-    const featureMap = {
-        Feature_Darkroom: 'Darkroom',
-        Feature_Dresscode: 'Dresscode',
-        Feature_Men_Only: 'Men Only',
-        Feature_Dancefloor: 'Dancefloor',
-        Feature_Smoking_Area: 'Smoking Area',
-        Feature_Cocktails: 'Cocktails',
-        Feature_Cruise_Focused: 'Cruising',
-        Feature_Sauna: 'Sauna'
-    };
-    Object.entries(featureMap).forEach(([field, label]) => {
-        if (venue && (venue[field] === true || String(venue[field]).toLowerCase() === 'true')) tags.push(label);
-    });
-    const seen = new Set();
-    return tags.map(t => String(t || '').trim()).filter(t => {
-        if (!t || seen.has(t)) return false;
-        seen.add(t);
-        return true;
-    });
-}
+const PLACEHOLDER_POOL = ['placeholder_venue.jpg', 'placeholder_venue01.jpg', 'placeholder_venue02.jpg', 'placeholder_venue03.jpg', 'placeholder_venue04.jpg', 'placeholder_venue05.jpg', 'placeholder_venue06.jpg', 'placeholder_venue07.jpg'];
 
 function getTagColorClass(tag) {
-    const red = ['Cruise', 'Cruising', 'Darkroom', 'Fetish', 'Dresscode', 'Leather', 'Rubber', 'Men Only', 'Naked', 'Underwear', 'Sneakers', 'Sportswear', 'Smoking Area'];
-    const yellow = ['Queer', 'Drag', 'Karaoke', 'Bear', 'Mature', 'Young Crowd'];
-    const blue = ['Bar', 'Club', 'Shop', 'Cinema', 'Party', 'Community', 'Dancefloor', 'Cocktails', 'Techno', 'Pop/Dance', 'Gear', 'Sauna', 'Cruise Club'];
+    const red = ['Cruising', 'Darkroom', 'Men Only', 'Dresscode', 'Naked', 'Underwear', 'Smoking Area', 'Fetish/Gear'];
+    const blue = ['Bar', 'Party', 'Cinema', 'Sauna', 'Shop', 'Dancefloor', 'Cocktails', 'Techno', 'Pop/Dance'];
+    const yellow = ['Bear', 'Mature', 'Young Crowd', 'Queer', 'Drag', 'Karaoke'];
     if (red.includes(tag)) return 'tag-adult-red';
-    if (yellow.includes(tag)) return 'tag-social-yellow';
     if (blue.includes(tag)) return 'tag-venue-blue';
+    if (yellow.includes(tag)) return 'tag-social-yellow';
     return 'tag-venue-blue';
 }
 
-function getPlaceholderForVenue(venue) {
-    const tags = getVenueTags(venue);
-    if (tags.includes('Shop')) return 'placeholder_venue08.jpg';
-    if (tags.includes('Techno')) return 'placeholder_venue04.jpg';
-    if (tags.includes('Pop') || tags.includes('Pop/Dance')) return 'placeholder_venue06.jpg';
-    if (tags.includes('Queer')) return 'placeholder_venue03.jpg';
-    if (tags.includes('Cinema')) return 'placeholder_venue10.jpg';
-    if (tags.includes('Bar')) return 'placeholder_venue02.jpg';
-    return PLACEHOLDER_POOL[Math.floor(Math.random() * PLACEHOLDER_POOL.length)];
+function getVenueTags(venue) {
+    if (!venue || !venue.Vibe_Tags) return [];
+    const seen = new Set();
+    return String(venue.Vibe_Tags)
+        .split(',')
+        .map(t => t.trim())
+        .filter(t => {
+            if (!t || seen.has(t)) return false;
+            seen.add(t);
+            return MASTER_VIBE_TAGS.includes(t);
+        });
 }
 
 function renderTagPills(tags, extraStyle = '') {
     return (tags || []).map(tag => `<span class="chip pill-btn ${getTagColorClass(tag)}" title="${tag}" style="font-size:0.85rem; padding: 4px 10px; ${extraStyle}">${tag}</span>`).join('');
+}
+
+
+function normalizeFeaturedLevel(venue) {
+    return String(venue?.Priority || '').trim();
+}
+
+function getVenueSearchText(venue) {
+    return [
+        venue?.Name,
+        venue?.Description,
+        venue?.Vibe_Tags,
+        venue?.City,
+        venue?.Country,
+        venue?.Address,
+        venue?.Postcode,
+        venue?.Nearest_Station,
+        venue?.Native_Map_Query,
+        venue?.Website_URL,
+        venue?.Instagram_URL,
+        venue?.Facebook_URL,
+        venue?.Other_URL,
+        venue?.Source_URLs
+    ].filter(Boolean).join(' ');
+}
+
+function getPublicVenues(source = venues) {
+    return (source || []).filter(v => {
+        const status = String(v?.Status || '').trim();
+        return status !== 'Hold' && status !== 'Flag';
+    });
+}
+
+function getCardStatusLabel(venue) {
+    const status = String(venue?.Status || '').trim();
+    if (status === 'Closed') return 'CLOSED';
+    if (activeFilters && activeFilters.length > 0) return activeFilters.slice(0, 3).join(' / ');
+    return 'ALL';
+}
+
+function getCardStatusClass(venue) {
+    const status = String(venue?.Status || '').trim().toLowerCase();
+    if (status === 'closed') return 'closed';
+    return 'all';
 }
 
 function showToast(message) {
@@ -262,17 +276,6 @@ function setupCriticalListeners() {
         appShell?.classList.remove('hidden');
         showToast("Backroom " + APP_VERSION);
     }
-
-    document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape') {
-            const vm = document.getElementById('venue-modal');
-            if (vm && !vm.classList.contains('hidden')) {
-                vm.classList.add('hidden');
-                window.history.pushState(null, '', window.location.pathname + window.location.search);
-                handleRouting();
-            }
-        }
-    });
 }
 
 async function initApp() {
@@ -334,14 +337,13 @@ async function initApp() {
                     Venue_ID: "LOCAL-01", 
                     Name: "Dummy GitHub Venue", 
                     City: "Berlin", 
-                    Category: "Club", 
                     Status: "Live", 
-                    Description: "If you see this on GitHub, it means listings.json failed to load.", 
+                    Description: "If you see this on GitHub, it means listings.json failed to load.",
+                    Vibe_Tags: "Dancefloor, Darkroom", 
                     Views: 420,
                     Rating_Age_Range: 3,
                     Rating_Size: 4,
-                    Rating_Popularity: 5,
-                    Feature_Darkroom: true
+                    Rating_Busyness: 5
                 }]; 
                 if(!events) events = [];
                 
@@ -417,7 +419,7 @@ function renderSharedListView(name, emoji, ids) {
     
     resultsContainer.appendChild(sharedHeader);
 
-    const matchingVenues = getPublicVenues().filter(v => ids.includes(v.Venue_ID));
+    const matchingVenues = venues.filter(v => ids.includes(v.Venue_ID));
     if (matchingVenues.length === 0) {
         resultsContainer.innerHTML += `<p style="text-align:center; color: var(--label-grey); grid-column: 1 / -1;">No active venues found in this list.</p>`;
     } else {
@@ -451,36 +453,25 @@ function renderSharedListView(name, emoji, ids) {
     });
 }
 
-async function loadStaticPage(pageName) {
-    const container = document.getElementById(`${pageName}-container`);
-    if (!container) return;
-    try {
-        const res = await fetch(`${pageName}.html?v=${Date.now()}`);
-        if (res.ok) container.innerHTML = await res.text();
-        else container.innerHTML = `<h2 class="display-font" style="color:var(--primary-blue);">Content not found</h2>`;
-    } catch (e) {
-        container.innerHTML = `<h2 class="display-font" style="color:var(--primary-blue);">Failed to load page</h2>`;
-    }
-}
-
 function handleRouting() {
-    if (checkSharedListRoute()) return;
+    if (checkSharedListRoute()) return; 
 
     const hash = window.location.hash;
-    document.querySelectorAll('.modal').forEach(m => { if (m.id !== 'tutorial-toast') m.classList.add('hidden'); });
+    const query = searchInput?.value.trim() || '';
+
+    document.querySelectorAll('.modal').forEach(m => m.classList.add('hidden'));
     contextHeader?.classList.add('hidden');
     document.getElementById('event-city-filters')?.classList.add('hidden');
     document.getElementById('btn-new-shortlist-view')?.classList.add('hidden');
     document.getElementById('main-filters')?.classList.remove('hidden');
     ['discounts', 'about', 'featured', 'cruising-guide'].forEach(page => document.getElementById(`${page}-container`)?.classList.add('hidden'));
+
     welcomeScreen?.classList.add('hidden');
     document.getElementById('profile-wipe-toast')?.classList.add('hidden');
 
-    if (hash === '') {
-        if (searchInput) searchInput.value = '';
-        activeFilters = [];
+    if (hash === '' && query === '' && activeFilters.length === 0 && sessionStorage.getItem('br_welcome_dismissed') !== 'true') {
         document.getElementById('main-filters')?.classList.add('hidden');
-        if (resultsContainer) resultsContainer.innerHTML = '';
+        if(resultsContainer) resultsContainer.innerHTML = '';
         renderWelcomeScreen();
         return;
     }
@@ -488,17 +479,13 @@ function handleRouting() {
     if (hash.startsWith('#venue=')) {
         const id = hash.replace('#venue=', '');
         const venue = venues.find(v => v.Venue_ID === id);
-        if (venue && venue.Status !== 'Hold' && venue.Status !== 'Flag') {
-            openVenueModal(venue);
-            applyFilters();
+        if (venue && !['Hold', 'Flag'].includes(String(venue.Status || '').trim())) { 
+            openVenueModal(venue); 
+            applyFilters(); 
         } else {
             showToast('Venue not available or under review');
-            window.location.hash = '#results';
-            return;
+            window.location.hash = '#results'; 
         }
-    } else if (hash === '#results') {
-        recordUserInteraction();
-        applyFilters();
     } else if (hash === '#favorites') {
         recordUserInteraction();
         renderFavoritesView();
@@ -511,40 +498,90 @@ function handleRouting() {
     } else if (hash === '#mytravel') {
         recordUserInteraction();
         renderTravelFullView();
+    } else if (hash === '#discounts') {
+        recordUserInteraction();
+        renderStaticPageView('discounts');
+    } else if (hash === '#about') {
+        recordUserInteraction();
+        renderStaticPageView('about');
+    } else if (hash === '#cruising-guide') {
+        recordUserInteraction();
+        renderStaticPageView('cruising-guide');
     } else if (hash === '#featured') {
         recordUserInteraction();
         renderFeaturedView();
-    } else if (['#discounts', '#about', '#cruising-guide'].includes(hash)) {
-        recordUserInteraction();
-        const page = hash.replace('#', '');
-        document.getElementById('main-filters')?.classList.add('hidden');
-        if (resultsContainer) resultsContainer.innerHTML = '';
-        const container = document.getElementById(`${page}-container`);
-        if (container) {
-            container.classList.remove('hidden');
-            loadStaticPage(page);
-        }
     } else if (hash.startsWith('#shortlist=')) {
         recordUserInteraction();
         const name = decodeURIComponent(hash.replace('#shortlist=', ''));
         renderSingleShortlist(name);
     } else {
-        applyFilters();
+        if(window.location.hash !== '#results') window.location.hash = '#results';
+        else applyFilters();
     }
+
     updateTravelSidebarHighlight();
 }
 
 function renderSingleShortlist(name) {
     document.getElementById('main-filters')?.classList.add('hidden');
     contextHeader?.classList.remove('hidden');
+    
     const cTitle = document.getElementById('context-title');
     const cDesc = document.getElementById('context-desc');
     const eIcon = userShortlistEmojis[name] || '📑';
     if(cTitle) cTitle.innerHTML = `${eIcon} ${name}`;
-    if(cDesc) cDesc.innerText = 'A saved shortlist collection.';
+    if(cDesc) cDesc.innerText = "A saved shortlist collection.";
+    
     const listIds = userShortlists[name] || [];
-    const matchingVenues = getPublicVenues().filter(v => listIds.includes(v.Venue_ID));
+    const matchingVenues = (venues||[]).filter(v => listIds.includes(v.Venue_ID));
     renderListings(matchingVenues, true);
+}
+
+async function renderStaticPageView(page) {
+    document.getElementById('main-filters')?.classList.add('hidden');
+    if(resultsContainer) resultsContainer.innerHTML = '';
+    ['discounts', 'about', 'featured', 'cruising-guide'].forEach(p => {
+        if(p !== page) document.getElementById(`${p}-container`)?.classList.add('hidden');
+    });
+    const container = document.getElementById(`${page}-container`);
+    if(!container) return;
+    container.classList.remove('hidden');
+    container.innerHTML = `<p class="body-font">Loading content...</p>`;
+    try {
+        const res = await fetch(`${page}.html?v=${Date.now()}`);
+        if(!res.ok) throw new Error(`HTTP ${res.status}`);
+        const html = await res.text();
+        const doc = new DOMParser().parseFromString(html, 'text/html');
+        const main = doc.querySelector('main');
+        container.innerHTML = main ? main.innerHTML : doc.body.innerHTML;
+    } catch (e) {
+        container.innerHTML = `<h2 class="display-font" style="color:var(--primary-blue);">Content not available</h2><p class="body-font">This page could not be loaded.</p>`;
+    }
+}
+
+function renderBlankPageView(page) {
+    renderStaticPageView(page);
+}
+
+function renderWelcomeScreen() {
+    const wName = document.getElementById('welcome-name');
+    const wAvatar = document.getElementById('welcome-avatar');
+    // V0.58 Dynamic Fallback Name
+    let dispName = 'GUEST';
+    if (userProfile.name) {
+        dispName = userProfile.name;
+    } else if (userProfile.avatar && userProfile.avatar !== 'noavatar01.png') {
+        const found = avatarData.find(a => a.file === userProfile.avatar);
+        if(found) dispName = found.label;
+    }
+    
+    if(wName) wName.innerText = dispName;
+    if(wAvatar && userProfile.avatar) wAvatar.src = `Profile_images/${userProfile.avatar}`;
+    welcomeScreen?.classList.remove('hidden');
+}
+
+function renderDiscountsView() {
+    renderStaticPageView('discounts');
 }
 
 function renderFeaturedView() {
@@ -553,48 +590,21 @@ function renderFeaturedView() {
     const container = document.getElementById('featured-container');
     if (!container) return;
     container.classList.remove('hidden');
+
     const featVenues = getPublicVenues().filter(v => ['1','2','3'].includes(normalizeFeaturedLevel(v)));
     const cities = [...new Set(featVenues.map(v => v.City).filter(Boolean))].sort();
     let html = `<h2 class="display-font" style="color:var(--primary-blue); margin-bottom:5px;">🏛️ FEATURED VENUES</h2>`;
-    html += `<p class="body-font" style="margin-bottom:15px; color:#fff;">Below are some of our favourite venues that we know you will love, visit if you are nearby or plan a trip soon!</p>`;
-    html += `<div style="display:flex; gap:8px; margin-bottom:20px; overflow-x:auto; flex-wrap:wrap;">${cities.map(c => `<button class="chip pill-btn" onclick="const s=document.getElementById('search-input'); if(s) s.value='${c.replace(/'/g, "\'")}'; window.location.hash='#results'; handleRouting();">${c}</button>`).join('')}</div>`;
+    html += `<p class="body-font" style="margin-bottom:15px; color:#fff;">${systemInfo.featured_page_intro || 'Below are some of our favourite venues.'}</p>`;
+    if(cities.length) html += `<div style="display:flex; gap:8px; margin-bottom:20px; overflow-x:auto; flex-wrap:wrap;">${cities.map(c => `<button class="chip pill-btn" onclick="const s=document.getElementById('search-input'); if(s) s.value='${String(c).replace(/'/g, "\\'")}'; window.location.hash='#results'; handleRouting();">${c}</button>`).join('')}</div>`;
     ['1','2','3'].forEach(level => {
-        const boxVenues = featVenues.filter(v => normalizeFeaturedLevel(v) === level);
         html += `<div class="featured-box" style="margin-bottom:30px; background:var(--near-black); border:1px solid var(--panel-mid); padding:20px; border-radius:var(--radius-card);"><h3 class="display-font" style="margin-bottom:15px; color:var(--primary-blue);">Featured Level ${level}</h3><div id="featured-level-${level}" class="featured-grid" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(300px, 1fr)); gap:20px;"></div></div>`;
     });
+    if(!featVenues.length) html += `<p class="body-font" style="color:var(--text-light);">No featured venues have been added yet.</p>`;
     container.innerHTML = html;
     ['1','2','3'].forEach(level => {
         const grid = document.getElementById(`featured-level-${level}`);
-        const boxVenues = featVenues.filter(v => normalizeFeaturedLevel(v) === level);
-        renderListings(boxVenues, true, grid);
+        renderListings(featVenues.filter(v => normalizeFeaturedLevel(v) === level), true, grid);
     });
-}
-
-function renderBlankPageView(page) {
-    document.getElementById('main-filters')?.classList.add('hidden');
-    if(resultsContainer) resultsContainer.innerHTML = '';
-    const container = document.getElementById(`${page}-container`);
-    if(container) container.classList.remove('hidden');
-}
-
-function renderWelcomeScreen() {
-    const wName = document.getElementById('welcome-name');
-    const wAvatar = document.getElementById('welcome-avatar');
-    let dispName = 'GUEST';
-    if (userProfile.name) dispName = userProfile.name;
-    else if (userProfile.avatar && userProfile.avatar !== 'noavatar01.png') {
-        const found = avatarData.find(a => a.file === userProfile.avatar);
-        if(found) dispName = found.label;
-    }
-    if(wName) wName.innerText = dispName;
-    if(wAvatar && userProfile.avatar) wAvatar.src = `Profile_images/${userProfile.avatar}`;
-    welcomeScreen?.classList.remove('hidden');
-}
-
-function renderDiscountsView() {
-    document.getElementById('main-filters')?.classList.add('hidden');
-    if(resultsContainer) resultsContainer.innerHTML = '';
-    document.getElementById('discounts-container')?.classList.remove('hidden');
 }
 
 // --- Tutorial System ---
@@ -605,10 +615,10 @@ let currentTutorialType = '';
 function startTutorial(type) {
     isTutorialRunning = true; 
     
-    // V0.59 Tutorial Reset & Hardcode Anchor
+    // V0.58 Tutorial Reset & Hardcode Anchor
     if (type === 'general') {
-        window.location.hash = '#results';
-        activeFilters = [];
+        window.location.hash = '#results'; // Clear views
+        activeFilters = []; // Clear filters
         const searchInputEl = document.getElementById('search-input');
         if(searchInputEl) {
             searchInputEl.value = "Berlin";
@@ -755,24 +765,17 @@ window.flagListing = function(id, name, type="Venue/Event") {
         const fsName = document.getElementById('fs-name');
         const fsType = document.getElementById('fs-type');
         const fsUrl = document.getElementById('fs-url');
-        
+
         if(fsId) fsId.value = id;
         if(fsName) fsName.value = name;
         if(fsType) fsType.value = type;
         if(fsUrl) fsUrl.value = window.location.href;
+
         const nameInp = modal.querySelector('input[name="name"]');
         const emailInp = modal.querySelector('input[name="email"]');
-        if(nameInp) {
-            let defaultName = 'Backroom User';
-            if(userProfile.name) defaultName = userProfile.name;
-            else if(userProfile.avatar && userProfile.avatar !== 'noavatar01.png') {
-                const found = avatarData.find(a => a.file === userProfile.avatar);
-                if(found) defaultName = found.label;
-            }
-            nameInp.value = defaultName;
-        }
-        if(emailInp) emailInp.value = 'your@email.com';
-        
+        if(nameInp && !nameInp.value) nameInp.value = userProfile.name || 'Backroom User';
+        if(emailInp && !emailInp.value) emailInp.value = systemInfo.form_default_email || 'your@email.com';
+
         modal.classList.remove('hidden');
     }
 };
@@ -783,13 +786,44 @@ function setupEventListeners() {
         if(el) el.addEventListener(evt, func);
     };
 
+    const fsForm = document.getElementById('fs-form');
+    if(fsForm && !fsForm.dataset.ajaxBound) {
+        fsForm.dataset.ajaxBound = 'true';
+        fsForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const submitBtn = fsForm.querySelector('button[type="submit"]');
+            const oldText = submitBtn ? submitBtn.innerText : '';
+            if(submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.innerText = 'Sending...';
+            }
+            try {
+                const res = await fetch(fsForm.action, {
+                    method: 'POST',
+                    body: new FormData(fsForm),
+                    headers: { 'Accept': 'application/json' }
+                });
+                if(!res.ok) throw new Error(`HTTP ${res.status}`);
+                showToast(systemInfo.form_success_message || 'Thanks, your report has been submitted.');
+                document.getElementById('formsubmit-modal')?.classList.add('hidden');
+                fsForm.reset();
+            } catch (err) {
+                showToast(systemInfo.error_messages?.form_submit_failed || 'The report could not be submitted. Please try again.');
+            } finally {
+                if(submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.innerText = oldText || 'Send Message';
+                }
+            }
+        });
+    }
+
     document.querySelectorAll('.close-modal-btn').forEach(btn => {
         btn.addEventListener('click', (e) => e.target.closest('.modal')?.classList.add('hidden'));
     });
     
     addEvt('close-modal', 'click', () => {
-        window.history.pushState(null, '', window.location.pathname + window.location.search);
-        handleRouting();
+        window.location.hash = '#results';
     });
 
     addEvt('btn-location', 'click', () => {
@@ -1005,27 +1039,6 @@ function setupEventListeners() {
     if(searchInput) {
         searchInput.addEventListener('input', () => { recordUserInteraction(); window.location.hash='#results'; handleRouting(); });
     }
-
-    document.getElementById('btn-sidebar-results')?.addEventListener('click', () => { window.location.hash = '#results'; });
-
-    const fsForm = document.getElementById('fs-form');
-    if (fsForm) {
-        fsForm.addEventListener('submit', (e) => {
-            e.preventDefault();
-            const formData = new FormData(fsForm);
-            fetch('https://formsubmit.cloud/f/ae0e141d-ad94-47fe-ac46-55702c6534a6/', { method: 'POST', body: formData })
-                .then(res => {
-                    if(!res.ok) throw new Error('FormSubmit request failed');
-                    showToast('Thanks, your report has been submitted.');
-                    fsForm.reset();
-                    document.getElementById('formsubmit-modal')?.classList.add('hidden');
-                })
-                .catch(() => {
-                    window.open('thanks.html', '_blank', 'width=420,height=420');
-                });
-        });
-    }
-
 }
 
 function initLeafletMap(lat, lng) {
@@ -1060,7 +1073,7 @@ function updateProfileDisplay() {
         dispName = userProfile.name;
     } else if (userProfile.avatar && userProfile.avatar !== 'noavatar01.png') {
         const found = avatarData.find(a => a.file === userProfile.avatar);
-        if(found) dispName = found.label; // V0.59 Fallback Name Logic
+        if(found) dispName = found.label; // V0.58 Fallback Name Logic
     }
 
     topName.innerText = dispName;
@@ -1119,26 +1132,41 @@ window.removeTravel = function(city) {
 function renderDynamicFilters(filteredData) {
     const container = document.getElementById('filter-chips');
     if(!container) return;
-    const activeTags = new Set();
-    (filteredData || []).forEach(v => getVenueTags(v).forEach(t => activeTags.add(t)));
+
+    const availableTags = new Set();
+    getPublicVenues().forEach(v => getVenueTags(v).forEach(t => availableTags.add(t)));
+
     let html = `<button class="chip pill-btn ${activeFilters.length === 0 ? 'active' : ''}" data-filter="All">All</button>`;
-    Array.from(activeTags).sort().forEach(tag => {
+    html += `<button class="chip pill-btn tag-social-yellow" data-filter="__close_to_me">Venues close to me</button>`;
+
+    MASTER_VIBE_TAGS.forEach(tag => {
         const colorClass = getTagColorClass(tag);
-        html += `<button class="chip pill-btn ${colorClass} ${activeFilters.includes(tag) ? 'active' : ''}" data-filter="${tag}">${tag}</button>`;
+        const isActive = activeFilters.includes(tag);
+        const isAvailable = availableTags.has(tag);
+        const disabledClass = (!isAvailable && !isActive) ? 'muted-chip' : '';
+        html += `<button class="chip pill-btn ${colorClass} ${isActive ? 'active' : ''} ${disabledClass}" data-filter="${tag}">${tag}</button>`;
     });
     container.innerHTML = html;
+
     container.querySelectorAll('.chip').forEach(chip => {
         chip.addEventListener('click', (e) => {
             recordUserInteraction();
             const tag = e.currentTarget.getAttribute('data-filter');
-            if(tag === 'All') activeFilters = [];
-            else {
+
+            if(tag === '__close_to_me') {
+                showToast('Coming soon');
+                return;
+            }
+
+            if(tag === 'All') {
+                activeFilters = [];
+            } else {
                 const idx = activeFilters.indexOf(tag);
                 if(idx > -1) activeFilters.splice(idx, 1);
                 else activeFilters.push(tag);
             }
-            window.location.hash = '#results';
-            handleRouting();
+            if(window.location.hash !== '#results') window.location.hash = '#results';
+            else handleRouting();
         });
     });
 }
@@ -1156,27 +1184,41 @@ function applyFilters() {
     }
 
     if(query.trim() !== '') {
-        filteredVenues = filteredVenues.filter(v => fuzzyMatch(`${v.Name || ''} ${v.Description || ''} ${v.Vibe_Tags || ''} ${v.City || ''} ${v.Category || ''}`, query));
+        filteredVenues = filteredVenues.filter(v => fuzzyMatch(getVenueSearchText(v), query));
     }
 
     filteredVenues.sort((a, b) => {
-        const aFeat = normalizeFeaturedLevel(a);
-        const bFeat = normalizeFeaturedLevel(b);
-        const featRank = { '1': 3, '2': 2, '3': 0, '': 0 };
-        if ((featRank[aFeat] || 0) !== (featRank[bFeat] || 0)) return (featRank[bFeat] || 0) - (featRank[aFeat] || 0);
-        const aShop = a.Category === 'Shop' ? 1 : 0;
-        const bShop = b.Category === 'Shop' ? 1 : 0;
-        if(aShop !== bShop) return aShop - bShop;
-        const aHasImg = a.Image_URL && String(a.Image_URL).trim() !== '' ? 1 : 0;
-        const bHasImg = b.Image_URL && String(b.Image_URL).trim() !== '' ? 1 : 0;
-        if(aHasImg !== bHasImg) return bHasImg - aHasImg;
+        const aShop = getVenueTags(a).includes('Shop') ? 1 : 0;
+        const bShop = getVenueTags(b).includes('Shop') ? 1 : 0;
+        if (aShop !== bShop) return aShop - bShop;
+
+        const aHasImg = (a.Image_URL && a.Image_URL.trim() !== '') ? 1 : 0;
+        const bHasImg = (b.Image_URL && b.Image_URL.trim() !== '') ? 1 : 0;
+        if (aHasImg !== bHasImg) return bHasImg - aHasImg; 
+
+        const aPriority = parseInt(normalizeFeaturedLevel(a)) || 99;
+        const bPriority = parseInt(normalizeFeaturedLevel(b)) || 99;
+        if (aPriority !== bPriority) return aPriority - bPriority;
+
         const aSize = parseInt(a.Rating_Size) || 0;
         const bSize = parseInt(b.Rating_Size) || 0;
-        if(aSize !== bSize) return bSize - aSize;
+        if (aSize !== bSize) return bSize - aSize; 
+
         const aPop = parseInt(a.Rating_Busyness || a.Rating_Popularity) || 0;
         const bPop = parseInt(b.Rating_Busyness || b.Rating_Popularity) || 0;
-        return bPop - aPop;
+        return bPop - aPop; 
     });
+
+    if(contextHeader) {
+        contextHeader.classList.remove('hidden');
+        const title = document.getElementById('context-title');
+        const desc = document.getElementById('context-desc');
+        const parts = [];
+        if(query.trim()) parts.push(`search: ${query.trim()}`);
+        if(activeFilters.length) parts.push(`filters: ${activeFilters.join(', ')}`);
+        if(title) title.innerText = parts.length ? `Showing results for ${parts.join(' + ')}` : 'Results';
+        if(desc) desc.innerText = `${filteredVenues.length} results found`;
+    }
 
     renderListings(filteredVenues);
     renderDynamicFilters(filteredVenues);
@@ -1260,7 +1302,7 @@ function renderFavoritesView() {
     if(cTitle) cTitle.innerHTML = "⚜️ MY FAVOURITES";
     if(cDesc) cDesc.innerText = "Venues you have starred locally.";
     
-    const favVenues = getPublicVenues().filter(v => userFavorites.includes(v.Venue_ID));
+    const favVenues = (venues||[]).filter(v => userFavorites.includes(v.Venue_ID));
     renderListings(favVenues, true);
 }
 
@@ -1492,11 +1534,15 @@ function renderProfileAvatars() {
     const grid = document.getElementById('avatar-grid');
     if(!grid) return;
     grid.innerHTML = '';
+    
     const switcher = document.getElementById('profile-switcher');
     if (switcher) {
         switcher.innerHTML = '<option value="">Switch Profile...</option>';
-        Object.keys(savedProfiles).forEach(pName => { switcher.innerHTML += `<option value="${pName}">${pName}</option>`; });
+        Object.keys(savedProfiles).forEach(pName => {
+            switcher.innerHTML += `<option value="${pName}">${pName}</option>`;
+        });
     }
+
     let filterContainer = document.getElementById('avatar-filters');
     if (!filterContainer) {
         filterContainer = document.createElement('div');
@@ -1508,20 +1554,21 @@ function renderProfileAvatars() {
         filterContainer.style.marginBottom = '15px';
         grid.parentNode.insertBefore(filterContainer, grid);
     }
-    const allCategories = new Set();
-    (avatarData || []).forEach(a => {
-        let cats = Array.isArray(a.category) ? a.category : String(a.category || '').split(',');
-        cats.map(c => String(c).trim()).filter(Boolean).forEach(c => allCategories.add(c));
-    });
-    let html = `<div class="tag-row-blue" style="display:flex; justify-content:center; flex-wrap:wrap; gap:8px;">`;
-    html += `<button class="chip pill-btn ${activeAvatarCategories.length === 0 ? 'active' : ''}" style="padding:4px 10px; font-size:0.85rem; flex-shrink:0;" data-val="All">All</button>`;
-    Array.from(allCategories).sort().forEach(c => {
-        html += `<button class="chip pill-btn ${activeAvatarCategories.includes(c) ? 'active' : ''}" style="padding:4px 10px; font-size:0.85rem; color:var(--primary-blue); border-color:var(--primary-blue); flex-shrink:0;" data-val="${c}">${c}</button>`;
-    });
+    
+    const ageTags = ['Young', 'Prime', 'Mature'];
+    const fetishTags = ['Ink', 'Leather', 'Rubber', 'Puppy'];
+    
+    let html = `<div class="tag-row-blue" style="display:flex; justify-content:center; gap:8px;">`;
+    html += `<button class="chip pill-btn ${activeAvatarCategories.length === 0 ? 'active' : ''}" style="padding: 4px 10px; font-size: 0.85rem; flex-shrink:0;" data-val="All">All</button>`;
+    html += ageTags.map(c => `<button class="chip pill-btn ${activeAvatarCategories.includes(c) ? 'active' : ''}" style="padding: 4px 10px; font-size: 0.85rem; color: var(--primary-blue); border-color: var(--primary-blue); flex-shrink:0;" data-val="${c}">${c}</button>`).join('');
+    html += `</div><div class="tag-row-red" style="display:flex; justify-content:center; gap:8px;">`;
+    html += fetishTags.map(c => `<button class="chip pill-btn ${activeAvatarCategories.includes(c) ? 'active' : ''}" style="padding: 4px 10px; font-size: 0.85rem; color: var(--bright-red-orange); border-color: var(--bright-red-orange); flex-shrink:0;" data-val="${c}">${c}</button>`).join('');
     html += `</div>`;
+
     filterContainer.innerHTML = html;
+    
     filterContainer.querySelectorAll('.chip').forEach(btn => {
-        btn.onclick = () => {
+        btn.onclick = () => { 
             const val = btn.getAttribute('data-val');
             if(val === 'All') activeAvatarCategories = [];
             else {
@@ -1529,40 +1576,49 @@ function renderProfileAvatars() {
                 if(idx > -1) activeAvatarCategories.splice(idx, 1);
                 else activeAvatarCategories.push(val);
             }
-            renderProfileAvatars();
+            renderProfileAvatars(); 
         };
     });
-    const displayData = [...(avatarData || [])];
+
+    let displayData = [...avatarData];
+    if (activeAvatarCategories.length === 0) {
+        displayData.unshift({ file: 'noavatar01.png', label: 'Default', category: [] });
+    }
+
     const filteredData = activeAvatarCategories.length === 0 ? displayData : displayData.filter(a => {
-        let cats = Array.isArray(a.category) ? a.category : String(a.category || '').split(',');
-        cats = cats.map(c => String(c).trim()).filter(Boolean);
+        let cats = Array.isArray(a.category) ? a.category : [a.category];
         return activeAvatarCategories.every(cat => cats.includes(cat));
     });
-    if(filteredData.length === 0) {
-        grid.style.minHeight = '300px';
-        showToast('No results! Message admin to request your favourite.');
-    } else {
-        grid.style.minHeight = '';
-    }
+
     filteredData.forEach(avatar => {
         const item = document.createElement('div');
         item.className = 'avatar-item';
+        
+        // V0.58 Title fallback for desktop span hiding
         item.innerHTML = `<img src="Profile_images/${avatar.file}" onerror="this.parentElement.style.display='none';" alt="${avatar.label}" title="${avatar.label}"><span>${avatar.label}</span>`;
+        
         item.addEventListener('click', () => {
             userProfile.avatar = avatar.file;
             const previewImg = document.getElementById('profile-avatar-preview');
-            if(previewImg) { previewImg.src = `Profile_images/${avatar.file}`; previewImg.parentElement.classList.remove('hidden'); }
+            if(previewImg) {
+                previewImg.src = `Profile_images/${avatar.file}`;
+                previewImg.parentElement.classList.remove('hidden');
+            }
+            
             document.querySelectorAll('.avatar-item').forEach(el => el.classList.remove('selected'));
             item.classList.add('selected');
         });
         grid.appendChild(item);
     });
+    
     const initialPreviewImg = document.getElementById('profile-avatar-preview');
     if(initialPreviewImg) {
         if(userProfile.avatar && userProfile.avatar !== 'noavatar01.png') {
             initialPreviewImg.src = `Profile_images/${userProfile.avatar}`;
             initialPreviewImg.parentElement.classList.remove('hidden');
-        } else initialPreviewImg.parentElement.classList.add('hidden');
+        } else {
+            initialPreviewImg.parentElement.classList.add('hidden');
+        }
     }
 }
 
@@ -1622,18 +1678,18 @@ function openProfileMenu() {
         window.switchProfileTab(1);
     }
     
-    // V0.59 Dynamic Fallback welcome string
+    // V0.58 Dynamic Fallback welcome string
     const privacyGreeting = document.getElementById('profile-privacy-greeting');
-    const privacyGreetingMob = document.getElementById('profile-privacy-greeting-mob');
-    let dispName = 'Guest';
-    if (userProfile.name) {
-        dispName = userProfile.name;
-    } else if (userProfile.avatar && userProfile.avatar !== 'noavatar01.png') {
-        const found = avatarData.find(a => a.file === userProfile.avatar);
-        if(found) dispName = found.label;
+    if(privacyGreeting) {
+        let dispName = 'Guest';
+        if (userProfile.name) {
+            dispName = userProfile.name;
+        } else if (userProfile.avatar && userProfile.avatar !== 'noavatar01.png') {
+            const found = avatarData.find(a => a.file === userProfile.avatar);
+            if(found) dispName = found.label; 
+        }
+        privacyGreeting.innerText = `Hi ${dispName},`;
     }
-    if(privacyGreeting) privacyGreeting.innerText = `Hi ${dispName},`;
-    if(privacyGreetingMob) privacyGreetingMob.innerText = `Hi ${dispName},`;
 
     const profileWipeToast = document.getElementById('profile-wipe-toast');
     if(profileWipeToast) {
@@ -1742,69 +1798,71 @@ function checkImportPreview() {
     }
 }
 
-// V0.59 Random Placeholder Infinite Loop Breaker
-function handleImageCarousel(imgElement, venue) {
-    if(!imgElement) return;
+// V0.58 Random Placeholder Infinite Loop Breaker
+function handleImageCarousel(imgElement) {
     imgElement.addEventListener('click', (e) => {
-        e.stopPropagation();
+        e.stopPropagation(); 
         const id = imgElement.getAttribute('data-id');
         let index = parseInt(imgElement.getAttribute('data-index') || '1') + 1;
         let numStr = index < 10 ? '0' + index : index;
         let newSrc = `Venue_images/${id}-${numStr}.jpg`;
+        
         let tempImg = new Image();
         tempImg.onload = () => {
             imgElement.src = newSrc;
             imgElement.setAttribute('data-index', index);
-            showToast('Double tap the venue name to open');
+            showToast("Double tap the venue name to open");
         };
         tempImg.onerror = () => {
-            imgElement.onerror = null;
-            imgElement.src = getPlaceholderForVenue(venue);
+            // V0.58 Random image pool selection
+            const randomFallback = PLACEHOLDER_POOL[Math.floor(Math.random() * PLACEHOLDER_POOL.length)];
+            imgElement.onerror = null; 
+            imgElement.src = randomFallback;
             imgElement.setAttribute('data-index', 1);
-            showToast('Double tap the venue name to open');
+            showToast("Double tap the venue name to open");
         };
         tempImg.src = newSrc;
     });
 }
 
-
-function setupBottomControls() {
-    let controls = document.getElementById('bottom-controls');
-    if(!controls) {
-        controls = document.createElement('div');
-        controls.id = 'bottom-controls';
-        controls.innerHTML = `
-            <div id="results-count-box">0 results</div>
-            <button class="btn primary-btn pill-btn" onclick="window.scrollTo({top:0, behavior:'smooth'})" title="Top of page">⬆️</button>
-            <button class="btn primary-btn pill-btn" onclick="window.scrollTo({top:document.body.scrollHeight, behavior:'smooth'})" title="Bottom of page">⬇️</button>
-        `;
-        document.body.appendChild(controls);
-    }
-}
-
-function renderListings(data, isContextView = false, targetContainer = null) {
-    const target = targetContainer || resultsContainer;
-    if(target) target.innerHTML = '';
+function renderListings(data, isContextView = false, targetContainer = resultsContainer) {
+    const container = targetContainer || resultsContainer;
+    if(container) container.innerHTML = '';
     const today = new Date(); today.setHours(0,0,0,0);
 
-    if(!targetContainer) {
-        setupBottomControls();
-        const countBox = document.getElementById('results-count-box');
-        if(countBox) {
-            const total = getPublicVenues().length;
-            countBox.innerText = activeFilters.length > 0 ? `${(data || []).length}/${total} results` : `${(data || []).length} results found`;
-        }
-    }
-
     if(!data || data.length === 0) {
-        const emptyHtml = `<p style="text-align:center; color:var(--label-grey); margin-top:20px; width: 100%; grid-column: 1 / -1;">No venues found.</p>`;
-        if(target) target.innerHTML = emptyHtml;
+        let emptyHtml = `<p style="text-align:center; color:var(--label-grey); margin-top:20px; width: 100%; grid-column: 1 / -1;">No venues found.</p>`;
+
+        const cityInput = document.getElementById('loc-city');
+        const userLat = parseFloat(cityInput?.dataset.lat || 'NaN');
+        const userLon = parseFloat(cityInput?.dataset.lon || 'NaN');
+
+        if (!isNaN(userLat) && !isNaN(userLon) && venues.length > 0) {
+            let nearest = null;
+            let minDist = Infinity;
+            getPublicVenues().forEach(v => {
+                const dist = getDistanceFromLatLonInKm(userLat, userLon, parseFloat(v.Latitude), parseFloat(v.Longitude));
+                if (dist < minDist) { minDist = dist; nearest = v; }
+            });
+
+            if (nearest && minDist !== Infinity) {
+                const distRounded = Math.round(minDist);
+                emptyHtml = `<p style="text-align:center; color:var(--label-grey); margin-top:20px; width: 100%; grid-column: 1 / -1;">
+                    <img src="location.png" style="width:40px; margin-bottom:10px;"><br>
+                    <span style="color: var(--bright-red-orange); font-family: 'Antonio', sans-serif; font-size: 1.5rem; text-transform: uppercase;">No venues found nearby</span><br><br>
+                    <a href="javascript:void(0)" onclick="const s = document.getElementById('search-input'); if(s) s.value='${nearest.City}'; window.location.hash='#results'; applyFilters();" style="color:var(--primary-blue); font-weight:bold; font-size:1.1rem; text-decoration:underline;">
+                        Closest venue is ${distRounded} km away in ${nearest.City}.<br>Click here to load ${nearest.City}.
+                    </a>
+                </p>`;
+            }
+        }
+        if(container) container.innerHTML = emptyHtml;
         return;
     }
 
     data.forEach(venue => {
         let nextEventHtml = '';
-        let venueEvents = (events||[]).filter(e => e.Venue_ID === venue.Venue_ID && new Date(e.Event_Date) >= today);
+        let venueEvents = (events||[]).filter(e => e.Venue_ID === venue.Venue_ID && new Date(e.Event_Date) >= today && String(e.Status || '') !== 'Hold' && String(e.Status || '') !== 'Flag');
         if(venueEvents.length > 0) {
             venueEvents.sort((a, b) => new Date(a.Event_Date) - new Date(b.Event_Date));
             const nextE = venueEvents[0];
@@ -1812,59 +1870,55 @@ function renderListings(data, isContextView = false, targetContainer = null) {
         }
 
         const isFav = userFavorites.includes(venue.Venue_ID);
-        const isShortlisted = Object.values(userShortlists).some(list => list.includes(venue.Venue_ID));
-        const desc = venue.Description || '';
-        const shortDesc = desc.length > 90 ? desc.substring(0, 90) + '...' : desc;
+        const shortDescSource = venue.Description || '';
+        const shortDesc = shortDescSource.length > 90 ? shortDescSource.substring(0, 90) + '...' : shortDescSource;
         const card = document.createElement('div');
         card.className = 'card';
-        const baseImageSrc = (venue.Image_URL && String(venue.Image_URL).trim() !== '') ? `Venue_images/${venue.Venue_ID}-01.jpg` : getPlaceholderForVenue(venue);
 
-        let statusBadgeHtml = '';
-        if (venue.Status === 'Closed') {
-            statusBadgeHtml = `<div class="status-badge closed">CLOSED</div>`;
-        } else {
-            const pillText = activeFilters.length > 0 ? activeFilters.slice(0, 3).join(', ') : 'ALL';
-            statusBadgeHtml = `<div class="status-badge live" style="background-color:var(--panel-mid); color:#fff;">${pillText}</div>`;
-        }
+        const baseImageSrc = (venue.Image_URL && venue.Image_URL.trim()) ? venue.Image_URL.trim() : `Venue_images/${venue.Venue_ID}-01.jpg`;
+        const badgeLabel = getCardStatusLabel(venue);
+        const badgeClass = getCardStatusClass(venue);
 
         card.innerHTML = `
             <div class="card-image-wrapper">
-                <img class="venue-image centered-image" src="${baseImageSrc}" onerror="this.onerror=null; this.src='${getPlaceholderForVenue(venue)}'" data-id="${venue.Venue_ID}" data-index="1" title="Tap to see next photo">
+                <img class="venue-image centered-image" src="${baseImageSrc}" onerror="this.onerror=null; this.src='${PLACEHOLDER_POOL[Math.floor(Math.random() * PLACEHOLDER_POOL.length)]}'" data-id="${venue.Venue_ID}" data-index="1" title="Tap to see next photo">
             </div>
             <div class="card-inner-content">
                 <div class="card-header">
-                    <div><h3 class="card-title display-font">${venue.Name}</h3><div class="card-meta"><img src="location.png" style="width:14px; vertical-align:middle;"> ${venue.City || ''}</div></div>
-                    ${statusBadgeHtml}
+                    <div><h3 class="card-title display-font">${venue.Name || 'Unnamed venue'}</h3><div class="card-meta"><img src="location.png" style="width:14px; vertical-align:middle;"> ${venue.City || ''}</div></div>
+                    <div class="status-badge ${badgeClass}">${badgeLabel}</div>
                 </div>
                 <div class="card-about">${shortDesc}</div>
                 ${nextEventHtml}
-                <div class="card-tags tag-wrapper" style="display:flex; flex-wrap:wrap; gap:5px; margin-bottom:12px; overflow:hidden;">${renderTagPills(getVenueTags(venue))}</div>
                 <div class="card-stats">
                     <span>🌈 ${systemInfo.labels?.rated_by_gays || 'Rated by gays'}</span><span>👁️ ${venue.Views || 0}</span>
                     <div style="margin-left:auto; display:flex; gap:10px; align-items:center;">
-                        <span class="icon-btn tooltip" onclick="event.stopPropagation(); shareURL('${window.location.origin}${window.location.pathname}?venue=${venue.Venue_ID}#venue=${venue.Venue_ID}', '${String(venue.Name || '').replace(/'/g, "\'")}')" title="Share" style="font-size:1.5rem;">📣</span>
-                        <span class="icon-btn tooltip" onclick="event.stopPropagation(); window.flagListing('${venue.Venue_ID}', '${String(venue.Name || '').replace(/'/g, "\'")}', 'Venue Report')" title="Report" style="display:flex; align-items:center; justify-content:center;"><img src="report.png" style="width:24px; height:24px; object-fit:contain;"></span>
-                        <span class="icon-btn fav-btn tooltip ${isShortlisted ? 'active-star' : ''}" title="Add to Shortlist" onclick="event.stopPropagation(); promptAddToShortlist({Venue_ID: '${venue.Venue_ID}', Name: '${String(venue.Name || '').replace(/'/g, "\'")}'})"><img src="shortlist.png" style="width:24px;"></span>
-                        <span class="star-btn icon-btn fav-btn tooltip ${isFav ? 'active-star' : ''}" title="Toggle Favourite" style="font-size:1.8rem; line-height:1;" onclick="event.stopPropagation(); toggleFavorite('${venue.Venue_ID}', this)">⚜️</span>
+                        <span class="icon-btn" onclick="event.stopPropagation(); shareURL('${window.location.origin}${window.location.pathname}?venue=${venue.Venue_ID}#venue=${venue.Venue_ID}', '${String(venue.Name || '').replace(/'/g, "\\'")}')" title="Share" style="font-size:1.5rem;">📣</span>
+                        <span class="icon-btn" onclick="event.stopPropagation(); window.flagListing('${venue.Venue_ID}', '${String(venue.Name || '').replace(/'/g, "\\'")}', 'Venue Report')" title="Report" style="display:flex; align-items:center; justify-content:center;"><img src="report.png" style="width:24px; height:24px; object-fit:contain;"></span>
+                        <span class="star-btn icon-btn fav-btn ${isFav ? 'active-star' : ''}" style="font-size:1.8rem; line-height:1;">⚜️</span>
                     </div>
                 </div>
             </div>
         `;
-        handleImageCarousel(card.querySelector('.venue-image'), venue);
-        card.addEventListener('click', (e) => {
-            if (!e.target.classList.contains('venue-image') && !e.target.closest('.icon-btn')) {
+
+        handleImageCarousel(card.querySelector('.venue-image'));
+
+        card.addEventListener('click', (e) => { 
+            if(e.target.classList.contains('star-btn')) {
+                toggleFavorite(venue.Venue_ID, e.target);
+            } else if (!e.target.classList.contains('venue-image')) {
                 if(selectedCardId === venue.Venue_ID) {
                     recordUserInteraction();
-                    window.location.hash = `#venue=${venue.Venue_ID}`;
+                    window.location.hash = `#venue=${venue.Venue_ID}`; 
                 } else {
                     document.querySelectorAll('.card.selected').forEach(c => c.classList.remove('selected'));
                     card.classList.add('selected');
                     selectedCardId = venue.Venue_ID;
-                    showToast('Double tap the venue name to open');
+                    showToast("Double tap the venue name to open");
                 }
-            }
+            } 
         });
-        if(target) target.appendChild(card);
+        if(container) container.appendChild(card);
     });
 }
 
@@ -1922,7 +1976,8 @@ function openVenueModal(venue) {
     const dynamicLayout = document.getElementById('modal-dynamic-layout');
     if(!dynamicLayout) return;
 
-    const featureHtml = renderTagPills(getVenueTags(venue));
+    const features = getVenueTags(venue);
+    const featureHtml = renderTagPills(features);
 
     const statsHtml = `
         <div class="public-stats-block">
@@ -2022,7 +2077,7 @@ function openVenueModal(venue) {
         <div class="modal-top-split">
             <div class="modal-left-col">
                 <div class="modal-image-container">
-                    <img id="modal-venue-image" class="venue-image centered-image" src="${(venue.Image_URL && String(venue.Image_URL).trim() !== '') ? `Venue_images/${venue.Venue_ID}-01.jpg` : getPlaceholderForVenue(venue)}" onerror="this.onerror=null; this.src='${getPlaceholderForVenue(venue)}'" data-id="${venue.Venue_ID}" data-index="1" title="Tap for next image">
+                    <img id="modal-venue-image" class="venue-image centered-image" src="Venue_images/${venue.Venue_ID}-01.jpg" onerror="this.onerror=null; this.src='${PLACEHOLDER_POOL[Math.floor(Math.random() * PLACEHOLDER_POOL.length)]}'" data-id="${venue.Venue_ID}" data-index="1" title="Tap for next image">
                 </div>
                 
                 <div class="desktop-stats">
@@ -2059,7 +2114,7 @@ function openVenueModal(venue) {
     `;
 
     const img = document.getElementById('modal-venue-image');
-    if(img) handleImageCarousel(img, venue);
+    if(img) handleImageCarousel(img);
 
     const starBtn = document.getElementById('modal-star');
     if(starBtn) {
@@ -2101,11 +2156,11 @@ function openVenueModal(venue) {
             }
             
             const mapQuery = venue.Native_Map_Query || venue.Address || venue.Name || '';
-            const queryPlus = encodeURIComponent(mapQuery.trim()).replace(/%20/g, '+');
+            const encodedQuery = encodeURIComponent(mapQuery.trim());
             if (isIOS) {
-                window.open(`http://maps.apple.com/?q=${queryPlus}`, '_blank');
+                window.open(`https://maps.apple.com/?q=${encodedQuery}`, '_blank');
             } else {
-                window.open(`http://googleusercontent.com/maps.google.com/maps?q=${queryPlus}`, '_blank');
+                window.open(`https://www.google.com/maps/search/?api=1&query=${encodedQuery}`, '_blank');
             }
         };
     }
@@ -2133,7 +2188,7 @@ function saveLocation() {
     
     if(loc.city && loc.city !== 'My Location') {
         if(searchInput) searchInput.value = loc.city;
-        window.location.hash = '';
+        window.location.hash = '#results';
         applyFilters();
     }
     

@@ -3,7 +3,8 @@ let draftData = [];
 let currentMode = 'venues'; // 'venues', 'events', 'editor', 'avatars'
 let lastSavedDate = localStorage.getItem('br_admin_timestamp') || 'Never';
 let activeTableFilters = {};
-let currentReviewFilter = 'all'; 
+let currentReviewFilter = 'all';
+let showHiddenFields = false; 
 
 let avatarAdminData = [];
 let tempMergeData = []; 
@@ -90,7 +91,7 @@ window.switchView = function(view) {
         'editor': document.getElementById('view-editor'),
         'avatars': document.getElementById('view-avatars')
     };
-    
+
     Object.keys(views).forEach(k => {
         if(views[k]) {
             views[k].style.display = 'none';
@@ -102,6 +103,7 @@ window.switchView = function(view) {
         views['editor'].style.display = 'flex';
         views['editor'].classList.remove('hidden');
         document.getElementById('btn-formatting-guide')?.classList.add('hidden');
+        loadEditorPage();
         saveEditorState(); 
     } else if (view === 'avatars') {
         views['avatars'].style.display = 'flex';
@@ -237,22 +239,9 @@ window.unhideAllColumns = function() {
     document.querySelectorAll('.hidden-col').forEach(c => c.classList.remove('hidden-col'));
 };
 
-window.toggleMagentaRow = function(btnElement) {
-    const tr = btnElement.closest('tr');
-    if(tr) tr.classList.toggle('magenta-highlight');
-};
-
-window.toggleMagentaCol = function(btnElement, idx) {
-    const table = document.getElementById('admin-table-container');
-    if(!table) return;
-    const th = table.querySelector(`th.col-idx-${idx}`);
-    if(th) th.classList.toggle('magenta-highlight');
-    table.querySelectorAll(`td.col-idx-${idx}`).forEach(td => td.classList.toggle('magenta-highlight'));
-};
-
 const headerMapping = {
     "Event_Start_Time": "Start Time", "Event_End_Time": "End Time", "Venue_ID": "ID", "Event_ID": "ID",
-    "Description": "Desc", "Event_Description": "Desc", "Rating_General": "Gen", "Rating_Darkroom": "Dark", "Feature_Playroom": "Featured Level"
+    "Description": "Desc", "Event_Description": "Desc", "Rating_General": "Gen", "Rating_Darkroom": "Dark", "Priority": "Priority", "Priority": "Priority"
 };
 
 function renderFilters() {
@@ -317,13 +306,12 @@ function generatePreviewTableHTML(dataObj) {
 function generateTableHTML(dataObj, isMainTable) {
     if (!isMainTable) return generatePreviewTableHTML(dataObj);
 
-    if (!dataObj || dataObj.length === 0) return "<p style='padding:20px;'>No data available.</p>";
+    const columns = getAdminColumns(dataObj);
+    if (!columns.length) return "<p style='padding:20px;'>No data available.</p>";
 
-    const columns = Object.keys(dataObj[0] || {});
     let html = `<table><thead id="admin-thead"><tr>`; 
-    
-    if(isMainTable) html += `<th style="min-width:70px;">Review</th>`; 
-        
+    html += `<th style="min-width:70px;">Review</th>`; 
+
     columns.forEach((col, idx) => {
         const displayName = headerMapping[col] || col;
         html += `<th class="col-idx-${idx}">
@@ -332,59 +320,103 @@ function generateTableHTML(dataObj, isMainTable) {
                 <span class="eye-btn" onclick="toggleColumn(${idx})" title="Toggle Hide">👁️</span>
                 <span class="col-title" style="flex-grow:1;">${displayName}</span>
             </div>`;
-        
+
         if (col === 'Status') {
             html += `<select class="filter-header-select filter-dropdown" data-col="${col}"><option value="">Filter...</option><option value="Live">Live</option><option value="Closed">Closed</option><option value="Hold">Hold</option><option value="Flag">Flag</option></select>`;
-        } else if (col === 'Feature_Playroom') {
-            html += `<select class="filter-header-select filter-dropdown" data-col="${col}"><option value="">Filter...</option><option value="1">1</option><option value="2">2</option><option value="3">3</option></select>`;
-        } else if (col.startsWith('Feature_')) {
-            html += `<select class="filter-header-select filter-dropdown" data-col="${col}"><option value="">Filter...</option><option value="true">True</option><option value="false">False</option></select>`;
+        } else if (col === 'Priority') {
+            html += `<select class="filter-header-select filter-dropdown" data-col="${col}"><option value="">Filter...</option><option value="1">Priority 1</option><option value="2">Priority 2</option><option value="3">Priority 3</option></select>`;
         } else if (col.startsWith('Rating_')) {
             html += `<select class="filter-header-select filter-dropdown" data-col="${col}"><option value="">Filter...</option><option value="0">0</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option></select>`;
         } else {
             html += `<input type="text" class="filter-header-input" placeholder="Filter..." data-col="${col}">`;
         }
-        
+
         html += `</th>`;
     });
-    
+
     html += `</tr></thead><tbody id="admin-tbody">`;
-    
+
+    if (!dataObj || dataObj.length === 0) {
+        html += `<tr><td colspan="${columns.length + 1}" style="padding:20px; color:var(--label-grey); text-align:center;">No matching rows. Headers are kept so filters can be changed.</td></tr>`;
+        html += `</tbody></table>`;
+        return html;
+    }
+
     dataObj.forEach((row, rowIndex) => {
-        const idField = currentMode === 'venues' ? 'Venue_ID' : 'Event_ID';
+        const idField = getAdminIdField();
         const id = row[idField] || rowIndex;
         const actualIndex = draftData.findIndex(d => d[idField] === id);
         const editIndex = actualIndex >= 0 ? actualIndex : rowIndex;
-        
+
         let isNew = false;
         if(liveData.length > 0) isNew = !liveData.some(l => l[idField] === id);
 
         html += `<tr data-id="${id}" class="${isNew ? 'new-entry-row' : ''}">`;
-        
-        const needsReview = (!row.Share_URL || String(row.Share_URL) === 'false' || String(row.Share_URL) === 'PENDING');
+
+        const needsReview = (!row.Share_URL || String(row.Share_URL).toLowerCase() === 'false' || String(row.Share_URL) === 'PENDING' || String(row.Status || '') === 'Draft');
         html += `<td style="text-align:center;">
             <span class="highlight-toggle-btn" title="Highlight Row" onclick="toggleMagentaRow(this)">🖍️</span><br>
             ${needsReview ? `<button onclick="markReviewed('${id}')" style="background:var(--primary-blue); border:none; color:#fff; border-radius:4px; cursor:pointer; padding:2px 5px;" title="Mark Reviewed">✔️</button>` : ''}
             ${isNew ? `<br><span class="new-badge">NEW</span>` : ''}
         </td>`;
-        
+
         columns.forEach((col, idx) => {
             let isEdited = false;
             if (liveData.length > 0 && !isNew) {
                 const lRow = liveData.find(l => l[idField] === row[idField]);
-                if (lRow && String(lRow[col]) !== String(row[col])) isEdited = true;
+                if (lRow && String(lRow[col] ?? '') !== String(row[col] ?? '')) isEdited = true;
             }
-            
+
             const emptyClass = (!row[col] || String(row[col]).trim() === '') ? 'empty-cell' : '';
             const editedClass = isEdited ? 'edited-cell' : '';
-            html += `<td class="col-idx-${idx} ${editedClass} ${emptyClass}" onclick="editCell(this, ${editIndex}, '${col}')">${String(row[col] || '')}</td>`;
+            html += `<td class="col-idx-${idx} ${editedClass} ${emptyClass}" onclick="editCell(this, ${editIndex}, '${col}')">${String(row[col] ?? '')}</td>`;
         });
         html += `</tr>`;
     });
-    
+
     html += `</tbody></table>`;
     return html;
 }
+
+
+function parseAdminDate(dateStr) {
+    if(!dateStr) return null;
+    const str = String(dateStr).trim();
+    const dmy = str.match(/^(\d{1,2})-(\d{1,2})-(\d{4})/);
+    if(dmy) return new Date(`${dmy[3]}-${dmy[2].padStart(2,'0')}-${dmy[1].padStart(2,'0')}`);
+    const iso = Date.parse(str);
+    if(!Number.isNaN(iso)) return new Date(iso);
+    return null;
+}
+
+function getAdminIdField() {
+    return currentMode === 'venues' ? 'Venue_ID' : 'Event_ID';
+}
+
+function getAdminColumns(dataObj) {
+    const source = (dataObj && dataObj.length) ? dataObj : (draftData && draftData.length ? draftData : liveData);
+    return Object.keys(source?.[0] || {});
+}
+
+function applyDefaultHiddenColumns() {
+    if(showHiddenFields) return;
+    const table = document.getElementById('admin-table-container');
+    if(!table) return;
+    table.querySelectorAll('th').forEach((th) => {
+        const title = th.querySelector('.col-title')?.innerText || '';
+        if(/^Unspecified\d+/i.test(title)) {
+            const match = Array.from(th.classList).join(' ').match(/col-idx-(\d+)/);
+            if(match) toggleColumn(parseInt(match[1], 10));
+        }
+    });
+}
+
+window.toggleHiddenFields = function() {
+    showHiddenFields = !showHiddenFields;
+    const btn = document.getElementById('btn-show-hidden-fields');
+    if(btn) btn.innerText = showHiddenFields ? '🙈 Hide Hidden Fields' : '👁️ Show Hidden Fields';
+    renderTable();
+};
 
 function renderTable() {
     const tableContainer = document.getElementById('admin-table-container');
@@ -395,8 +427,8 @@ function renderTable() {
         return;
     }
 
-    const sixMonthsAgo = new Date();
-    sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
     const filteredData = draftData.filter(row => {
         if (currentReviewFilter === 'pending') {
@@ -405,12 +437,8 @@ function renderTable() {
         } else if (currentReviewFilter === 'flaghold') {
             if (row.Status !== 'Flag' && row.Status !== 'Hold') return false;
         } else if (currentReviewFilter === 'old') {
-            const dateStr = row.Last_Updated || row.Date_Updated || '';
-            const parts = String(dateStr).split('-');
-            if(parts.length === 3) {
-                const rowDate = new Date(`${parts[2]}-${parts[1]}-${parts[0]}`);
-                if(rowDate > sixMonthsAgo) return false;
-            } else return false;
+            const rowDate = parseAdminDate(row.Last_Updated || row.Date_Updated || '');
+            if(!rowDate || rowDate > thirtyDaysAgo) return false;
         }
         for(let col in activeTableFilters) {
             const rowVal = String(row[col] || '').toLowerCase();
@@ -421,7 +449,7 @@ function renderTable() {
     });
 
     tableContainer.innerHTML = generateTableHTML(filteredData, true);
-    
+
     const thead = document.getElementById('admin-thead');
     if (thead) {
         thead.addEventListener('wheel', (e) => {
@@ -442,7 +470,7 @@ function renderTable() {
             }
         });
     });
-    
+
     document.querySelectorAll('.filter-header-select').forEach(sel => {
         sel.addEventListener('change', (e) => {
             if(e.target.value !== '') {
@@ -453,27 +481,23 @@ function renderTable() {
             }
         });
     });
-    
+
+    applyDefaultHiddenColumns();
     updateMismatchCount();
 }
 
 window.editCell = function(td, rowIndex, col) {
     if(col === 'Venue_ID' || col === 'Event_ID') return; 
     if(td.querySelector('select')) return; 
-    
+
     const currentVal = td.innerText.trim();
-    
-    if (col === 'Feature_Playroom') {
-        let options = '<option value="">None / Normal</option><option value="1">Level 1</option><option value="2">Level 2</option><option value="3">Level 3</option>';
-        td.innerHTML = `<select class="cell-edit" onblur="saveCell(this, ${rowIndex}, '${col}')" onchange="saveCell(this, ${rowIndex}, '${col}')">${options}</select>`;
-        td.querySelector('select').value = currentVal.startsWith('Level') ? currentVal.match(/[123]/)?.[0] || '' : currentVal;
-        td.querySelector('select').focus();
-    } else if(col === 'Status' || col.startsWith('Feature_') || col.startsWith('Rating_')) {
+
+    if(col === 'Status' || col === 'Priority' || col.startsWith('Rating_')) {
         let options = '';
         if(col === 'Status') options = '<option value="Live">Live</option><option value="Closed">Closed</option><option value="Hold">Hold</option><option value="Flag">Flag</option>';
-        else if(col.startsWith('Feature_')) options = '<option value="true">true</option><option value="false">false</option>';
+        else if(col === 'Priority') options = '<option value="">Normal / blank</option><option value="1">1 - highest featured priority</option><option value="2">2 - secondary featured priority</option><option value="3">3 - featured page only / lower priority</option>';
         else if(col.startsWith('Rating_')) options = '<option value="0">0</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option>';
-        
+
         td.innerHTML = `<select class="cell-edit" onblur="saveCell(this, ${rowIndex}, '${col}')" onchange="saveCell(this, ${rowIndex}, '${col}')">${options}</select>`;
         td.querySelector('select').value = currentVal;
         td.querySelector('select').focus();
@@ -481,12 +505,12 @@ window.editCell = function(td, rowIndex, col) {
         if (td.isContentEditable) return; 
         td.contentEditable = "true";
         td.focus();
-        
+
         if(!td.dataset.listening) {
             td.addEventListener('blur', function() {
                 td.contentEditable = "false";
                 const newVal = td.innerText.trim();
-                if(String(draftData[rowIndex][col]) !== newVal) {
+                if(String(draftData[rowIndex][col] ?? '') !== newVal) {
                     draftData[rowIndex][col] = newVal;
                     td.classList.add('edited-cell');
                     saveDraftsToLocal();
@@ -505,11 +529,8 @@ window.saveCell = function(selectEl, rowIndex, col) {
     if(newVal === 'false') finalVal = false;
     if(col.startsWith('Rating_')) finalVal = parseInt(newVal);
 
-    draftData[rowIndex][col] = col === 'Feature_Playroom' ? String(newVal || '').trim() : finalVal;
-    if (col === 'Feature_Playroom') {
-        const texts = { '': '', '1': 'Level 1', '2': 'Level 2', '3': 'Level 3' };
-        selectEl.parentElement.innerText = texts[newVal] || newVal;
-    } else selectEl.parentElement.innerText = newVal;
+    draftData[rowIndex][col] = finalVal;
+    selectEl.parentElement.innerText = newVal;
     selectEl.parentElement.classList.add('edited-cell');
     saveDraftsToLocal();
 };
@@ -543,18 +564,10 @@ window.updatePreviewData = function(idx, col, el) {
     if(tempMergeData[idx]) tempMergeData[idx][col] = el.innerText.trim();
 }
 
-function normalizeAvatarCategories(raw) {
-    let values = [];
-    if(Array.isArray(raw)) raw.forEach(v => values.push(...String(v).split(',')));
-    else if(raw) values = String(raw).split(',');
-    const seen = new Set();
-    return values.map(v => String(v).trim()).filter(v => v && !seen.has(v) && seen.add(v));
-}
-
 async function loadAdminAvatars() {
     try {
         const res = await fetch('Profile_images/avatar_list.json?v=' + Date.now());
-        if(res.ok) avatarAdminData = (await res.json()).map(a => ({ ...a, category: normalizeAvatarCategories(a.category) }));
+        if(res.ok) avatarAdminData = await res.json();
         else avatarAdminData = [];
     } catch(e) { avatarAdminData = []; }
     renderAdminAvatars();
@@ -575,29 +588,29 @@ function renderAdminAvatars() {
     });
     
     let ages = new Set();
-    let tages = new Set();
+    let fetishes = new Set();
     avatarAdminData.forEach(a => {
         let cats = Array.isArray(a.category) ? a.category : [a.category];
         cats.forEach(c => {
             if(['Young', 'Prime', 'Mature'].includes(c)) ages.add(c);
-            else if(c) tages.add(c);
+            else if(c) fetishes.add(c);
         });
     });
-    const fetSel = document.getElementById('ac-tag');
-    if(fetSel) { fetSel.innerHTML = '<option value="">None</option>' + Array.from(tages).map(f => `<option value="${f}">${f}</option>`).join(''); }
+    const fetSel = document.getElementById('ac-fetish');
+    if(fetSel) { fetSel.innerHTML = '<option value="">None</option>' + Array.from(fetishes).map(f => `<option value="${f}">${f}</option>`).join(''); }
 }
 
-function renderTagPills() {
+function renderFetishPills() {
     if(activeAvatarIndex === -1) return;
     const av = avatarAdminData[activeAvatarIndex];
     const cats = Array.isArray(av.category) ? av.category : [av.category];
-    const tages = cats.filter(c => !['Young', 'Prime', 'Mature'].includes(c) && c);
+    const fetishes = cats.filter(c => !['Young', 'Prime', 'Mature'].includes(c) && c);
     
-    const pillsContainer = document.getElementById('ac-tag-pills');
+    const pillsContainer = document.getElementById('ac-fetish-pills');
     if(pillsContainer) {
         pillsContainer.innerHTML = '';
-        tages.forEach(f => {
-            pillsContainer.innerHTML += `<span style="background:var(--bright-red-orange); color:#fff; padding:4px 10px; border-radius:var(--radius-pill); font-size:0.85rem; display:flex; align-items:center; gap:6px; font-weight:bold;">${f} <span style="cursor:pointer; color:#000;" onclick="removeActiveTag('${f}')">❌</span></span>`;
+        fetishes.forEach(f => {
+            pillsContainer.innerHTML += `<span style="background:var(--bright-red-orange); color:#fff; padding:4px 10px; border-radius:var(--radius-pill); font-size:0.85rem; display:flex; align-items:center; gap:6px; font-weight:bold;">${f} <span style="cursor:pointer; color:#000;" onclick="removeActiveFetish('${f}')">❌</span></span>`;
         });
     }
 }
@@ -623,9 +636,9 @@ function selectAvatarForEditing(idx) {
     
     const cats = Array.isArray(av.category) ? av.category : [av.category];
     
-    const selectedAges = cats.filter(c => ['Young', 'Prime', 'Mature'].includes(c));
+    const selectedAge = cats.find(c => ['Young', 'Prime', 'Mature'].includes(c)) || '';
     document.querySelectorAll('.age-pill').forEach(p => {
-        if(selectedAges.includes(p.dataset.val)) {
+        if(p.dataset.val === selectedAge) {
             p.classList.remove('secondary-btn');
             p.style.backgroundColor = 'var(--bright-red-orange)';
             p.style.borderColor = 'var(--bright-red-orange)';
@@ -638,44 +651,55 @@ function selectAvatarForEditing(idx) {
         }
     });
     
-    renderTagPills();
+    renderFetishPills();
 }
 
-window.addActiveTag = function() {
+window.addActiveFetish = function() {
     if(activeAvatarIndex === -1) return;
-    const fetSel = document.getElementById('ac-tag');
+    const fetSel = document.getElementById('ac-fetish');
     if(!fetSel || !fetSel.value) return;
-    const newTag = fetSel.value;
+    const newFetish = fetSel.value;
     
     const av = avatarAdminData[activeAvatarIndex];
     let cats = Array.isArray(av.category) ? av.category : [av.category];
-    if(!cats.includes(newTag)) {
-        cats.push(newTag);
+    if(!cats.includes(newFetish)) {
+        cats.push(newFetish);
         av.category = cats;
-        renderTagPills();
+        renderFetishPills();
         renderAdminAvatars(); 
     }
 };
 
-window.removeActiveTag = function(tag) {
+window.removeActiveFetish = function(fetish) {
     if(activeAvatarIndex === -1) return;
     const av = avatarAdminData[activeAvatarIndex];
     let cats = Array.isArray(av.category) ? av.category : [av.category];
-    av.category = cats.filter(c => c !== tag);
-    renderTagPills();
+    av.category = cats.filter(c => c !== fetish);
+    renderFetishPills();
     renderAdminAvatars();
 };
 
 window.saveActiveAvatarEdits = function() {
     if(activeAvatarIndex === -1) return;
     const name = document.getElementById('ac-name')?.value || '';
+    
+    const activeAgePill = document.querySelector('.age-pill.active-age');
+    const age = activeAgePill ? activeAgePill.dataset.val : '';
+    
     const av = avatarAdminData[activeAvatarIndex];
-    const selectedAges = Array.from(document.querySelectorAll('.age-pill.active-age')).map(p => p.dataset.val);
-    const existingTags = normalizeAvatarCategories(av.category).filter(c => !['Young', 'Prime', 'Mature'].includes(c));
+    let cats = Array.isArray(av.category) ? av.category : [av.category];
+    let fetishes = cats.filter(c => !['Young', 'Prime', 'Mature'].includes(c) && c);
+    
+    let newCats = [];
+    if(age) newCats.push(age);
+    newCats = newCats.concat(fetishes); 
+    
     av.label = name;
-    av.category = normalizeAvatarCategories([...selectedAges, ...existingTags]);
+    av.category = newCats;
+    
     const previewName = document.getElementById('avatar-large-name');
     if(previewName) previewName.innerText = name || 'Unknown';
+    
     renderAdminAvatars();
 };
 
@@ -779,13 +803,41 @@ wysiwygContent?.addEventListener('input', () => {
 
 // V0.58 Page Selector Updated
 document.getElementById('editor-page-select')?.addEventListener('change', (e) => {
-    if(e.target.value === 'template.html') {
+    if(e.target.value === 'new') {
         const defaultText = `<h1>New Page</h1><p>Start typing... dont forget to have this page added to the menu it wont appear automatically</p>`;
         if(wysiwygContent) wysiwygContent.innerHTML = defaultText;
         if(wysiwygSource) wysiwygSource.value = defaultText;
         saveEditorState();
     }
 });
+
+
+window.loadEditorPage = async function() {
+    const select = document.getElementById('editor-page-select');
+    const content = document.getElementById('wysiwyg-content');
+    const source = document.getElementById('wysiwyg-source');
+    if(!select || !content) return;
+    const page = select.value;
+    if(page === 'new') {
+        content.innerHTML = '<h1>New Page</h1><p>Start typing here.</p>';
+        if(source) source.value = content.innerHTML;
+        saveEditorState();
+        return;
+    }
+    try {
+        const res = await fetch(`${page}.html?v=${Date.now()}`);
+        if(!res.ok) throw new Error(`HTTP ${res.status}`);
+        const html = await res.text();
+        const doc = new DOMParser().parseFromString(html, 'text/html');
+        const main = doc.querySelector('main');
+        content.innerHTML = main ? main.innerHTML : doc.body.innerHTML;
+        if(source) source.value = content.innerHTML;
+        saveEditorState();
+        showToast(`${page}.html loaded`);
+    } catch(e) {
+        showToast(`Could not load ${page}.html`);
+    }
+};
 
 window.editorAction = function(action, val, event) {
     if(event) event.preventDefault(); 
@@ -879,18 +931,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
     document.querySelectorAll('.age-pill').forEach(pill => {
         pill.addEventListener('click', (e) => {
-            const target = e.currentTarget;
-            if(target.classList.contains('active-age')) {
-                target.classList.add('secondary-btn');
-                target.style.backgroundColor = '';
-                target.style.borderColor = '';
-                target.classList.remove('active-age');
-            } else {
-                target.classList.remove('secondary-btn');
-                target.style.backgroundColor = 'var(--bright-red-orange)';
-                target.style.borderColor = 'var(--bright-red-orange)';
-                target.classList.add('active-age');
-            }
+            document.querySelectorAll('.age-pill').forEach(p => {
+                p.classList.add('secondary-btn');
+                p.style.backgroundColor = '';
+                p.style.borderColor = '';
+                p.classList.remove('active-age');
+            });
+            e.target.classList.remove('secondary-btn');
+            e.target.style.backgroundColor = 'var(--bright-red-orange)';
+            e.target.style.borderColor = 'var(--bright-red-orange)';
+            e.target.classList.add('active-age');
             saveActiveAvatarEdits();
         });
     });
@@ -930,20 +980,35 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('nav-editor')?.addEventListener('click', () => switchView('editor'));
     document.getElementById('nav-avatars')?.addEventListener('click', () => switchView('avatars'));
 
-    document.getElementById('btn-sidebar-show-all')?.addEventListener('click', () => { currentReviewFilter = 'all'; renderTable(); });
     document.getElementById('btn-sidebar-pending')?.addEventListener('click', () => {
-        document.getElementById('sidebar-pending-list').classList.toggle('hidden');
-        currentReviewFilter = 'pending'; renderTable();
+        currentReviewFilter = currentReviewFilter === 'pending' ? 'all' : 'pending';
+        document.getElementById('sidebar-pending-list')?.classList.toggle('hidden');
+        renderTable();
     });
     document.getElementById('btn-sidebar-old')?.addEventListener('click', () => {
-        document.getElementById('sidebar-old-list').classList.toggle('hidden');
-        currentReviewFilter = 'old'; renderTable();
+        currentReviewFilter = currentReviewFilter === 'old' ? 'all' : 'old';
+        document.getElementById('sidebar-old-list')?.classList.toggle('hidden');
+        renderTable();
     });
-    document.getElementById('btn-sidebar-flag-hold')?.addEventListener('click', () => { currentReviewFilter = 'flaghold'; renderTable(); });
+    document.getElementById('btn-sidebar-flaghold')?.addEventListener('click', () => {
+        currentReviewFilter = currentReviewFilter === 'flaghold' ? 'all' : 'flaghold';
+        renderTable();
+        showToast(currentReviewFilter === 'flaghold' ? 'Showing Flag/Hold rows' : 'Showing all rows');
+    });
+    document.getElementById('btn-sidebar-showall')?.addEventListener('click', () => {
+        currentReviewFilter = 'all';
+        activeTableFilters = {};
+        renderFilters();
+        renderTable();
+        showToast('Showing all rows');
+    });
     
     document.getElementById('btn-formatting-guide')?.addEventListener('click', () => {
         document.getElementById('formatting-guide-modal').classList.remove('hidden');
     });
+
+    document.getElementById('btn-load-editor-page')?.addEventListener('click', () => loadEditorPage());
+    document.getElementById('editor-page-select')?.addEventListener('change', () => loadEditorPage());
 
     const makeDraggable = (headerId, windowId) => {
         const header = document.getElementById(headerId);
@@ -1054,7 +1119,17 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     document.getElementById('btn-copy-error')?.addEventListener('click', () => { navigator.clipboard.writeText(lastJsonErrorText); showToast("Copied"); });
-    document.getElementById('btn-export-csv')?.addEventListener('click', () => { /* Reserved for CSV Logic */ });
+    document.getElementById('btn-export-csv')?.addEventListener('click', () => {
+        if(!draftData || !draftData.length) return showToast('No data to export');
+        const cols = Object.keys(draftData[0]);
+        const esc = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`;
+        const csv = [cols.map(esc).join(','), ...draftData.map(row => cols.map(c => esc(row[c])).join(','))].join('\n');
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(new Blob([csv], {type: 'text/csv;charset=utf-8'}));
+        a.download = `backroom_${currentMode}_${new Date().toISOString().split('T')[0]}.csv`;
+        a.click();
+    });
+
     document.getElementById('btn-export-json')?.addEventListener('click', () => {
         const dataStr = JSON.stringify(draftData, null, 2);
         const a = document.createElement('a');
@@ -1091,5 +1166,3 @@ document.addEventListener('DOMContentLoaded', () => {
 
     document.querySelectorAll('.close-modal-btn').forEach(btn => btn.addEventListener('click', (e) => e.target.closest('.modal')?.classList.add('hidden')));
 });
-window.addActiveFetish = window.addActiveTag;
-window.removeActiveFetish = window.removeActiveTag;
