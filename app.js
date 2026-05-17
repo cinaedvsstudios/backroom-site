@@ -1,9 +1,9 @@
 // --- Application State ---
-const APP_VERSION = "v0.61";
+const APP_VERSION = "v0.62";
 const APP_DATE = "17 May 2026";
 
 let systemInfo = {}, designTheme = {}, venues = [], events = [];
-let activeFilters = []; // v0.61 Multi-select Array
+let activeFilters = []; // v0.62 Multi-select Array
 let selectedCardId = null;
 let currentTargetVenue = null; 
 let currentEventCityFilter = 'All';
@@ -47,6 +47,8 @@ let sidebarTimeout;
 const MASTER_VIBE_TAGS = ["Bar","Party","Cinema","Sauna","Shop","Cruising","Darkroom","Men Only","Dresscode","Naked","Underwear","Dancefloor","Smoking Area","Cocktails","Fetish/Gear","Bear","Mature","Young Crowd","Queer","Drag","Karaoke","Pop/Dance","Techno"];
 const SHORTLIST_EMOJIS = ['🤠','🚄','👑','🥂','🦄','🫦','💪','🪇','🔥','🍆','🍑','💄','🛁','✈️','💥','💦','🗝️','🧿','🎧','🧭','⛓️','🎼'];
 const PLACEHOLDER_POOL = ['placeholder_venue.jpg', 'placeholder_venue01.jpg', 'placeholder_venue02.jpg', 'placeholder_venue03.jpg', 'placeholder_venue04.jpg', 'placeholder_venue05.jpg', 'placeholder_venue06.jpg', 'placeholder_venue07.jpg'];
+const BR_ICONS = { share: '📣', favourite: '⚜️', savedEvent: '💖', report: 'report.png', link: 'link.png', shortlist: 'shortlist.png' };
+const FORMSUBMIT_ENDPOINT = 'https://formsubmit.cloud/f/ae0e141d-ad94-47fe-ac46-55702c6534a6/';
 
 function getTagColorClass(tag) {
     const red = ['Cruising', 'Darkroom', 'Men Only', 'Dresscode', 'Naked', 'Underwear', 'Smoking Area', 'Fetish/Gear'];
@@ -515,6 +517,7 @@ function handleRouting() {
 
     if (hash === '') {
         if (searchInput) searchInput.value = '';
+        updateSearchClearButton();
         activeFilters = [];
         selectedCardId = null;
         document.getElementById('main-filters')?.classList.add('hidden');
@@ -575,7 +578,9 @@ function handleRouting() {
 function renderSingleShortlist(name) {
     document.getElementById('main-filters')?.classList.add('hidden');
     contextHeader?.classList.remove('hidden');
-    document.getElementById('btn-back-to-results')?.classList.remove('result-back-hidden');
+    const backBtn = document.getElementById('btn-back-to-results');
+    backBtn?.classList.remove('result-back-hidden');
+    resetBackButton('← Back to Shortlists', 'shortlists');
     
     const cTitle = document.getElementById('context-title');
     const cDesc = document.getElementById('context-desc');
@@ -643,18 +648,28 @@ function renderFeaturedView() {
     container.classList.remove('hidden');
 
     const featVenues = getPublicVenues().filter(v => ['1','2','3'].includes(normalizeFeaturedLevel(v)));
+    const levelLabels = { '1': 'Top Picks', '2': 'Recommended', '3': 'Also Featured' };
     const cities = [...new Set(featVenues.flatMap(v => getCityTokens(v)).filter(Boolean))].sort();
     let html = `<h2 class="display-font" style="color:var(--primary-blue); margin-bottom:5px;">🏛️ FEATURED VENUES</h2>`;
     html += `<p class="body-font" style="margin-bottom:15px; color:#fff;">${systemInfo.featured_page_intro || 'Below are some of our favourite venues.'}</p>`;
-    if(cities.length) html += `<div style="display:flex; gap:8px; margin-bottom:20px; overflow-x:auto; flex-wrap:wrap;">${cities.map(c => `<button class="chip pill-btn" onclick="const s=document.getElementById('search-input'); if(s) s.value='${String(c).replace(/'/g, "\\'")}'; window.location.hash='#results'; handleRouting();">${c}</button>`).join('')}</div>`;
+    if(cities.length) html += `<div class="featured-city-strip" style="display:flex; gap:8px; margin-bottom:20px; overflow-x:auto; flex-wrap:wrap;">${cities.map(c => `<button class="chip pill-btn" onclick="const s=document.getElementById('search-input'); if(s) s.value='${String(c).replace(/'/g, "\\'")}'; updateSearchClearButton(); window.location.hash='#results'; handleRouting();">${c}</button>`).join('')}</div>`;
+
+    if(!featVenues.length) {
+        html += `<p class="body-font" style="color:var(--text-light);">No featured venues have been added yet.</p>`;
+        container.innerHTML = html;
+        return;
+    }
+
     ['1','2','3'].forEach(level => {
-        html += `<div class="featured-box" style="margin-bottom:30px; background:var(--near-black); border:1px solid var(--panel-mid); padding:20px; border-radius:var(--radius-card);"><h3 class="display-font" style="margin-bottom:15px; color:var(--primary-blue);">Featured Level ${level}</h3><div id="featured-level-${level}" class="featured-grid" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(300px, 1fr)); gap:20px;"></div></div>`;
+        const levelVenues = featVenues.filter(v => normalizeFeaturedLevel(v) === level);
+        if(levelVenues.length) {
+            html += `<section class="featured-section" style="margin-bottom:28px;"><h3 class="display-font" style="margin:0 0 12px; color:var(--primary-blue);">${levelLabels[level]}</h3><div id="featured-level-${level}" class="featured-grid" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(300px, 1fr)); gap:20px;"></div></section>`;
+        }
     });
-    if(!featVenues.length) html += `<p class="body-font" style="color:var(--text-light);">No featured venues have been added yet.</p>`;
     container.innerHTML = html;
     ['1','2','3'].forEach(level => {
         const grid = document.getElementById(`featured-level-${level}`);
-        renderListings(featVenues.filter(v => normalizeFeaturedLevel(v) === level), true, grid);
+        if(grid) renderListings(featVenues.filter(v => normalizeFeaturedLevel(v) === level), true, grid);
     });
 }
 
@@ -809,6 +824,19 @@ function setupTutorialDrag() {
     windowEl.dataset.dragSet = 'true';
 }
 
+function updateSearchClearButton() {
+    const clearBtn = document.getElementById('search-clear');
+    if (!clearBtn || !searchInput) return;
+    clearBtn.classList.toggle('hidden', !searchInput.value.trim());
+}
+
+function resetBackButton(label = '← Back to Results', target = 'results') {
+    const btn = document.getElementById('btn-back-to-results');
+    if (!btn) return;
+    btn.textContent = label;
+    btn.dataset.backTarget = target;
+}
+
 window.flagListing = function(id, name, type="Venue/Event") {
     const modal = document.getElementById('formsubmit-modal');
     if(modal) {
@@ -849,17 +877,30 @@ function setupEventListeners() {
                 submitBtn.innerText = 'Sending...';
             }
             try {
-                const res = await fetch(fsForm.action, {
+                fsForm.action = FORMSUBMIT_ENDPOINT;
+                await fetch(FORMSUBMIT_ENDPOINT, {
                     method: 'POST',
                     body: new FormData(fsForm),
-                    headers: { 'Accept': 'application/json' }
+                    mode: 'no-cors',
+                    cache: 'no-store'
                 });
-                if(!res.ok) throw new Error(`HTTP ${res.status}`);
                 showToast(systemInfo.form_success_message || 'Thanks, your report has been submitted.');
                 document.getElementById('formsubmit-modal')?.classList.add('hidden');
                 fsForm.reset();
             } catch (err) {
-                showToast(systemInfo.error_messages?.form_submit_failed || 'The report could not be submitted. Please try again.');
+                const hiddenFrame = document.getElementById('formsubmit-hidden-frame');
+                try {
+                    if(hiddenFrame) fsForm.target = 'formsubmit-hidden-frame';
+                    fsForm.action = FORMSUBMIT_ENDPOINT;
+                    HTMLFormElement.prototype.submit.call(fsForm);
+                    showToast(systemInfo.form_success_message || 'Thanks, your report has been submitted.');
+                    document.getElementById('formsubmit-modal')?.classList.add('hidden');
+                    fsForm.reset();
+                } catch (fallbackErr) {
+                    showToast(systemInfo.error_messages?.form_submit_failed || 'The report could not be submitted. Please try again.');
+                } finally {
+                    fsForm.removeAttribute('target');
+                }
             } finally {
                 if(submitBtn) {
                     submitBtn.disabled = false;
@@ -910,9 +951,16 @@ function setupEventListeners() {
 
     addEvt('btn-language', 'click', () => showToast("Coming soon!")); 
     addEvt('btn-back-to-results', 'click', () => {
-        if(searchInput) searchInput.value = '';
-        window.location.hash = '#results';
-        updateTravelSidebarHighlight();
+        const btn = document.getElementById('btn-back-to-results');
+        const target = btn?.dataset.backTarget || 'results';
+        if(target === 'shortlists') {
+            window.location.hash = '#myshortlists';
+        } else {
+            if(searchInput) searchInput.value = '';
+            updateSearchClearButton();
+            window.location.hash = '#results';
+            updateTravelSidebarHighlight();
+        }
     });
 
     addEvt('btn-save-location', 'click', saveLocation);
@@ -1102,8 +1150,20 @@ function setupEventListeners() {
     }
 
     if(searchInput) {
-        searchInput.addEventListener('input', () => { recordUserInteraction(); window.location.hash='#results'; handleRouting(); });
+        searchInput.addEventListener('input', () => { recordUserInteraction(); updateSearchClearButton(); window.location.hash='#results'; handleRouting(); });
+        updateSearchClearButton();
     }
+    const searchClear = document.getElementById('search-clear');
+    if(searchClear) {
+        searchClear.addEventListener('click', () => {
+            if(searchInput) searchInput.value = '';
+            updateSearchClearButton();
+            recordUserInteraction();
+            window.location.hash = '#results';
+            handleRouting();
+        });
+    }
+    addEvt('btn-save-profile-inline', 'click', () => document.getElementById('btn-save-profile')?.click());
 }
 
 function initLeafletMap(lat, lng) {
@@ -1199,7 +1259,9 @@ function renderDynamicFilters(filteredData) {
     if(!container) return;
 
     const availableTags = new Set();
-    getPublicVenues().forEach(v => getVenueTags(v).forEach(t => availableTags.add(t)));
+    const availabilitySource = Array.isArray(filteredData) ? filteredData : getPublicVenues();
+    availabilitySource.forEach(v => getVenueTags(v).forEach(t => availableTags.add(t)));
+    activeFilters.forEach(t => availableTags.add(t));
 
     let html = `<button class="chip pill-btn ${activeFilters.length === 0 ? 'active' : ''}" data-filter="All">All</button>`;
     html += `<button class="chip pill-btn tag-social-yellow" data-filter="__close_to_me">Venues close to me</button>`;
@@ -1283,6 +1345,7 @@ function applyFilters() {
 
     if(contextHeader) {
         contextHeader.classList.remove('hidden');
+        resetBackButton('← Back to Results', 'results');
         document.getElementById('btn-back-to-results')?.classList.add('result-back-hidden');
         const title = document.getElementById('context-title');
         const desc = document.getElementById('context-desc');
@@ -1371,6 +1434,7 @@ function renderFavoritesView() {
     document.getElementById('main-filters')?.classList.add('hidden');
     contextHeader?.classList.remove('hidden');
     document.getElementById('btn-back-to-results')?.classList.remove('result-back-hidden');
+    resetBackButton('← Back to Results', 'results');
     const cTitle = document.getElementById('context-title');
     const cDesc = document.getElementById('context-desc');
     if(cTitle) cTitle.innerHTML = "⚜️ MY FAVOURITES";
@@ -1383,7 +1447,9 @@ function renderFavoritesView() {
 function renderMyEventsView() {
     document.getElementById('main-filters')?.classList.add('hidden');
     contextHeader?.classList.remove('hidden');
-    document.getElementById('btn-back-to-results')?.classList.remove('result-back-hidden');
+    const backBtn = document.getElementById('btn-back-to-results');
+    backBtn?.classList.remove('result-back-hidden');
+    resetBackButton('← Back to Results', 'results');
     
     const cTitle = document.getElementById('context-title');
     const cDesc = document.getElementById('context-desc');
@@ -1441,7 +1507,7 @@ function renderMyEventsView() {
                 <div class="card-header">
                     <div><h3 class="card-title display-font">${ev.Event_Name}</h3><div class="card-meta">${formatDateToDDMMYYYY(ev.Event_Date)} | @ ${venueName}</div></div>
                     <div style="display:flex; gap:10px; align-items:center;">
-                        <span class="icon-btn" onclick="event.stopPropagation(); shareURL('${window.location.origin}${window.location.pathname}?event=${ev.Event_ID}#myevents', '${ev.Event_Name.replace(/'/g, "\\'")}')" title="Share" style="font-size:1.5rem;">📣</span>
+                        <span class="icon-btn" onclick="event.stopPropagation(); shareURL('${window.location.origin}${window.location.pathname}?event=${ev.Event_ID}#myevents', '${ev.Event_Name.replace(/'/g, "\\'")}')" title="Share" style="font-size:1.5rem;">${BR_ICONS.share}</span>
                         <span class="icon-btn" onclick="event.stopPropagation(); window.flagListing('${ev.Event_ID}', '${ev.Event_Name.replace(/'/g, "\\'")}', 'Event Report')" title="Report" style="display:flex; align-items:center; justify-content:center;"><img src="report.png" style="width:24px; height:24px; object-fit:contain;"></span>
                         <button class="icon-btn fav-btn active-star" style="font-size:1.5rem;" onclick="toggleEventFavorite('${ev.Event_ID}', null, true)">❌</button>
                     </div>
@@ -1456,7 +1522,9 @@ function renderMyEventsView() {
 function renderTravelFullView() {
     document.getElementById('main-filters')?.classList.add('hidden');
     contextHeader?.classList.remove('hidden');
-    document.getElementById('btn-back-to-results')?.classList.remove('result-back-hidden');
+    const backBtn = document.getElementById('btn-back-to-results');
+    backBtn?.classList.remove('result-back-hidden');
+    resetBackButton('← Back to Results', 'results');
     
     const cTitle = document.getElementById('context-title');
     const cDesc = document.getElementById('context-desc');
@@ -1515,7 +1583,9 @@ function shareShortlist(name) {
 function renderShortlistsFullView() {
     document.getElementById('main-filters')?.classList.add('hidden');
     contextHeader?.classList.remove('hidden');
-    document.getElementById('btn-back-to-results')?.classList.remove('result-back-hidden');
+    const backBtn = document.getElementById('btn-back-to-results');
+    backBtn?.classList.remove('result-back-hidden');
+    resetBackButton('← Back to Results', 'results');
     
     const cTitle = document.getElementById('context-title');
     const cDesc = document.getElementById('context-desc');
@@ -1558,7 +1628,7 @@ function renderShortlistsFullView() {
                     <p class="meta-text" style="margin-top:5px;">${count} venue${count === 1 ? '' : 's'}</p>
                 </div>
                 <div style="display:flex; gap:10px;">
-                    <button class="icon-btn" onclick="shareShortlist('${name}')" title="Share"><img src="link.png" style="width:20px;"></button>
+                    <button class="icon-btn" onclick="event.stopPropagation(); shareShortlist('${name}')" title="Share" style="font-size:1.35rem;">${BR_ICONS.share}</button>
                     <button class="icon-btn" style="color:var(--bright-red-orange);" onclick="event.stopPropagation(); if(confirm('Delete shortlist ${name}?')){ delete userShortlists['${name}']; saveCurrentToBundle(); renderShortlistsFullView(); }">❌</button>
                 </div>
             </div>
@@ -1746,7 +1816,7 @@ function renderProfileStats() {
     container.innerHTML = html;
     const mobileHtml = html.replace('desktop-only-text ', '');
     const containerMob = document.getElementById('profile-stats-container-mob');
-    if(containerMob) containerMob.innerHTML = mobileHtml;
+    if(containerMob) containerMob.innerHTML = '';
     const containerMobFirst = document.getElementById('profile-stats-container-mob-first');
     if(containerMobFirst) containerMobFirst.innerHTML = mobileHtml;
 }
@@ -1771,7 +1841,7 @@ function openProfileMenu() {
             const found = avatarData.find(a => a.file === userProfile.avatar);
             if(found) dispName = found.label; 
         }
-        privacyGreeting.innerText = `Hi ${dispName},`;
+        privacyGreeting.innerText = '';
     }
 
     const profileWipeToast = document.getElementById('profile-wipe-toast');
@@ -1782,14 +1852,7 @@ function openProfileMenu() {
         if(copyBtn) copyBtn.innerText = "Make a copy of this profile";
     }
 
-    const mobileStats = document.getElementById('profile-stats-container-mob');
-    if(mobileStats && !document.getElementById('profile-mobile-help')) {
-        const help = document.createElement('div');
-        help.id = 'profile-mobile-help';
-        help.className = 'profile-mobile-help mobile-only';
-        help.innerHTML = `<h4 class="display-font" style="color:var(--primary-blue); margin-bottom:8px;">Hi ${userProfile.name || 'Guest'},</h4><p>Your profile, favourites, shortlists, saved events and travel pins are stored locally in this browser. Export your profile if you want a backup.</p>`;
-        mobileStats.parentNode.appendChild(help);
-    }
+    document.getElementById('profile-mobile-help')?.remove();
 
     profileModal?.classList.remove('hidden');
 }
@@ -1986,7 +2049,7 @@ function renderListings(data, isContextView = false, targetContainer = resultsCo
                 <div class="card-stats">
                     <span>🌈 ${systemInfo.labels?.rated_by_gays || 'Rated by gays'}</span><span>👁️ ${venue.Views || 0}</span>
                     <div style="margin-left:auto; display:flex; gap:10px; align-items:center;">
-                        <span class="icon-btn" onclick="event.stopPropagation(); shareURL('${window.location.origin}${window.location.pathname}?venue=${venue.Venue_ID}#venue=${venue.Venue_ID}', '${String(venue.Name || '').replace(/'/g, "\\'")}')" title="Share" style="font-size:1.5rem;">📣</span>
+                        <span class="icon-btn" onclick="event.stopPropagation(); shareURL('${window.location.origin}${window.location.pathname}?venue=${venue.Venue_ID}#venue=${venue.Venue_ID}', '${String(venue.Name || '').replace(/'/g, "\\'")}')" title="Share" style="font-size:1.5rem;">${BR_ICONS.share}</span>
                         <span class="icon-btn" onclick="event.stopPropagation(); window.flagListing('${venue.Venue_ID}', '${String(venue.Name || '').replace(/'/g, "\\'")}', 'Venue Report')" title="Report" style="display:flex; align-items:center; justify-content:center;"><img src="report.png" style="width:24px; height:24px; object-fit:contain;"></span>
                         <span class="star-btn icon-btn fav-btn ${isFav ? 'active-star' : ''}" style="font-size:1.8rem; line-height:1;">⚜️</span>
                     </div>
@@ -2146,7 +2209,7 @@ function openVenueModal(venue) {
                                     <span class="meta-text">${formatDateToDDMMYYYY(ev.Event_Date)} | ${ev.Event_Start_Time}</span>
                                 </div>
                                 <div style="display:flex; gap:8px; align-items:center;">
-                                    <span class="icon-btn" onclick="event.stopPropagation(); shareURL('${window.location.origin}${window.location.pathname}?event=${ev.Event_ID}', '${ev.Event_Name.replace(/'/g, "\\'")}')" title="Share" style="font-size:1.2rem;">📣</span>
+                                    <span class="icon-btn" onclick="event.stopPropagation(); shareURL('${window.location.origin}${window.location.pathname}?event=${ev.Event_ID}', '${ev.Event_Name.replace(/'/g, "\\'")}')" title="Share" style="font-size:1.2rem;">${BR_ICONS.share}</span>
                                     <span class="icon-btn" onclick="event.stopPropagation(); window.flagListing('${ev.Event_ID}', '${ev.Event_Name.replace(/'/g, "\\'")}', 'Event Report')" title="Report" style="display:flex; align-items:center; justify-content:center;"><img src="report.png" style="width:20px; height:20px; object-fit:contain;"></span>
                                     <button class="icon-btn fav-btn ${isSaved ? 'active-star' : ''}" style="font-size: 1.5rem;" onclick="toggleEventFavorite('${ev.Event_ID}', this)">💖</button>
                                 </div>
@@ -2230,7 +2293,7 @@ function openVenueModal(venue) {
     
     const shareBtn = document.getElementById('modal-share');
     if(shareBtn) {
-        shareBtn.innerHTML = '📣';
+        shareBtn.innerHTML = BR_ICONS.share;
         shareBtn.onclick = () => shareURL(`${window.location.origin}${window.location.pathname}?venue=${venue.Venue_ID}#venue=${venue.Venue_ID}`, venue.Name);
     }
     

@@ -239,6 +239,23 @@ window.unhideAllColumns = function() {
     document.querySelectorAll('.hidden-col').forEach(c => c.classList.remove('hidden-col'));
 };
 
+
+window.toggleMagentaRow = function(btn) {
+    const row = btn?.closest('tr');
+    if(!row) return;
+    row.classList.toggle('magenta-highlight');
+    btn.classList.toggle('active', row.classList.contains('magenta-highlight'));
+};
+
+window.toggleMagentaCol = function(btn, idx) {
+    const table = document.getElementById('admin-table-container');
+    if(!table) return;
+    const cells = table.querySelectorAll(`.col-idx-${idx}`);
+    const willHighlight = !Array.from(cells).some(c => c.classList.contains('magenta-highlight'));
+    cells.forEach(c => c.classList.toggle('magenta-highlight', willHighlight));
+    btn?.classList.toggle('active', willHighlight);
+};
+
 const headerMapping = {
     "Event_Start_Time": "Start Time", "Event_End_Time": "End Time", "Venue_ID": "ID", "Event_ID": "ID",
     "Description": "Desc", "Event_Description": "Desc", "Rating_General": "Gen", "Rating_Darkroom": "Dark", "Priority": "Priority", "Priority": "Priority"
@@ -316,7 +333,7 @@ function generateTableHTML(dataObj, isMainTable) {
         const displayName = headerMapping[col] || col;
         html += `<th class="col-idx-${idx}">
             <div style="display:flex; justify-content:space-between; align-items:center;">
-                <span class="highlight-toggle-btn" title="Highlight Column" onclick="toggleMagentaCol(this, ${idx})">🖍️</span>
+                <span class="highlight-toggle-btn" title="Highlight Column" data-col-idx="${idx}">🖍️</span>
                 <span class="eye-btn" onclick="toggleColumn(${idx})" title="Toggle Hide">👁️</span>
                 <span class="col-title" style="flex-grow:1;">${displayName}</span>
             </div>`;
@@ -355,7 +372,7 @@ function generateTableHTML(dataObj, isMainTable) {
 
         const needsReview = (!row.Share_URL || String(row.Share_URL).toLowerCase() === 'false' || String(row.Share_URL) === 'PENDING' || String(row.Status || '') === 'Draft');
         html += `<td style="text-align:center;">
-            <span class="highlight-toggle-btn" title="Highlight Row" onclick="toggleMagentaRow(this)">🖍️</span><br>
+            <span class="highlight-toggle-btn" title="Highlight Row">🖍️</span><br>
             ${needsReview ? `<button onclick="markReviewed('${id}')" style="background:var(--primary-blue); border:none; color:#fff; border-radius:4px; cursor:pointer; padding:2px 5px;" title="Mark Reviewed">✔️</button>` : ''}
             ${isNew ? `<br><span class="new-badge">NEW</span>` : ''}
         </td>`;
@@ -449,6 +466,16 @@ function renderTable() {
     });
 
     tableContainer.innerHTML = generateTableHTML(filteredData, true);
+    if(!tableContainer.dataset.highlightDelegated) {
+        tableContainer.dataset.highlightDelegated = 'true';
+        tableContainer.addEventListener('click', (e) => {
+            const highBtn = e.target.closest('.highlight-toggle-btn');
+            if(!highBtn) return;
+            e.stopPropagation();
+            if(highBtn.dataset.colIdx !== undefined) window.toggleMagentaCol(highBtn, parseInt(highBtn.dataset.colIdx, 10));
+            else window.toggleMagentaRow(highBtn);
+        });
+    }
 
     const thead = document.getElementById('admin-thead');
     if (thead) {

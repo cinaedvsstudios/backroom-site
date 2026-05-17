@@ -1,0 +1,62 @@
+Backroom v0.62 focused debug checklist
+
+1. Contact/report form
+- Open Contact/report from Settings and from a venue report button.
+- Submit a test message.
+- Expected: no redirect, no formsubmit.co URL, no Cloudflare 521, success toast appears, form closes.
+
+2. Search clear X
+- Type Berlin or Darkroom in search.
+- Expected: X appears inside search box.
+- Click X.
+- Expected: search clears, results rerender, X disappears.
+
+3. Mobile sticky/overflow
+- On mobile, scroll Results, Featured, Shortlist detail, and Profile.
+- Expected: top bar stays sticky, content does not bleed sideways, tag strip scrolls all the way.
+
+4. Tag chips
+- Select Bar, then another tag.
+- Expected: chips remain in place; unavailable chips grey out rather than vanishing/moving.
+
+5. Featured page
+- Open Featured.
+- Expected: priority venues display. No empty Featured Level 1/2/3 boxes.
+- Check Priority 1: Lab.Oratory, KitKatClub, Boiler, Tipsy Bear, Chantal's House of Shame, Boyberry Berlin.
+
+6. Shortlist navigation
+- Open My Shortlists, then open a specific shortlist.
+- Expected: button says Back to Shortlists and returns to the shortlist list.
+- Main My Shortlists page still has Back to Results.
+
+7. Icon mapping
+- On shortlist list, click the share button.
+- Expected: share uses megaphone/share icon, not link icon.
+- Link icon only appears for actual URL/social link behaviour.
+
+8. Profile mobile
+- Open Profile on mobile.
+- Expected: Your Profile Contains appears on the first profile screen only.
+- Expected: no lower duplicate profile inventory and no Hi Chris/helper block lower down.
+- Expected: save icon appears next to the profile name field.
+
+9. Settings
+- Open Settings.
+- Expected: Quick Edit, About, Contact, Help/Privacy/Backup, Reset/Delete sections are ordered and divided with red lines.
+- Instagram link uses https://www.instagram.com/the.backroom.guide/
+
+10. Admin page editor
+- Open admin > Page Editor.
+- Expected: Cruising Guide is selectable/loadable.
+- Expected: Featured is not listed as a static page.
+
+11. Admin highlighters/scrollbars
+- Load venue data.
+- Click row/column highlighter icons.
+- Expected: row/column highlights toggle.
+- Use horizontal scrollbar.
+- Expected: scrollbar is visibly thick/easy to grab.
+
+12. Final stale string check
+- Confirm no visible v0.61 label remains after hard refresh.
+- Confirm no old old-brand/backdoorguide/formsubmit.co behaviour appears.

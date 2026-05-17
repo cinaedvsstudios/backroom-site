@@ -384,7 +384,7 @@ td.hidden-col * { display: none !important; }
 .color-swatch { width: 24px; height: 24px; cursor: pointer; border-radius: 4px; border: 1px solid rgba(255,255,255,0.2); }
 .color-swatch:hover { transform: scale(1.1); border-color: #fff; }
 
-/* v0.60 tag filter stability */
+/* v0.62 tag filter stability */
 .muted-chip {
     opacity: 0.32 !important;
     filter: grayscale(1);
@@ -393,7 +393,7 @@ td.hidden-col * { display: none !important; }
     border-color: var(--panel-mid) !important;
 }
 
-/* v0.60 static page containers loaded inside the app */
+/* v0.62 static page containers loaded inside the app */
 #discounts-container main,
 #about-container main,
 #cruising-guide-container main,
@@ -413,7 +413,7 @@ td.hidden-col * { display: none !important; }
 }
 
 
-/* v0.60 admin readability */
+/* v0.62 admin readability */
 .admin-main::-webkit-scrollbar,
 .table-wrapper::-webkit-scrollbar,
 #admin-table-container::-webkit-scrollbar {
@@ -429,7 +429,7 @@ td.hidden-col * { display: none !important; }
 }
 
 
-/* v0.61 cleanup overrides */
+/* v0.62 cleanup overrides */
 .settings-sections { display:flex; flex-direction:column; gap:10px; }
 .settings-heading { color: var(--primary-blue); margin: 0 0 4px; font-size: 1.15rem; }
 .settings-red-divider { border:0; height:2px; background:var(--bright-red-orange); margin:12px 0; width:100%; }
@@ -471,4 +471,73 @@ td.hidden-col * { display: none !important; }
     #avatar-filters { position: sticky; top: 0; z-index: 12; background:#000; padding:8px 0; }
     #avatar-grid { max-height: 52vh !important; overflow-y:auto !important; }
     #profile-stats-container-mob { margin-top:15px; }
+}
+
+/* v0.62 repeated-miss cleanup */
+.search-wrapper { position: relative; min-width: 0; }
+#search-input { padding-right: 42px !important; box-sizing: border-box; }
+.search-clear {
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 28px;
+    height: 28px;
+    border: 1px solid var(--panel-mid);
+    border-radius: 999px;
+    background: var(--near-black);
+    color: var(--bright-red-orange);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    z-index: 3;
+}
+.search-clear.hidden { display: none !important; }
+
+.profile-name-row { display:flex; align-items:center; gap:8px; }
+.profile-name-row #profile-name { flex:1; min-width:0; }
+.profile-name-save { flex:0 0 auto; width:42px; height:42px; border-radius:999px; background:var(--panel-standard); border:1px solid var(--panel-mid); display:flex; align-items:center; justify-content:center; }
+#profile-privacy-box { display:none !important; }
+
+.featured-section .card { width: 100%; max-width: 100%; }
+.featured-city-strip { -webkit-overflow-scrolling: touch; }
+
+@media (max-width: 768px) {
+    html, body, #app-shell, #workspace, #main-content, #results-container, .card, .content-window, .featured-section, #featured-container, #about-container, #discounts-container, #cruising-guide-container {
+        max-width: 100vw !important;
+        box-sizing: border-box !important;
+    }
+    body { overflow-x: hidden !important; }
+    #top-bar {
+        position: sticky !important;
+        top: 0 !important;
+        z-index: 900 !important;
+        width: 100% !important;
+        box-sizing: border-box !important;
+        background: var(--near-black) !important;
+        box-shadow: 0 2px 0 var(--panel-mid), 0 8px 18px rgba(0,0,0,.45) !important;
+    }
+    #main-content { min-width: 0 !important; overflow-x: hidden !important; padding-left: 36px !important; padding-right: 12px !important; }
+    #results-container { grid-template-columns: minmax(0, 1fr) !important; overflow-x: hidden !important; }
+    .card { min-width: 0 !important; overflow: hidden !important; }
+    .filter-chips-container { max-width: 100% !important; overflow: hidden !important; }
+    .filter-chips {
+        flex-wrap: nowrap !important;
+        justify-content: flex-start !important;
+        overflow-x: auto !important;
+        overflow-y: hidden !important;
+        max-width: 100% !important;
+        padding-bottom: 8px !important;
+        -webkit-overflow-scrolling: touch !important;
+        scrollbar-width: thin !important;
+    }
+    .filter-chips .chip { flex: 0 0 auto !important; }
+    #profile-mob-view-3 #profile-stats-container,
+    #profile-stats-container-mob,
+    .profile-mobile-help,
+    #profile-privacy-box { display: none !important; }
+    #avatar-filters { overflow-x:auto !important; flex-wrap: nowrap !important; justify-content:flex-start !important; }
+    #avatar-filters .chip { flex: 0 0 auto !important; }
 }
