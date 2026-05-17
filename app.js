@@ -1,9 +1,9 @@
 // --- Application State ---
-const APP_VERSION = "v0.63";
+const APP_VERSION = "v0.64";
 const APP_DATE = "17 May 2026";
 
 let systemInfo = {}, designTheme = {}, venues = [], events = [];
-let activeFilters = []; // v0.62 Multi-select Array
+let activeFilters = []; // v0.64 Multi-select Array
 let selectedCardId = null;
 let venueReturnHash = '#results';
 let currentTargetVenue = null; 
@@ -24,6 +24,8 @@ let userTravel = [];
 let importInfo = JSON.parse(localStorage.getItem('br_import_info')) || null;
 let avatarData = [];
 let activeAvatarCategories = [];
+let profileOpenName = '';
+let profileOpenAvatar = '';
 
 let leafletMap = null;
 let leafletMarker = null;
@@ -303,6 +305,7 @@ function setupCriticalListeners() {
         localStorage.setItem('br_age_verified', 'true');
         ageGate?.classList.add('hidden');
         appShell?.classList.remove('hidden');
+        updateMobileTopBarOffset();
         showToast("Backroom " + APP_VERSION);
         handleRouting(); 
     };
@@ -323,11 +326,17 @@ function setupCriticalListeners() {
             }
         });
     }
+    if(!window.brMobileTopBarResizeBound) {
+        window.brMobileTopBarResizeBound = true;
+        window.addEventListener('resize', updateMobileTopBarOffset);
+        window.addEventListener('orientationchange', () => setTimeout(updateMobileTopBarOffset, 250));
+    }
 }
 
 async function initApp() {
     loadActiveProfileData(); 
     setupCriticalListeners();
+    updateMobileTopBarOffset();
     const verDisplay = document.getElementById('sidebar-version-display');
     if(verDisplay) verDisplay.innerHTML = `${APP_VERSION}<br>${APP_DATE}`;
     
@@ -358,7 +367,8 @@ async function initApp() {
         applyTheme(); 
         populateSystemText(); 
         setupEventListeners(); 
-        loadSavedLocation(); 
+        loadSavedLocation();
+        updateMobileTopBarOffset(); 
         
         if(localStorage.getItem('br_age_verified') === 'true') handleRouting();
         
@@ -394,7 +404,7 @@ async function initApp() {
                 }]; 
                 if(!events) events = [];
                 
-                applyTheme(); populateSystemText(); setupEventListeners(); loadSavedLocation(); 
+                applyTheme(); populateSystemText(); setupEventListeners(); loadSavedLocation(); updateMobileTopBarOffset(); 
                 if(localStorage.getItem('br_age_verified') === 'true') {
                     showToast("Backroom " + APP_VERSION);
                     handleRouting();
@@ -460,11 +470,17 @@ function sortFeaturedVenues(list) {
     });
 }
 
-function updateMobileSidebarOffset() {
+function updateMobileTopBarOffset() {
     const topBar = document.getElementById('top-bar');
     if (!topBar) return;
-    const height = Math.ceil(topBar.getBoundingClientRect().height);
-    document.documentElement.style.setProperty('--mobile-sidebar-top', `${height}px`);
+    const height = Math.ceil(topBar.getBoundingClientRect().height || 126);
+    const offset = `${height}px`;
+    document.documentElement.style.setProperty('--mobile-topbar-height', offset);
+    document.documentElement.style.setProperty('--mobile-sidebar-top', offset);
+}
+
+function updateMobileSidebarOffset() {
+    updateMobileTopBarOffset();
 }
 
 function closeSidebarImmediately() {
@@ -677,7 +693,7 @@ function renderBlankPageView(page) {
 function renderWelcomeScreen() {
     const wName = document.getElementById('welcome-name');
     const wAvatar = document.getElementById('welcome-avatar');
-    // V0.58 Dynamic Fallback Name
+    // v0.64 Dynamic Fallback Name
     let dispName = 'GUEST';
     if (userProfile.name) {
         dispName = userProfile.name;
@@ -736,7 +752,7 @@ let currentTutorialType = '';
 function startTutorial(type) {
     isTutorialRunning = true; 
     
-    // V0.58 Tutorial Reset & Hardcode Anchor
+    // v0.64 Tutorial Reset & Hardcode Anchor
     if (type === 'general') {
         window.location.hash = '#results'; // Clear views
         activeFilters = []; // Clear filters
@@ -914,6 +930,28 @@ window.flagListing = function(id, name, type="Venue/Event") {
     }
 };
 
+
+function getCurrentProfileFormName() {
+    return document.getElementById('profile-name')?.value.trim() || '';
+}
+
+function markProfileOpenState() {
+    profileOpenName = userProfile.name || '';
+    profileOpenAvatar = userProfile.avatar || '';
+}
+
+function hasUnsavedProfileChanges() {
+    return getCurrentProfileFormName() !== profileOpenName || (userProfile.avatar || '') !== profileOpenAvatar;
+}
+
+function hideProfileUnsavedModal() {
+    document.getElementById('profile-unsaved-modal')?.classList.add('hidden');
+}
+
+function showProfileUnsavedModal() {
+    document.getElementById('profile-unsaved-modal')?.classList.remove('hidden');
+}
+
 function setupEventListeners() {
     const addEvt = (id, evt, func) => {
         const el = document.getElementById(id);
@@ -923,83 +961,57 @@ function setupEventListeners() {
     const fsForm = document.getElementById('fs-form');
     if(fsForm && !fsForm.dataset.ajaxBound) {
         fsForm.dataset.ajaxBound = 'true';
-        fsForm.addEventListener('submit', async (e) => {
+        fsForm.addEventListener('submit', (e) => {
             e.preventDefault();
+            if (!fsForm.checkValidity()) {
+                fsForm.reportValidity();
+                return;
+            }
             const submitBtn = fsForm.querySelector('button[type="submit"]');
-            const oldText = submitBtn ? submitBtn.innerText : '';
-            const hiddenFrame = document.getElementById('formsubmit-hidden-frame');
             if(submitBtn) {
-                submitBtn.disabled = true;
-                submitBtn.innerText = 'Sending...';
+                submitBtn.disabled = false;
+                submitBtn.innerText = 'Send Message';
             }
-
-            const finishAsHandedOff = () => {
-                showToast(systemInfo.form_success_message || 'Your message was handed to FormSubmit. Check email/FormSubmit settings if it does not arrive.');
-                document.getElementById('formsubmit-modal')?.classList.add('hidden');
-                fsForm.reset();
-                if(submitBtn) {
-                    submitBtn.disabled = false;
-                    submitBtn.innerText = oldText || 'Send Message';
-                }
-            };
-
-            const failSubmit = () => {
-                showToast(systemInfo.error_messages?.form_submit_failed || 'The report could not be submitted. Please try again.');
-                if(submitBtn) {
-                    submitBtn.disabled = false;
-                    submitBtn.innerText = oldText || 'Send Message';
-                }
-                fsForm.removeAttribute('target');
-            };
-
-            try {
-                fsForm.action = FORMSUBMIT_ENDPOINT;
-                if(hiddenFrame) {
-                    let completed = false;
-                    const onLoad = () => {
-                        if(completed) return;
-                        completed = true;
-                        hiddenFrame.removeEventListener('load', onLoad);
-                        fsForm.removeAttribute('target');
-                        finishAsHandedOff();
-                    };
-                    hiddenFrame.addEventListener('load', onLoad);
-                    fsForm.target = 'formsubmit-hidden-frame';
-                    HTMLFormElement.prototype.submit.call(fsForm);
-                    setTimeout(() => {
-                        if(completed) return;
-                        completed = true;
-                        hiddenFrame.removeEventListener('load', onLoad);
-                        fsForm.removeAttribute('target');
-                        showToast('Message sent to FormSubmit. If no email arrives, check the FormSubmit Cloud dashboard/settings.');
-                        document.getElementById('formsubmit-modal')?.classList.add('hidden');
-                        fsForm.reset();
-                        if(submitBtn) {
-                            submitBtn.disabled = false;
-                            submitBtn.innerText = oldText || 'Send Message';
-                        }
-                    }, 4500);
-                } else {
-                    HTMLFormElement.prototype.submit.call(fsForm);
-                    finishAsHandedOff();
-                }
-            } catch (err) {
-                failSubmit();
-            }
+            fsForm.action = FORMSUBMIT_ENDPOINT;
+            fsForm.method = 'POST';
+            fsForm.target = 'formsubmit-frame';
+            document.getElementById('formsubmit-flow-modal')?.classList.remove('hidden');
+            document.getElementById('formsubmit-modal')?.classList.add('hidden');
+            showToast('Complete the FormSubmit verification window to send your message.');
+            HTMLFormElement.prototype.submit.call(fsForm);
         });
     }
+
+    addEvt('btn-formsubmit-newtab', 'click', () => {
+        const form = document.getElementById('fs-form');
+        if (!form) return;
+        if (!form.checkValidity()) {
+            document.getElementById('formsubmit-flow-modal')?.classList.add('hidden');
+            document.getElementById('formsubmit-modal')?.classList.remove('hidden');
+            form.reportValidity();
+            return;
+        }
+        form.action = FORMSUBMIT_ENDPOINT;
+        form.method = 'POST';
+        form.target = '_blank';
+        showToast('Continue in the FormSubmit tab to complete verification.');
+        HTMLFormElement.prototype.submit.call(form);
+        form.removeAttribute('target');
+    });
+
+    addEvt('btn-formsubmit-flow-close', 'click', () => {
+        document.getElementById('formsubmit-flow-modal')?.classList.add('hidden');
+        const form = document.getElementById('fs-form');
+        if(form) form.removeAttribute('target');
+    });
+
 
     document.querySelectorAll('.close-modal-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
             const modal = e.target.closest('.modal');
-            if(modal && modal.id === 'profile-modal') {
-                const currentName = document.getElementById('profile-name')?.value.trim() || '';
-                if(currentName !== (userProfile.name || '')) {
-                    const saveIt = confirm('You have unsaved profile changes. Save before closing?');
-                    if(saveIt) document.getElementById('btn-save-profile')?.click();
-                    else modal.classList.add('hidden');
-                    return;
-                }
+            if(modal && modal.id === 'profile-modal' && hasUnsavedProfileChanges()) {
+                showProfileUnsavedModal();
+                return;
             }
             modal?.classList.add('hidden');
         });
@@ -1014,6 +1026,20 @@ function setupEventListeners() {
     
     addEvt('btn-settings', 'click', () => settingsModal?.classList.remove('hidden'));
     addEvt('btn-profile-menu', 'click', openProfileMenu);
+    addEvt('btn-save-profile-unsaved', 'click', () => {
+        document.getElementById('btn-save-profile')?.click();
+        profileModal?.classList.add('hidden');
+    });
+    addEvt('btn-discard-profile-unsaved', 'click', () => {
+        hideProfileUnsavedModal();
+        const nameInp = document.getElementById('profile-name');
+        if(nameInp) nameInp.value = profileOpenName || '';
+        userProfile.name = profileOpenName || '';
+        userProfile.avatar = profileOpenAvatar || '';
+        renderProfileAvatars();
+        updateProfileDisplay();
+        profileModal?.classList.add('hidden');
+    });
     addEvt('btn-favorites', 'click', () => window.location.hash = '#favorites');
     addEvt('btn-shortlists-menu', 'click', () => window.location.hash = '#myshortlists');
     
@@ -1143,6 +1169,8 @@ function setupEventListeners() {
         const nameInp = document.getElementById('profile-name');
         if(nameInp) userProfile.name = nameInp.value.trim();
         saveCurrentToBundle(); 
+        markProfileOpenState();
+        hideProfileUnsavedModal();
         updateProfileDisplay();
         showToast("Profile saved locally!");
         if(window.location.hash === '' && searchInput?.value === '') renderWelcomeScreen();
@@ -1283,7 +1311,7 @@ function updateProfileDisplay() {
         dispName = userProfile.name;
     } else if (userProfile.avatar && userProfile.avatar !== 'noavatar01.png') {
         const found = avatarData.find(a => a.file === userProfile.avatar);
-        if(found) dispName = found.label; // V0.58 Fallback Name Logic
+        if(found) dispName = found.label; // v0.64 Fallback Name Logic
     }
 
     topName.innerText = dispName;
@@ -1738,26 +1766,24 @@ window.switchProfileTab = function(step) {
         p2.classList.add('mobile-hidden-tab');
         p3.classList.add('mobile-hidden-tab');
         
-        t1.classList.remove('tutorial-highlight');
-        t2.classList.remove('tutorial-highlight');
-        t3.classList.remove('tutorial-highlight');
+        [t1, t2, t3].forEach(t => { t.classList.remove('tutorial-highlight'); t.classList.remove('active-profile-tab'); });
         
-        if(a1) a1.classList.remove('tutorial-highlight');
-        if(a2) a2.classList.remove('tutorial-highlight');
+        if(a1) { a1.classList.remove('tutorial-highlight'); a1.classList.remove('active-profile-tab'); }
+        if(a2) { a2.classList.remove('tutorial-highlight'); a2.classList.remove('active-profile-tab'); }
 
         if(step === 1) { 
             p1.classList.remove('mobile-hidden-tab'); 
-            t1.classList.add('tutorial-highlight');
-            if(a1) a1.classList.add('tutorial-highlight');
+            t1.classList.add('tutorial-highlight', 'active-profile-tab');
+            if(a1) a1.classList.add('tutorial-highlight', 'active-profile-tab');
         }
         else if(step === 2) { 
             p2.classList.remove('mobile-hidden-tab'); 
-            t2.classList.add('tutorial-highlight');
-            if(a2) a2.classList.add('tutorial-highlight');
+            t2.classList.add('tutorial-highlight', 'active-profile-tab');
+            if(a2) a2.classList.add('tutorial-highlight', 'active-profile-tab');
         }
         else if(step === 3) { 
             p3.classList.remove('mobile-hidden-tab'); 
-            t3.classList.add('tutorial-highlight');
+            t3.classList.add('tutorial-highlight', 'active-profile-tab');
         }
     }
 }
@@ -1788,11 +1814,14 @@ function renderProfileAvatars() {
     }
     
     const ageTags = ['Young', 'Prime', 'Mature'];
-    const fetishTags = ['Fun', 'Ink', 'Inked', 'Leather', 'Rubber', 'Puppy'];
+    const funTags = ['Fun'];
+    const fetishTags = ['Ink', 'Inked', 'Leather', 'Rubber', 'Puppy'];
     
     let html = `<div class="tag-row-blue" style="display:flex; justify-content:center; gap:8px;">`;
     html += `<button class="chip pill-btn ${activeAvatarCategories.length === 0 ? 'active' : ''}" style="padding: 4px 10px; font-size: 0.85rem; flex-shrink:0;" data-val="All">All</button>`;
     html += ageTags.map(c => `<button class="chip pill-btn ${activeAvatarCategories.includes(c) ? 'active' : ''}" style="padding: 4px 10px; font-size: 0.85rem; color: var(--primary-blue); border-color: var(--primary-blue); flex-shrink:0;" data-val="${c}">${c}</button>`).join('');
+    html += `</div><div class="tag-row-yellow" style="display:flex; justify-content:center; gap:8px;">`;
+    html += funTags.map(c => `<button class="chip pill-btn avatar-fun-chip ${activeAvatarCategories.includes(c) ? 'active' : ''}" style="padding: 4px 10px; font-size: 0.85rem; color: #f3c743; border-color: #f3c743; flex-shrink:0;" data-val="${c}">${c}</button>`).join('');
     html += `</div><div class="tag-row-red" style="display:flex; justify-content:center; gap:8px;">`;
     html += fetishTags.map(c => `<button class="chip pill-btn ${activeAvatarCategories.includes(c) ? 'active' : ''}" style="padding: 4px 10px; font-size: 0.85rem; color: var(--bright-red-orange); border-color: var(--bright-red-orange); flex-shrink:0;" data-val="${c}">${c}</button>`).join('');
     html += `</div>`;
@@ -1827,7 +1856,7 @@ function renderProfileAvatars() {
         item.className = 'avatar-item';
         if (avatar.file === userProfile.avatar) item.classList.add('selected');
         
-        // V0.58 Title fallback for desktop span hiding
+        // v0.64 Title fallback for desktop span hiding
         item.innerHTML = `<img src="Profile_images/${avatar.file}" onerror="this.parentElement.style.display='none';" alt="${avatar.label}" title="${avatar.label}"><span>${avatar.label}</span>`;
         
         item.addEventListener('click', () => {
@@ -1917,7 +1946,7 @@ function openProfileMenu() {
         window.switchProfileTab(1);
     }
     
-    // V0.58 Dynamic Fallback welcome string
+    // v0.64 Dynamic Fallback welcome string
     const privacyGreeting = document.getElementById('profile-privacy-greeting');
     let dispName = 'Guest';
     if (userProfile.name) {
@@ -1935,11 +1964,13 @@ function openProfileMenu() {
             mobileHi = document.createElement('div');
             mobileHi.id = 'profile-mobile-hi-box';
             mobileHi.className = 'profile-hi-mobile-box';
+            const tutorialButton = document.getElementById('btn-profile-tutorial-mob');
             const btnStack = mobileFunctions.querySelector('.profile-btn-stack');
-            if(btnStack) btnStack.insertAdjacentElement('afterend', mobileHi);
+            if(tutorialButton) tutorialButton.insertAdjacentElement('afterend', mobileHi);
+            else if(btnStack) btnStack.appendChild(mobileHi);
             else mobileFunctions.prepend(mobileHi);
         }
-        mobileHi.innerHTML = `<h4 class="display-font">Hi ${dispName},</h4><p>In this screen you can edit your profile. Your favorites, shortlists, events, travel pins and profile choices are stored locally in this browser. Export your data if you want a backup.</p>`;
+        mobileHi.innerHTML = `<h4>Hi ${dispName},</h4><p>In this screen you can edit your profile. Your favorites, shortlists, events, travel pins and profile choices are stored locally in this browser. Export your data if you want a backup.</p>`;
     }
 
     const profileWipeToast = document.getElementById('profile-wipe-toast');
@@ -1951,6 +1982,7 @@ function openProfileMenu() {
     }
 
 
+    markProfileOpenState();
     profileModal?.classList.remove('hidden');
 }
 
@@ -2050,7 +2082,7 @@ function checkImportPreview() {
     }
 }
 
-// V0.58 Random Placeholder Infinite Loop Breaker
+// v0.64 Random Placeholder Infinite Loop Breaker
 function handleImageCarousel(imgElement) {
     imgElement.addEventListener('click', (e) => {
         e.stopPropagation(); 
@@ -2066,7 +2098,7 @@ function handleImageCarousel(imgElement) {
             showToast("Double tap the venue name to open");
         };
         tempImg.onerror = () => {
-            // V0.58 Random image pool selection
+            // v0.64 Random image pool selection
             const randomFallback = PLACEHOLDER_POOL[Math.floor(Math.random() * PLACEHOLDER_POOL.length)];
             imgElement.onerror = null; 
             imgElement.src = randomFallback;

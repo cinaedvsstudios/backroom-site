@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Backroom - v0.63</title>
+    <title>Backroom - v0.64</title>
     
     <meta name="description" content="Backroom - The comprehensive local guide to gay venues, cruise clubs, and events.">
     <meta name="keywords" content="gay guide, cruising, gay clubs, darkroom, fetish, gay events, queer venues">
@@ -15,7 +15,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Antonio:wght@400;700&family=Barlow+Condensed:wght@400;500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
-    <link rel="stylesheet" href="style.css?v=0.63">
+    <link rel="stylesheet" href="style.css?v=0.64">
 </head>
 <body>
 
@@ -307,7 +307,7 @@
                         <hr class="mobile-only divider" style="border-color:var(--bright-red-orange); background:var(--bright-red-orange);">
                         <div style="background: var(--panel-dark); padding: 25px; border-radius: var(--radius-card); border: 1px solid var(--panel-mid);">
                             <div id="preview-img-wrapper" class="hidden" style="width: 100%; display: flex; justify-content: center;">
-                                <img id="profile-avatar-preview" src="" style="border-radius: 12px; object-fit: cover; border: 3px solid var(--primary-blue); margin-bottom: 10px; box-shadow: 0 0 15px rgba(44, 168, 212, 0.4);">
+                                <img id="profile-avatar-preview" src="" style="border-radius: 12px; object-fit: contain; object-position: center center; border: 3px solid var(--primary-blue); margin-bottom: 10px; box-shadow: 0 0 15px rgba(44, 168, 212, 0.4);">
                             </div>
                             <div style="width: 100%;">
                                 <label class="meta-text" style="font-size: 0.9rem; margin-bottom: 5px; display: block; text-align: center;">Profile Name</label>
@@ -403,11 +403,8 @@
                 </div>
 
                 <hr class="settings-red-divider">
-                <h3 class="settings-heading">About</h3>
+                <h3 class="settings-heading">About / Contact</h3>
                 <button class="btn secondary-btn pill-btn" onclick="document.getElementById('settings-modal').classList.add('hidden'); window.location.hash='#about';">ℹ️ Open About Page</button>
-
-                <hr class="settings-red-divider">
-                <h3 class="settings-heading">Contact</h3>
                 <button class="btn secondary-btn pill-btn" onclick="window.flagListing('N/A', 'General Message', 'General Support')">✉️ Email Support</button>
                 <button class="btn secondary-btn pill-btn" onclick="window.open('https://www.instagram.com/the.backroom.guide/', '_blank')">
                     <img src="Emoji/instagram_url.png" onerror="this.src='https://i.postimg.cc/Ls6MW6B3/free-instagram-icon-svg-download-png-7574395-1.png'" style="height:20px; vertical-align:middle; margin-right:8px;"> Follow us on Instagram
@@ -422,7 +419,6 @@
                 <div id="import-preview-info" class="meta-text hidden" style="margin-bottom:10px; background:var(--panel-dark); padding:10px; border-radius:var(--radius-card); font-size:0.9rem;"></div>
 
                 <hr class="settings-red-divider">
-                <h3 class="settings-heading">Reset / Delete</h3>
                 <button id="btn-reset-age" class="btn secondary-btn pill-btn">Reset 18+ Age Gate</button>
                 <button id="btn-clear-data" class="btn pill-btn" style="background-color: var(--dark-red); color: #fff;">Delete All Local Data</button>
             </div>
@@ -456,6 +452,7 @@
                     <input type="hidden" name="_gotcha" style="display:none !important">
                     <input type="hidden" name="_subject" value="Backroom Site Submission">
                     <input type="hidden" name="_next" value="https://cinaedvsstudios.github.io/Backroom-site/thanks.html">
+                    <input type="hidden" name="_next" value="https://cinaedvsstudios.github.io/Backroom-site/thanks.html">
                     
                     <p class="meta-text" style="margin-bottom: 10px;">Send a message to the team. Please include details if reporting an issue.</p>
                     
@@ -465,13 +462,39 @@
                     
                     <button type="submit" class="btn primary-btn pill-btn" style="margin-top: 10px;">Send Message</button>
                 </form>
-                <iframe name="formsubmit-hidden-frame" id="formsubmit-hidden-frame" class="hidden" title="Hidden form submit frame"></iframe>
+            </div>
+        </div>
+    </div>
+
+    <div id="formsubmit-flow-modal" class="modal hidden">
+        <div class="modal-content large-modal" style="max-width: 920px; height: 82vh;">
+            <div class="modal-header" style="display:flex; justify-content:space-between; align-items:center; gap:10px;">
+                <h2 class="display-font">FORM VERIFICATION</h2>
+                <button id="btn-formsubmit-flow-close" type="button" class="btn-close">❌</button>
+            </div>
+            <div class="modal-body body-font" style="height: calc(82vh - 90px); display:flex; flex-direction:column; gap:10px;">
+                <p class="meta-text" style="font-size:1rem;">Complete the FormSubmit verification below if it appears. If this box stays blank or refuses to load, use the new-tab button.</p>
+                <iframe name="formsubmit-frame" id="formsubmit-frame" title="FormSubmit verification window" style="flex:1; width:100%; border:1px solid var(--panel-mid); border-radius:12px; background:#fff;"></iframe>
+                <button id="btn-formsubmit-newtab" type="button" class="btn secondary-btn pill-btn">Open FormSubmit in new tab</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="profile-unsaved-modal" class="modal hidden" style="z-index: 3600;">
+        <div class="modal-content small-modal" style="background: var(--panel-dark); border: 2px solid var(--primary-blue);">
+            <div class="modal-header"><h2 class="display-font">SAVE AVATAR CHANGES?</h2></div>
+            <div class="modal-body body-font">
+                <p style="margin-bottom:15px; color:#fff;">Save avatar changes?</p>
+                <div style="display:flex; flex-direction:column; gap:10px;">
+                    <button id="btn-save-profile-unsaved" type="button" class="btn primary-btn pill-btn">Save changes</button>
+                    <button id="btn-discard-profile-unsaved" type="button" class="btn secondary-btn pill-btn">Discard changes</button>
+                </div>
             </div>
         </div>
     </div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
-    <script src="app.js?v=0.62"></script>
+    <script src="app.js?v=0.64"></script>
 
 
 </body>

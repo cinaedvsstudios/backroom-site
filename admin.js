@@ -102,20 +102,17 @@ window.switchView = function(view) {
     if(view === 'editor') {
         views['editor'].style.display = 'flex';
         views['editor'].classList.remove('hidden');
-        document.getElementById('btn-formatting-guide')?.classList.add('hidden');
         loadEditorPage();
         saveEditorState(); 
     } else if (view === 'avatars') {
         views['avatars'].style.display = 'flex';
         views['avatars'].classList.remove('hidden');
-        document.getElementById('btn-formatting-guide')?.classList.add('hidden');
         loadAdminAvatars();
     } else {
         views['tables'].style.display = 'flex';
         views['tables'].classList.remove('hidden');
         const title = document.getElementById('summary-title');
         if(title) title.innerText = view === 'venues' ? 'VENUE DATA' : 'EVENT DATA';
-        document.getElementById('btn-formatting-guide')?.classList.remove('hidden');
         activeTableFilters = {};
         currentReviewFilter = 'all';
         loadDraftsFromLocal();
@@ -828,7 +825,7 @@ wysiwygContent?.addEventListener('input', () => {
     window.editorSaveTimer = setTimeout(saveEditorState, 500);
 });
 
-// V0.58 Page Selector Updated
+// v0.64 Page Selector Updated
 document.getElementById('editor-page-select')?.addEventListener('change', (e) => {
     if(e.target.value === 'new') {
         const defaultText = `<h1>New Page</h1><p>Start typing... dont forget to have this page added to the menu it wont appear automatically</p>`;
