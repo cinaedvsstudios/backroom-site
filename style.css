@@ -185,12 +185,12 @@ select.filter-header-select:focus, select.cell-edit:focus { border-color: var(--
 .modal-image-container img { width: 100%; max-height: 350px; object-fit: cover; border-radius: var(--radius-card); }
 .centered-image { object-position: center !important; }
 
-/* v0.64 Profile Button Styling Consistency */
+/* v0.65 Profile Button Styling Consistency */
 .profile-btn-stack .btn { font-family: 'Barlow Condensed', sans-serif; font-size: 1.1rem !important; padding: 12px !important; font-weight: normal; border-radius: var(--radius-pill); margin-top: 0 !important; width: 100%; box-sizing: border-box; }
 
 /* Desktop Media Queries */
 @media (min-width: 769px) {
-    /* v0.64 Desktop tag wrap limit (~12 pills approx) */
+    /* v0.65 Desktop tag wrap limit (~12 pills approx) */
     .filter-chips { justify-content: center; flex-wrap: wrap; white-space: normal; overflow-x: visible; max-width: 950px; margin: 0 auto; }
     
     .desktop-only-hr { display: block !important; }
@@ -215,13 +215,13 @@ select.filter-header-select:focus, select.cell-edit:focus { border-color: var(--
     
     #profile-avatar-preview { width: 180px !important; height: 288px !important; object-fit: contain !important; object-position: center center !important; }
     
-    /* v0.64 Hide Avatar Text on Desktop */
+    /* v0.65 Hide Avatar Text on Desktop */
     .avatar-item span { display: none !important; }
 }
 
 /* Mobile Media Queries */
 @media (max-width: 768px) {
-    /* v0.64 Deep Mobile Overflow Constraints */
+    /* v0.65 Deep Mobile Overflow Constraints */
     body, #app-shell, #workspace { max-width: 100vw; overflow-x: hidden; }
     .card, .card-inner-content, .card-about, .card-header { min-width: 0; word-wrap: break-word; overflow-wrap: break-word; }
     #results-container { grid-template-columns: 1fr !important; overflow-x: hidden; width: 100%; box-sizing: border-box; }
@@ -384,7 +384,7 @@ td.hidden-col * { display: none !important; }
 .color-swatch { width: 24px; height: 24px; cursor: pointer; border-radius: 4px; border: 1px solid rgba(255,255,255,0.2); }
 .color-swatch:hover { transform: scale(1.1); border-color: #fff; }
 
-/* v0.64 tag filter stability */
+/* v0.65 tag filter stability */
 .muted-chip {
     opacity: 0.32 !important;
     filter: grayscale(1);
@@ -393,7 +393,7 @@ td.hidden-col * { display: none !important; }
     border-color: var(--panel-mid) !important;
 }
 
-/* v0.64 static page containers loaded inside the app */
+/* v0.65 static page containers loaded inside the app */
 #discounts-container main,
 #about-container main,
 #cruising-guide-container main,
@@ -413,7 +413,7 @@ td.hidden-col * { display: none !important; }
 }
 
 
-/* v0.64 admin readability */
+/* v0.65 admin readability */
 .admin-main::-webkit-scrollbar,
 .table-wrapper::-webkit-scrollbar,
 #admin-table-container::-webkit-scrollbar {
@@ -429,7 +429,7 @@ td.hidden-col * { display: none !important; }
 }
 
 
-/* v0.64 cleanup overrides */
+/* v0.65 cleanup overrides */
 .settings-sections { display:flex; flex-direction:column; gap:10px; }
 .settings-heading { color: var(--primary-blue); margin: 0 0 4px; font-size: 1.15rem; }
 .settings-red-divider { border:0; height:2px; background:var(--bright-red-orange); margin:12px 0; width:100%; }
@@ -498,7 +498,7 @@ td.hidden-col * { display: none !important; }
     #profile-stats-container-mob { margin-top:15px; }
 }
 
-/* v0.64 repeated-miss cleanup */
+/* v0.65 repeated-miss cleanup */
 .search-wrapper { position: relative; min-width: 0; }
 #search-input { padding-right: 42px !important; box-sizing: border-box; }
 .search-clear {
@@ -570,7 +570,7 @@ td.hidden-col * { display: none !important; }
 }
 
 
-/* v0.64 repair pass */
+/* v0.65 repair pass */
 #sidebar {
     position: sticky;
     top: 73px;
@@ -723,7 +723,7 @@ td.hidden-col * { display: none !important; }
 }
 
 
-/* v0.64 targeted repair pass */
+/* v0.65 targeted repair pass */
 @media (max-width: 768px) {
     #top-bar {
         position: fixed !important;
@@ -768,4 +768,66 @@ td.hidden-col * { display: none !important; }
     background: #f3c743 !important;
     color: #000 !important;
     border-color: #f3c743 !important;
+}
+
+
+/* v0.65 targeted repair pass */
+@media (max-width: 768px) {
+    #sidebar.sidebar-opening .sidebar-item,
+    #sidebar.sidebar-opening .submenu-item {
+        pointer-events: none !important;
+        cursor: default !important;
+    }
+}
+.muted-chip {
+    cursor: not-allowed !important;
+}
+.muted-chip:hover {
+    opacity: 0.78 !important;
+    border-color: var(--panel-dark) !important;
+    color: #707789 !important;
+}
+.muted-chip[aria-disabled="true"] {
+    pointer-events: auto;
+}
+@media (min-width: 769px) {
+    #profile-mob-view-3 {
+        display: block !important;
+        grid-column: 1 / -1 !important;
+        width: 100% !important;
+    }
+    #profile-mob-view-3 .desktop-only-table {
+        width: 100% !important;
+        table-layout: fixed !important;
+    }
+    #profile-mob-view-3 .desktop-only-table td {
+        width: 33.333% !important;
+        vertical-align: top !important;
+    }
+}
+#profile-mobile-tabs div.active-profile-tab,
+#profile-mobile-tabs div.tutorial-highlight {
+    border-color: transparent !important;
+    outline: none !important;
+    background: rgba(44,168,212,.11) !important;
+    box-shadow: 0 0 16px rgba(44,168,212,.80), 0 0 30px rgba(44,168,212,.35) !important;
+    animation: profile-tab-soft-pulse 1.6s ease-in-out infinite !important;
+}
+#profile-mobile-tabs #parr-1.tutorial-highlight,
+#profile-mobile-tabs #parr-2.tutorial-highlight {
+    border-color: transparent !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    text-shadow: 0 0 8px var(--primary-blue), 0 0 16px var(--primary-blue) !important;
+    animation: profile-arrow-blue-glow 1.6s ease-in-out infinite !important;
+}
+@keyframes profile-tab-soft-pulse {
+    0%, 100% { box-shadow: 0 0 10px rgba(44,168,212,.45), 0 0 18px rgba(44,168,212,.22); }
+    50% { box-shadow: 0 0 22px rgba(44,168,212,.95), 0 0 38px rgba(44,168,212,.42); }
+}
+@media (max-width: 768px) {
+    #preview-img-wrapper,
+    #profile-avatar-preview {
+        cursor: pointer;
+    }
 }

@@ -1,9 +1,9 @@
 // --- Application State ---
-const APP_VERSION = "v0.64";
-const APP_DATE = "17 May 2026";
+const APP_VERSION = "v0.65";
+const APP_DATE = "18 May 2026";
 
 let systemInfo = {}, designTheme = {}, venues = [], events = [];
-let activeFilters = []; // v0.64 Multi-select Array
+let activeFilters = []; // v0.65 Multi-select Array
 let selectedCardId = null;
 let venueReturnHash = '#results';
 let currentTargetVenue = null; 
@@ -485,15 +485,17 @@ function updateMobileSidebarOffset() {
 
 function closeSidebarImmediately() {
     if (!sidebar) return;
-    sidebar.classList.remove('visible');
+    sidebar.classList.remove('visible', 'sidebar-opening');
     clearTimeout(sidebarTimeout);
 }
 
 function openSidebarTemporarily() {
     if (!sidebar) return;
     updateMobileSidebarOffset();
-    sidebar.classList.add('visible');
+    sidebar.classList.add('visible', 'sidebar-opening');
     sidebar.scrollTop = 0;
+    window.clearTimeout(sidebar.dataset.openingTimer);
+    sidebar.dataset.openingTimer = window.setTimeout(() => sidebar.classList.remove('sidebar-opening'), 340);
     clearTimeout(sidebarTimeout);
     sidebarTimeout = setTimeout(closeSidebarImmediately, 5000);
 }
@@ -693,7 +695,7 @@ function renderBlankPageView(page) {
 function renderWelcomeScreen() {
     const wName = document.getElementById('welcome-name');
     const wAvatar = document.getElementById('welcome-avatar');
-    // v0.64 Dynamic Fallback Name
+    // v0.65 Dynamic Fallback Name
     let dispName = 'GUEST';
     if (userProfile.name) {
         dispName = userProfile.name;
@@ -752,7 +754,7 @@ let currentTutorialType = '';
 function startTutorial(type) {
     isTutorialRunning = true; 
     
-    // v0.64 Tutorial Reset & Hardcode Anchor
+    // v0.65 Tutorial Reset & Hardcode Anchor
     if (type === 'general') {
         window.location.hash = '#results'; // Clear views
         activeFilters = []; // Clear filters
@@ -908,6 +910,16 @@ function resetBackButton(label = '← Back to Results', target = 'results') {
     btn.dataset.backTarget = target;
 }
 
+function formatReportTimestamp(date = new Date()) {
+    const dd = String(date.getDate()).padStart(2, '0');
+    const mm = String(date.getMonth() + 1).padStart(2, '0');
+    const yy = String(date.getFullYear()).slice(-2);
+    const hh = String(date.getHours()).padStart(2, '0');
+    const min = String(date.getMinutes()).padStart(2, '0');
+    const ss = String(date.getSeconds()).padStart(2, '0');
+    return `${dd}-${mm}-${yy} ${hh}-${min}-${ss}`;
+}
+
 window.flagListing = function(id, name, type="Venue/Event") {
     const modal = document.getElementById('formsubmit-modal');
     if(modal) {
@@ -925,6 +937,21 @@ window.flagListing = function(id, name, type="Venue/Event") {
         const emailInp = modal.querySelector('input[name="email"]');
         if(nameInp && !nameInp.value) nameInp.value = userProfile.name || 'Backroom User';
         if(emailInp && !emailInp.value) emailInp.value = systemInfo.form_default_email || 'your@email.com';
+
+        const msg = modal.querySelector('textarea[name="message"]');
+        if(msg) {
+            const cleanId = String(id || '').trim();
+            const cleanName = String(name || '').trim();
+            if(cleanId && cleanId !== 'N/A') {
+                msg.value = `Report problem with ${cleanId} ${cleanName} ${formatReportTimestamp()}
+--------------------------
+Type your message here`;
+                msg.selectionStart = msg.selectionEnd = msg.value.length;
+            } else if(!msg.value.trim()) {
+                msg.value = 'Type your message here';
+                msg.select();
+            }
+        }
 
         modal.classList.remove('hidden');
     }
@@ -959,26 +986,15 @@ function setupEventListeners() {
     };
 
     const fsForm = document.getElementById('fs-form');
-    if(fsForm && !fsForm.dataset.ajaxBound) {
-        fsForm.dataset.ajaxBound = 'true';
-        fsForm.addEventListener('submit', (e) => {
-            e.preventDefault();
-            if (!fsForm.checkValidity()) {
-                fsForm.reportValidity();
-                return;
-            }
-            const submitBtn = fsForm.querySelector('button[type="submit"]');
-            if(submitBtn) {
-                submitBtn.disabled = false;
-                submitBtn.innerText = 'Send Message';
-            }
+    if(fsForm && !fsForm.dataset.submitBound) {
+        fsForm.dataset.submitBound = 'true';
+        fsForm.addEventListener('submit', () => {
             fsForm.action = FORMSUBMIT_ENDPOINT;
             fsForm.method = 'POST';
-            fsForm.target = 'formsubmit-frame';
-            document.getElementById('formsubmit-flow-modal')?.classList.remove('hidden');
+            fsForm.target = '_blank';
+            showToast('Continue in the FormSubmit tab to complete verification.');
             document.getElementById('formsubmit-modal')?.classList.add('hidden');
-            showToast('Complete the FormSubmit verification window to send your message.');
-            HTMLFormElement.prototype.submit.call(fsForm);
+            setTimeout(() => fsForm.removeAttribute('target'), 1500);
         });
     }
 
@@ -986,8 +1002,6 @@ function setupEventListeners() {
         const form = document.getElementById('fs-form');
         if (!form) return;
         if (!form.checkValidity()) {
-            document.getElementById('formsubmit-flow-modal')?.classList.add('hidden');
-            document.getElementById('formsubmit-modal')?.classList.remove('hidden');
             form.reportValidity();
             return;
         }
@@ -996,7 +1010,7 @@ function setupEventListeners() {
         form.target = '_blank';
         showToast('Continue in the FormSubmit tab to complete verification.');
         HTMLFormElement.prototype.submit.call(form);
-        form.removeAttribute('target');
+        setTimeout(() => form.removeAttribute('target'), 1500);
     });
 
     addEvt('btn-formsubmit-flow-close', 'click', () => {
@@ -1026,6 +1040,13 @@ function setupEventListeners() {
     
     addEvt('btn-settings', 'click', () => settingsModal?.classList.remove('hidden'));
     addEvt('btn-profile-menu', 'click', openProfileMenu);
+    const previewShortcut = document.getElementById('preview-img-wrapper');
+    if(previewShortcut && !previewShortcut.dataset.avatarShortcutBound) {
+        previewShortcut.dataset.avatarShortcutBound = 'true';
+        previewShortcut.addEventListener('click', () => {
+            if(window.innerWidth <= 768 && typeof window.switchProfileTab === 'function') window.switchProfileTab(2);
+        });
+    }
     addEvt('btn-save-profile-unsaved', 'click', () => {
         document.getElementById('btn-save-profile')?.click();
         profileModal?.classList.add('hidden');
@@ -1248,6 +1269,13 @@ function setupEventListeners() {
         document.body.dataset.sidebarBound = 'true';
         hitArea.addEventListener('click', (e) => { e.stopPropagation(); openSidebarTemporarily(); });
         hitArea.addEventListener('touchstart', (e) => { e.stopPropagation(); openSidebarTemporarily(); }, {passive:true});
+        sidebar.addEventListener('click', (e) => {
+            if(sidebar.classList.contains('sidebar-opening')) {
+                e.preventDefault();
+                e.stopImmediatePropagation();
+                return false;
+            }
+        }, true);
         sidebar.addEventListener('click', (e) => { e.stopPropagation(); openSidebarTemporarily(); });
         document.addEventListener('click', (e) => {
             if(!sidebar.classList.contains('visible')) return;
@@ -1311,7 +1339,7 @@ function updateProfileDisplay() {
         dispName = userProfile.name;
     } else if (userProfile.avatar && userProfile.avatar !== 'noavatar01.png') {
         const found = avatarData.find(a => a.file === userProfile.avatar);
-        if(found) dispName = found.label; // v0.64 Fallback Name Logic
+        if(found) dispName = found.label; // v0.65 Fallback Name Logic
     }
 
     topName.innerText = dispName;
@@ -1383,14 +1411,20 @@ function renderDynamicFilters(filteredData) {
         const colorClass = getTagColorClass(tag);
         const isActive = activeFilters.includes(tag);
         const isAvailable = availableTags.has(tag);
-        const disabledClass = (!isAvailable && !isActive) ? 'muted-chip' : '';
-        html += `<button class="chip pill-btn ${colorClass} ${isActive ? 'active' : ''} ${disabledClass}" data-filter="${tag}">${tag}</button>`;
+        const isDisabled = (!isAvailable && !isActive);
+        const disabledClass = isDisabled ? 'muted-chip' : '';
+        const disabledAttrs = isDisabled ? ' data-disabled="true" aria-disabled="true" title="No matching venues with current filters"' : '';
+        html += `<button class="chip pill-btn ${colorClass} ${isActive ? 'active' : ''} ${disabledClass}" data-filter="${tag}"${disabledAttrs}>${tag}</button>`;
     });
     container.innerHTML = html;
 
     container.querySelectorAll('.chip').forEach(chip => {
         chip.addEventListener('click', (e) => {
             recordUserInteraction();
+            if(e.currentTarget.dataset.disabled === 'true') {
+                showToast('No matching venues with current filters.');
+                return;
+            }
             const tag = e.currentTarget.getAttribute('data-filter');
 
             if(tag === '__close_to_me') {
@@ -1856,7 +1890,7 @@ function renderProfileAvatars() {
         item.className = 'avatar-item';
         if (avatar.file === userProfile.avatar) item.classList.add('selected');
         
-        // v0.64 Title fallback for desktop span hiding
+        // v0.65 Title fallback for desktop span hiding
         item.innerHTML = `<img src="Profile_images/${avatar.file}" onerror="this.parentElement.style.display='none';" alt="${avatar.label}" title="${avatar.label}"><span>${avatar.label}</span>`;
         
         item.addEventListener('click', () => {
@@ -1946,7 +1980,7 @@ function openProfileMenu() {
         window.switchProfileTab(1);
     }
     
-    // v0.64 Dynamic Fallback welcome string
+    // v0.65 Dynamic Fallback welcome string
     const privacyGreeting = document.getElementById('profile-privacy-greeting');
     let dispName = 'Guest';
     if (userProfile.name) {
@@ -2082,7 +2116,7 @@ function checkImportPreview() {
     }
 }
 
-// v0.64 Random Placeholder Infinite Loop Breaker
+// v0.65 Random Placeholder Infinite Loop Breaker
 function handleImageCarousel(imgElement) {
     imgElement.addEventListener('click', (e) => {
         e.stopPropagation(); 
@@ -2098,7 +2132,7 @@ function handleImageCarousel(imgElement) {
             showToast("Double tap the venue name to open");
         };
         tempImg.onerror = () => {
-            // v0.64 Random image pool selection
+            // v0.65 Random image pool selection
             const randomFallback = PLACEHOLDER_POOL[Math.floor(Math.random() * PLACEHOLDER_POOL.length)];
             imgElement.onerror = null; 
             imgElement.src = randomFallback;

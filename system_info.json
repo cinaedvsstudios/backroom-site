@@ -7,8 +7,8 @@
   "default_city": "Berlin",
   "default_country": "Germany",
   "default_language": "en",
-  "version": "v0.64",
-  "build_date": "2026-05-17",
+  "version": "v0.65",
+  "build_date": "2026-05-18",
   "age_gate_title": "18+ Entry Gate",
   "age_gate_text": "You must be 18 or older to enter. This site contains adult themes, nightlife information, fetish venues, and sex-positive venue listings.",
   "disclaimer_text": "All information provided on this platform is sourced directly from public domains, including but not limited to: official venue websites, Instagram, Facebook, Google Business profiles, and public directory listings. This page is not responsible for the accuracy of this data or for any information that may be considered defamatory. Users rely on this information at their own risk.",
@@ -20,7 +20,7 @@
   "instagram_label": "Follow us on Instagram",
   "instagram_url": "https://www.instagram.com/the.backroom.guide/",
   "formsubmit_endpoint": "https://formsubmit.cloud/f/ae0e141d-ad94-47fe-ac46-55702c6534a6/",
-  "form_success_message": "Complete the FormSubmit verification window to send your message.",
+  "form_success_message": "Continue in the FormSubmit tab to complete verification.",
   "form_default_email": "your@email.com",
   "thanks_page_url": "https://cinaedvsstudios.github.io/Backroom-site/thanks.html",
   "featured_page_title": "Featured Venues",
@@ -107,5 +107,5 @@
     "form_submit_failed": "The report could not be submitted. Please try again.",
     "location_unavailable": "Location is unavailable. You can enter a location manually."
   },
-  "form_pending_message": "Complete the FormSubmit verification window below. If it does not load, use the new-tab button."
+  "form_pending_message": "The FormSubmit verification opens in a new tab. Complete it there to send your message."
 }

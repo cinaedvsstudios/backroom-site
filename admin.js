@@ -8,6 +8,8 @@ let showHiddenFields = false;
 
 let avatarAdminData = [];
 let tempMergeData = []; 
+let auditResults = null;
+let dismissedAuditKeys = new Set();
 
 let editorHistory = [];
 let historyIndex = -1;
@@ -825,7 +827,7 @@ wysiwygContent?.addEventListener('input', () => {
     window.editorSaveTimer = setTimeout(saveEditorState, 500);
 });
 
-// v0.64 Page Selector Updated
+// v0.65 Page Selector Updated
 document.getElementById('editor-page-select')?.addEventListener('change', (e) => {
     if(e.target.value === 'new') {
         const defaultText = `<h1>New Page</h1><p>Start typing... dont forget to have this page added to the menu it wont appear automatically</p>`;
@@ -951,6 +953,212 @@ window.downloadEditorHTML = function() {
     a.click();
 }
 
+
+function normaliseAuditValue(value) {
+    return String(value ?? '').trim();
+}
+
+function isBlankAuditValue(value) {
+    return normaliseAuditValue(value) === '';
+}
+
+function isLikelyExternalUrl(url) {
+    return /^https?:\/\//i.test(normaliseAuditValue(url));
+}
+
+function isValidUrlFormat(url) {
+    const raw = normaliseAuditValue(url);
+    if(!raw) return true;
+    try {
+        const parsed = new URL(raw);
+        return parsed.protocol === 'http:' || parsed.protocol === 'https:' || parsed.protocol === 'mailto:';
+    } catch(e) {
+        return false;
+    }
+}
+
+function splitUrlList(value) {
+    const raw = normaliseAuditValue(value);
+    if(!raw) return [];
+    return raw.split(/[\n,]+/).map(v => v.trim()).filter(Boolean);
+}
+
+function addAuditIssue(results, section, row, field, problem) {
+    const id = row.Venue_ID || row.Event_ID || 'NO_ID';
+    const name = row.Name || row.Event_Name || '';
+    const key = `${section}|${id}|${field}|${problem}`;
+    if(dismissedAuditKeys.has(key)) return;
+    results[section].push({ key, id, name, field, problem });
+}
+
+function isLocalImageReference(value) {
+    const raw = normaliseAuditValue(value);
+    return raw && !isLikelyExternalUrl(raw) && /\.(png|jpe?g|webp|gif)$/i.test(raw);
+}
+
+function checkImageExists(src) {
+    return new Promise(resolve => {
+        if(!src) return resolve(false);
+        const img = new Image();
+        const done = (ok) => {
+            img.onload = null;
+            img.onerror = null;
+            resolve(ok);
+        };
+        const timer = setTimeout(() => done(false), 3500);
+        img.onload = () => { clearTimeout(timer); done(true); };
+        img.onerror = () => { clearTimeout(timer); done(false); };
+        img.src = src + (src.includes('?') ? '&' : '?') + 'audit=' + Date.now();
+    });
+}
+
+async function runVenueFieldAudit() {
+    const results = { Images: [], URLs: [], Ratings: [], Address: [] };
+    const rows = Array.isArray(draftData) ? draftData : [];
+    const ratingFields = ['Rating_General','Rating_Darkroom','Rating_Age_Range','Rating_Cost','Rating_Size','Rating_Location','Rating_Busyness'];
+    const publicUrlFields = ['Website_URL','Instagram_URL','Facebook_URL','Other_URL','Source_URLs'];
+    const allUrlFields = ['Google_Maps_URL','Apple_Maps_URL','Website_URL','Instagram_URL','Facebook_URL','Other_URL','Source_URLs'];
+
+    for(const row of rows) {
+        const imageUrl = normaliseAuditValue(row.Image_URL);
+        if(!imageUrl) {
+            addAuditIssue(results, 'Images', row, 'Image_URL', 'Image_URL is blank.');
+        } else if(isLocalImageReference(imageUrl)) {
+            const exists = await checkImageExists(imageUrl);
+            if(!exists) addAuditIssue(results, 'Images', row, 'Image_URL', `Local image reference did not load: ${imageUrl}`);
+        }
+
+        const hasAnyPublicUrl = publicUrlFields.some(field => !isBlankAuditValue(row[field]));
+        if(!hasAnyPublicUrl) {
+            addAuditIssue(results, 'URLs', row, 'URL fields', 'No Website, Instagram, Facebook, Other, or Source URL is provided.');
+        }
+
+        for(const field of allUrlFields) {
+            const values = field === 'Source_URLs' ? splitUrlList(row[field]) : [normaliseAuditValue(row[field])].filter(Boolean);
+            for(const url of values) {
+                if(!isValidUrlFormat(url)) addAuditIssue(results, 'URLs', row, field, `Malformed URL format: ${url}`);
+            }
+        }
+
+        const hasAnyRating = ratingFields.some(field => {
+            const value = row[field];
+            if(value === 0 || value === '0') return true;
+            return !isBlankAuditValue(value);
+        });
+        if(!hasAnyRating) {
+            addAuditIssue(results, 'Ratings', row, 'Rating_*', 'All seven rating fields are blank.');
+        }
+
+        if(isBlankAuditValue(row.Address)) {
+            addAuditIssue(results, 'Address', row, 'Address', 'Address is blank.');
+        }
+    }
+
+    return results;
+}
+
+function auditIssueCount(results) {
+    if(!results) return 0;
+    return Object.values(results).reduce((sum, list) => sum + list.length, 0);
+}
+
+function renderAuditResults() {
+    const container = document.getElementById('audit-field-results');
+    if(!container) return;
+
+    if(currentMode !== 'venues') {
+        container.innerHTML = `<p class="audit-note"><strong>Event audit is coming later.</strong><br>v0.65 only runs the Venue Data audit because event listings need different validation logic.</p>`;
+        return;
+    }
+
+    if(!auditResults) {
+        container.innerHTML = `<p class="audit-note">Run an audit to check venue data. v0.65 checks blank/malformed fields and local image paths where the browser can verify them. It does not reliably check whether external websites are live.</p>`;
+        return;
+    }
+
+    const total = auditIssueCount(auditResults);
+    let html = `<p class="audit-note"><strong>${total} issue${total === 1 ? '' : 's'} found.</strong><br>URL live-status is not checked in v0.65; only blanks and malformed URL formats are checked.</p>`;
+
+    Object.entries(auditResults).forEach(([section, rows]) => {
+        const safeSection = section.replace(/[^a-z0-9]/gi, '-').toLowerCase();
+        html += `<div class="audit-section" data-section="${safeSection}">
+            <div class="audit-section-header" onclick="this.parentElement.classList.toggle('collapsed')">
+                <span>▾ ${section}</span><span>${rows.length}</span>
+            </div>
+            <div class="audit-section-body">`;
+        if(rows.length === 0) {
+            html += `<div class="audit-note">No ${section.toLowerCase()} issues found.</div>`;
+        } else {
+            rows.forEach(issue => {
+                html += `<div class="audit-row" data-audit-key="${escapeHtml(issue.key)}">
+                    <input type="checkbox" title="Dismiss this item" onchange="dismissAuditIssue('${escapeJs(issue.key)}')">
+                    <span class="audit-row-id" onclick="jumpToAuditRow('${escapeJs(issue.id)}')">${escapeHtml(issue.id)}</span>
+                    <span class="audit-row-problem"><strong>${escapeHtml(issue.name || '')}</strong><br>${escapeHtml(issue.field)}: ${escapeHtml(issue.problem)}</span>
+                </div>`;
+            });
+        }
+        html += `</div></div>`;
+    });
+    container.innerHTML = html;
+}
+
+function escapeHtml(value) {
+    return String(value ?? '').replace(/[&<>"]/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[ch]));
+}
+
+function escapeJs(value) {
+    return String(value ?? '').replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/\n/g, '\\n').replace(/\r/g, '');
+}
+
+window.dismissAuditIssue = function(key) {
+    dismissedAuditKeys.add(key);
+    if(auditResults) {
+        Object.keys(auditResults).forEach(section => {
+            auditResults[section] = auditResults[section].filter(issue => issue.key !== key);
+        });
+    }
+    renderAuditResults();
+};
+
+window.jumpToAuditRow = function(id) {
+    jumpToRow(id);
+};
+
+async function openAuditFieldWindow() {
+    const win = document.getElementById('audit-field-float');
+    if(win) win.classList.remove('hidden');
+    if(currentMode !== 'venues') {
+        renderAuditResults();
+        showToast('Event audit coming later.');
+        return;
+    }
+    if(!draftData || draftData.length === 0) {
+        const container = document.getElementById('audit-field-results');
+        if(container) container.innerHTML = `<p class="audit-note">No Venue Data loaded. Load live data or upload JSON first.</p>`;
+        return;
+    }
+    if(!auditResults) await refreshAuditFieldWindow();
+    else renderAuditResults();
+}
+
+async function refreshAuditFieldWindow() {
+    const container = document.getElementById('audit-field-results');
+    if(currentMode !== 'venues') {
+        auditResults = null;
+        renderAuditResults();
+        return;
+    }
+    if(container) container.innerHTML = `<p class="audit-note">Running Venue Data audit…</p>`;
+    auditResults = await runVenueFieldAudit();
+    renderAuditResults();
+}
+
+function clearAuditFieldWindow() {
+    auditResults = null;
+    dismissedAuditKeys = new Set();
+    renderAuditResults();
+}
+
 document.addEventListener('DOMContentLoaded', () => {
 
     document.querySelectorAll('.age-pill').forEach(pill => {
@@ -1028,8 +1236,11 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     
     document.getElementById('btn-formatting-guide')?.addEventListener('click', () => {
-        document.getElementById('formatting-guide-modal').classList.remove('hidden');
+        document.getElementById('formatting-guide-float')?.classList.remove('hidden');
     });
+    document.getElementById('btn-audit-field')?.addEventListener('click', () => openAuditFieldWindow());
+    document.getElementById('btn-audit-refresh')?.addEventListener('click', () => refreshAuditFieldWindow());
+    document.getElementById('btn-audit-clear')?.addEventListener('click', () => clearAuditFieldWindow());
 
     document.getElementById('btn-load-editor-page')?.addEventListener('click', () => loadEditorPage());
     document.getElementById('editor-page-select')?.addEventListener('change', () => loadEditorPage());
@@ -1054,6 +1265,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     makeDraggable('clipboard-header', 'clipboard-float');
     makeDraggable('preview-import-header', 'preview-import-modal');
+    makeDraggable('formatting-guide-header', 'formatting-guide-float');
+    makeDraggable('audit-field-header', 'audit-field-float');
 
     const clipboard = document.getElementById('clipboard-text');
     if(clipboard) {
