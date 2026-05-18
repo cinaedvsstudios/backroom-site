@@ -3,9 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Backroom Admin Dashboard - v0.65</title>
+    <title>Backroom Admin Dashboard - v0.66</title>
     <link href="https://fonts.googleapis.com/css2?family=Antonio:wght@400;700&family=Barlow+Condensed:wght@400;500;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css?v=0.65">
+    <link rel="stylesheet" href="style.css?v=0.66">
     <style>
         .admin-layout { display: flex; height: 100vh; overflow: hidden; background: var(--bg-color); color: #fff; font-family: sans-serif; }
         .admin-sidebar { width: 250px; background: var(--panel-dark); border-right: 1px solid var(--panel-mid); padding: 20px 0; display:flex; flex-direction:column; flex-shrink:0; overflow-y:auto; }
@@ -47,7 +47,7 @@
         #preview-thead th:nth-child(1), #preview-table-container td:nth-child(1) { position: sticky; left: 0; z-index: 6; background: var(--panel-dark); text-align: center; border-right: 1px solid var(--panel-mid); }
         #preview-thead th:nth-child(2), #preview-table-container td:nth-child(2) { position: sticky; left: 50px; z-index: 6; background: var(--panel-dark); border-right: 1px solid var(--panel-mid); }
 
-        /* v0.65 admin polish */
+        /* v0.66 admin polish */
         #admin-table-container, .table-wrapper, .admin-main { scrollbar-width: thick; scrollbar-color: var(--primary-blue) var(--near-black); }
         #admin-table-container::-webkit-scrollbar, .table-wrapper::-webkit-scrollbar, .admin-main::-webkit-scrollbar { width: 20px !important; height: 20px !important; }
         #admin-table-container::-webkit-scrollbar-thumb, .table-wrapper::-webkit-scrollbar-thumb, .admin-main::-webkit-scrollbar-thumb { background: var(--primary-blue) !important; border: 3px solid var(--near-black) !important; border-radius: 999px !important; }
@@ -68,6 +68,9 @@
         .audit-row-id { color:var(--primary-blue); cursor:pointer; text-decoration:underline; font-weight:bold; word-break:break-word; }
         .audit-row-problem { color:var(--text-light); line-height:1.35; }
         .audit-note { color:var(--label-grey); font-size:.9rem; line-height:1.4; margin-bottom:10px; }
+
+        .format-pill { display:inline-flex; align-items:center; justify-content:center; padding:3px 10px; margin:0 4px 3px 0; border:1px solid var(--primary-blue); border-radius:999px; background:rgba(44,168,212,.16); color:#fff; font-family:monospace; font-weight:bold; cursor:pointer; }
+        .format-pill:hover, .format-pill:focus { background:var(--primary-blue); color:#000; outline:none; }
     </style>
 </head>
 <body>
@@ -104,14 +107,15 @@
         </div>
         <div class="admin-float-body" style="font-family:'Barlow Condensed', sans-serif; font-size:1rem;">
             <p style="margin-bottom:10px; color:var(--text-light);">Use these shortcuts in venue/event description text areas while you edit the table underneath:</p>
-            <ul style="margin-left:20px; line-height:1.8;">
-                <li><strong>==</strong> : Line break</li>
-                <li><strong>=====</strong> : Draw horizontal line</li>
-                <li><strong>------</strong> : Hidden marker / ignored</li>
-                <li><strong>***** Title</strong> : Create a blue H4 heading</li>
-                <li><strong>-- Item</strong> : Create bullet point list</li>
-                <li><strong>!!text!!</strong> : Make text <strong>bold</strong></li>
+            <ul style="margin-left:20px; line-height:1.9;">
+                <li><button type="button" class="format-pill" data-copy="==">==</button> Line break</li>
+                <li><button type="button" class="format-pill" data-copy="=====">=====</button> Draw horizontal line</li>
+                <li><button type="button" class="format-pill" data-copy="------">------</button> Hidden marker / ignored</li>
+                <li><button type="button" class="format-pill" data-copy="***** ">***** Title</button> Create a blue H4 heading</li>
+                <li><button type="button" class="format-pill" data-copy="-- ">-- Item</button> Create bullet point list</li>
+                <li><button type="button" class="format-pill" data-copy="!!text!!">!!text!!</button> Make text <strong>bold</strong></li>
             </ul>
+            <p class="audit-note" style="margin-top:10px;">Click a pill to copy the marker to your clipboard.</p>
         </div>
     </div>
 
@@ -121,7 +125,7 @@
             <span style="cursor:pointer; font-size:1.2rem;" onclick="document.getElementById('audit-field-float').classList.add('hidden')">❌</span>
         </div>
         <div id="audit-field-results" class="admin-float-body">
-            <p class="audit-note">Run an audit to check venue data. v0.65 checks blank/malformed fields and local image paths where the browser can verify them. It does not reliably check whether external websites are live.</p>
+            <p class="audit-note">Run an audit to check venue data. v0.66 checks blank/malformed fields and local image paths where the browser can verify them. It does not reliably check whether external websites are live.</p>
         </div>
         <div class="admin-float-actions">
             <button id="btn-audit-refresh" class="btn primary-btn pill-btn">Refresh Audit</button>
@@ -182,7 +186,7 @@
 
     <div id="admin-shell" class="admin-layout hidden">
         <aside class="admin-sidebar">
-            <h2 class="display-font" style="color:var(--primary-blue); padding: 0 20px 20px; text-align:center;">BR ADMIN <span style="font-size: 0.9rem; color: var(--label-grey); margin-left: 5px;">v0.65</span></h2>
+            <h2 class="display-font" style="color:var(--primary-blue); padding: 0 20px 20px; text-align:center;">BR ADMIN <span style="font-size: 0.9rem; color: var(--label-grey); margin-left: 5px;">v0.66</span></h2>
             
             <div style="padding: 0 20px 15px; display:flex; gap:5px; justify-content:center;">
                 <button id="btn-text-size-down" class="btn secondary-btn" style="padding: 4px; font-size:0.9rem;">A-</button>
@@ -385,6 +389,6 @@
         </main>
     </div>
 
-    <script src="admin.js?v=0.65"></script>
+    <script src="admin.js?v=0.66"></script>
 </body>
 </html>

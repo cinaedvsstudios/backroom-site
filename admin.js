@@ -827,7 +827,7 @@ wysiwygContent?.addEventListener('input', () => {
     window.editorSaveTimer = setTimeout(saveEditorState, 500);
 });
 
-// v0.65 Page Selector Updated
+// v0.66 Page Selector Updated
 document.getElementById('editor-page-select')?.addEventListener('change', (e) => {
     if(e.target.value === 'new') {
         const defaultText = `<h1>New Page</h1><p>Start typing... dont forget to have this page added to the menu it wont appear automatically</p>`;
@@ -1067,17 +1067,17 @@ function renderAuditResults() {
     if(!container) return;
 
     if(currentMode !== 'venues') {
-        container.innerHTML = `<p class="audit-note"><strong>Event audit is coming later.</strong><br>v0.65 only runs the Venue Data audit because event listings need different validation logic.</p>`;
+        container.innerHTML = `<p class="audit-note"><strong>Event audit is coming later.</strong><br>v0.66 only runs the Venue Data audit because event listings need different validation logic.</p>`;
         return;
     }
 
     if(!auditResults) {
-        container.innerHTML = `<p class="audit-note">Run an audit to check venue data. v0.65 checks blank/malformed fields and local image paths where the browser can verify them. It does not reliably check whether external websites are live.</p>`;
+        container.innerHTML = `<p class="audit-note">Run an audit to check venue data. v0.66 checks blank/malformed fields and local image paths where the browser can verify them. It does not reliably check whether external websites are live.</p>`;
         return;
     }
 
     const total = auditIssueCount(auditResults);
-    let html = `<p class="audit-note"><strong>${total} issue${total === 1 ? '' : 's'} found.</strong><br>URL live-status is not checked in v0.65; only blanks and malformed URL formats are checked.</p>`;
+    let html = `<p class="audit-note"><strong>${total} issue${total === 1 ? '' : 's'} found.</strong><br>URL live-status is not checked in v0.66; only blanks and malformed URL formats are checked.</p>`;
 
     Object.entries(auditResults).forEach(([section, rows]) => {
         const safeSection = section.replace(/[^a-z0-9]/gi, '-').toLowerCase();
@@ -1237,6 +1237,27 @@ document.addEventListener('DOMContentLoaded', () => {
     
     document.getElementById('btn-formatting-guide')?.addEventListener('click', () => {
         document.getElementById('formatting-guide-float')?.classList.remove('hidden');
+    });
+
+    document.querySelectorAll('.format-pill').forEach(pill => {
+        pill.addEventListener('click', async () => {
+            const text = pill.dataset.copy || pill.textContent.trim();
+            try {
+                await navigator.clipboard.writeText(text);
+                showToast(`Copied: ${text}`);
+            } catch (err) {
+                const tmp = document.createElement('textarea');
+                tmp.value = text;
+                tmp.style.position = 'fixed';
+                tmp.style.left = '-9999px';
+                document.body.appendChild(tmp);
+                tmp.focus();
+                tmp.select();
+                try { document.execCommand('copy'); showToast(`Copied: ${text}`); }
+                catch (e) { showToast('Copy failed. Select the pill text manually.'); }
+                tmp.remove();
+            }
+        });
     });
     document.getElementById('btn-audit-field')?.addEventListener('click', () => openAuditFieldWindow());
     document.getElementById('btn-audit-refresh')?.addEventListener('click', () => refreshAuditFieldWindow());

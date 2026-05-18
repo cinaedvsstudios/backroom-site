@@ -1,9 +1,9 @@
 // --- Application State ---
-const APP_VERSION = "v0.65";
+const APP_VERSION = "v0.66";
 const APP_DATE = "18 May 2026";
 
 let systemInfo = {}, designTheme = {}, venues = [], events = [];
-let activeFilters = []; // v0.65 Multi-select Array
+let activeFilters = []; // v0.66 Multi-select Array
 let selectedCardId = null;
 let venueReturnHash = '#results';
 let currentTargetVenue = null; 
@@ -695,7 +695,7 @@ function renderBlankPageView(page) {
 function renderWelcomeScreen() {
     const wName = document.getElementById('welcome-name');
     const wAvatar = document.getElementById('welcome-avatar');
-    // v0.65 Dynamic Fallback Name
+    // v0.66 Dynamic Fallback Name
     let dispName = 'GUEST';
     if (userProfile.name) {
         dispName = userProfile.name;
@@ -754,7 +754,7 @@ let currentTutorialType = '';
 function startTutorial(type) {
     isTutorialRunning = true; 
     
-    // v0.65 Tutorial Reset & Hardcode Anchor
+    // v0.66 Tutorial Reset & Hardcode Anchor
     if (type === 'general') {
         window.location.hash = '#results'; // Clear views
         activeFilters = []; // Clear filters
@@ -1339,7 +1339,7 @@ function updateProfileDisplay() {
         dispName = userProfile.name;
     } else if (userProfile.avatar && userProfile.avatar !== 'noavatar01.png') {
         const found = avatarData.find(a => a.file === userProfile.avatar);
-        if(found) dispName = found.label; // v0.65 Fallback Name Logic
+        if(found) dispName = found.label; // v0.66 Fallback Name Logic
     }
 
     topName.innerText = dispName;
@@ -1890,7 +1890,7 @@ function renderProfileAvatars() {
         item.className = 'avatar-item';
         if (avatar.file === userProfile.avatar) item.classList.add('selected');
         
-        // v0.65 Title fallback for desktop span hiding
+        // v0.66 Title fallback for desktop span hiding
         item.innerHTML = `<img src="Profile_images/${avatar.file}" onerror="this.parentElement.style.display='none';" alt="${avatar.label}" title="${avatar.label}"><span>${avatar.label}</span>`;
         
         item.addEventListener('click', () => {
@@ -1980,7 +1980,7 @@ function openProfileMenu() {
         window.switchProfileTab(1);
     }
     
-    // v0.65 Dynamic Fallback welcome string
+    // v0.66 Dynamic Fallback welcome string
     const privacyGreeting = document.getElementById('profile-privacy-greeting');
     let dispName = 'Guest';
     if (userProfile.name) {
@@ -2116,7 +2116,7 @@ function checkImportPreview() {
     }
 }
 
-// v0.65 Random Placeholder Infinite Loop Breaker
+// v0.66 Random Placeholder Infinite Loop Breaker
 function handleImageCarousel(imgElement) {
     imgElement.addEventListener('click', (e) => {
         e.stopPropagation(); 
@@ -2132,7 +2132,7 @@ function handleImageCarousel(imgElement) {
             showToast("Double tap the venue name to open");
         };
         tempImg.onerror = () => {
-            // v0.65 Random image pool selection
+            // v0.66 Random image pool selection
             const randomFallback = PLACEHOLDER_POOL[Math.floor(Math.random() * PLACEHOLDER_POOL.length)];
             imgElement.onerror = null; 
             imgElement.src = randomFallback;
