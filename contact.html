@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Backroom Contact</title>
+
+  <style>
+    :root {
+      --bg-dark: #1b1b1b;
+      --panel-dark: #101820;
+      --button-dark-blue: #001d33;
+      --accent-blue: #007bb9;
+      --frame-red: #f90000;
+      --text-main: #f2f2f2;
+      --text-muted: #8fb8cf;
+      --shadow-blue: rgba(0, 123, 185, 0.75);
+      --shadow-red: rgba(249, 0, 0, 0.45);
+      --radius-pill: 9999px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      width: 100%;
+      min-height: 100%;
+      margin: 0;
+      padding: 0;
+      background: var(--bg-dark);
+      color: var(--text-main);
+      font-family: Arial, Helvetica, sans-serif;
+    }
+
+    body {
+      display: flex;
+      justify-content: center;
+      align-items: stretch;
+    }
+
+    .page-shell {
+      width: 100%;
+      min-height: 100vh;
+      background:
+        radial-gradient(circle at top center, rgba(0, 123, 185, 0.13), transparent 30rem),
+        linear-gradient(180deg, #232323 0%, var(--bg-dark) 38%, #111 100%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 18px;
+    }
+
+    .contact-wrapper {
+      width: min(100%, 860px);
+      min-height: calc(100vh - 36px);
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .control-bar {
+      width: 100%;
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      background: rgba(0, 0, 0, 0.35);
+      border: 1px solid rgba(0, 123, 185, 0.7);
+      border-radius: 22px;
+      padding: 10px;
+      box-shadow: 0 0 14px rgba(0, 123, 185, 0.22);
+    }
+
+    .contact-title {
+      color: var(--accent-blue);
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      padding: 0 10px;
+      font-size: 0.9rem;
+      white-space: nowrap;
+    }
+
+    .button-row {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
+    .pill-btn {
+      appearance: none;
+      border: 1.5px solid var(--accent-blue);
+      background: var(--button-dark-blue);
+      color: var(--accent-blue);
+      border-radius: var(--radius-pill);
+      padding: 9px 16px;
+      font-size: 0.78rem;
+      font-weight: 800;
+      letter-spacing: 0.07em;
+      text-transform: uppercase;
+      cursor: pointer;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 38px;
+      transition:
+        transform 0.18s ease,
+        box-shadow 0.18s ease,
+        background 0.18s ease;
+    }
+
+    .pill-btn:hover,
+    .pill-btn:focus-visible {
+      background: #002845;
+      box-shadow: 0 0 14px var(--shadow-blue);
+      transform: translateY(-1px);
+      outline: none;
+    }
+
+    .pill-btn:active {
+      transform: translateY(1px);
+    }
+
+    .form-frame-shell {
+      width: 100%;
+      flex: 1;
+      min-height: 720px;
+      border: 2px solid var(--frame-red);
+      border-radius: 24px;
+      background: #050505;
+      overflow: hidden;
+      box-shadow:
+        0 0 22px var(--shadow-blue),
+        0 0 36px rgba(0, 123, 185, 0.28),
+        0 0 18px var(--shadow-red),
+        inset 0 0 24px rgba(0, 123, 185, 0.24);
+      position: relative;
+    }
+
+    .form-frame-shell::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      border-radius: 21px;
+      box-shadow:
+        inset 0 0 32px rgba(0, 123, 185, 0.32),
+        inset 0 0 10px rgba(249, 0, 0, 0.28);
+      z-index: 2;
+    }
+
+    .google-form-frame {
+      width: 100%;
+      height: 100%;
+      min-height: 720px;
+      border: 0;
+      display: block;
+      background: #fff;
+      position: relative;
+      z-index: 1;
+    }
+
+    .footer-note {
+      color: var(--text-muted);
+      font-size: 0.75rem;
+      text-align: center;
+      line-height: 1.45;
+      padding: 2px 12px 0;
+    }
+
+    .footer-note strong {
+      color: var(--accent-blue);
+    }
+
+    @media (max-width: 640px) {
+      .page-shell {
+        padding: 10px;
+      }
+
+      .contact-wrapper {
+        min-height: calc(100vh - 20px);
+      }
+
+      .control-bar {
+        justify-content: center;
+      }
+
+      .contact-title {
+        width: 100%;
+        text-align: center;
+      }
+
+      .button-row {
+        width: 100%;
+        justify-content: center;
+      }
+
+      .pill-btn {
+        flex: 1;
+        min-width: 120px;
+        padding: 9px 12px;
+      }
+
+      .form-frame-shell,
+      .google-form-frame {
+        min-height: 740px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <main class="page-shell">
+    <section class="contact-wrapper" aria-label="Backroom contact form wrapper">
+
+      <nav class="control-bar" aria-label="Contact form controls">
+        <div class="contact-title">Contact / Submit Listing</div>
+
+        <div class="button-row">
+          <a
+            class="pill-btn"
+            id="open-form-new-tab"
+            href="PASTE_GOOGLE_FORM_PUBLIC_LINK_HERE"
+            target="_blank"
+            rel="noopener noreferrer">
+            Open Form
+          </a>
+
+          <button class="pill-btn" type="button" id="close-contact-page">
+            Close
+          </button>
+        </div>
+      </nav>
+
+      <section class="form-frame-shell" aria-label="Embedded Google form">
+        <iframe
+          class="google-form-frame"
+          id="google-form-frame"
+          src="PASTE_GOOGLE_FORM_EMBED_LINK_HERE"
+          title="Backroom contact Google Form"
+          loading="lazy">
+          Loading…
+        </iframe>
+      </section>
+
+      <p class="footer-note">
+        <strong>After submitting:</strong> use the Close button, or open the form in a new tab if the embedded form behaves strangely on mobile.
+      </p>
+
+    </section>
+  </main>
+
+  <script>
+    const GOOGLE_FORM_PUBLIC_LINK = "PASTE_GOOGLE_FORM_PUBLIC_LINK_HERE";
+    const GOOGLE_FORM_EMBED_LINK = "PASTE_GOOGLE_FORM_EMBED_LINK_HERE";
+
+    const openFormLink = document.getElementById("open-form-new-tab");
+    const formFrame = document.getElementById("google-form-frame");
+    const closeButton = document.getElementById("close-contact-page");
+
+    if (GOOGLE_FORM_PUBLIC_LINK && !GOOGLE_FORM_PUBLIC_LINK.includes("PASTE_")) {
+      openFormLink.href = GOOGLE_FORM_PUBLIC_LINK;
+    }
+
+    if (GOOGLE_FORM_EMBED_LINK && !GOOGLE_FORM_EMBED_LINK.includes("PASTE_")) {
+      formFrame.src = GOOGLE_FORM_EMBED_LINK;
+    }
+
+    closeButton.addEventListener("click", () => {
+      window.close();
+
+      setTimeout(() => {
+        if (!window.closed && window.history.length > 1) {
+          window.history.back();
+        }
+      }, 120);
+
+      setTimeout(() => {
+        if (!window.closed) {
+          closeButton.textContent = "Use browser close";
+          closeButton.blur();
+        }
+      }, 380);
+    });
+  </script>
+</body>
+</html>
