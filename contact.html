@@ -3,12 +3,11 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Backroom Contact</title>
+  <title>Report a problem / Contact</title>
 
   <style>
     :root {
       --bg-dark: #1b1b1b;
-      --panel-dark: #101820;
       --button-dark-blue: #001d33;
       --accent-blue: #007bb9;
       --frame-red: #f90000;
@@ -220,13 +219,13 @@
     <section class="contact-wrapper" aria-label="Backroom contact form wrapper">
 
       <nav class="control-bar" aria-label="Contact form controls">
-        <div class="contact-title">Contact / Submit Listing</div>
+        <div class="contact-title">Report a problem / Contact</div>
 
         <div class="button-row">
           <a
             class="pill-btn"
             id="open-form-new-tab"
-            href="PASTE_GOOGLE_FORM_PUBLIC_LINK_HERE"
+            href="https://docs.google.com/forms/d/e/1FAIpQLSePzZm2QhK51uPX6fSx91G1VRwo_Oz9PHuBP8i2KHNKtrFs3Q/viewform"
             target="_blank"
             rel="noopener noreferrer">
             Open Form
@@ -242,7 +241,7 @@
         <iframe
           class="google-form-frame"
           id="google-form-frame"
-          src="PASTE_GOOGLE_FORM_EMBED_LINK_HERE"
+          src="https://docs.google.com/forms/d/e/1FAIpQLSePzZm2QhK51uPX6fSx91G1VRwo_Oz9PHuBP8i2KHNKtrFs3Q/viewform?embedded=true"
           title="Backroom contact Google Form"
           loading="lazy">
           Loading…
@@ -257,20 +256,7 @@
   </main>
 
   <script>
-    const GOOGLE_FORM_PUBLIC_LINK = "PASTE_GOOGLE_FORM_PUBLIC_LINK_HERE";
-    const GOOGLE_FORM_EMBED_LINK = "PASTE_GOOGLE_FORM_EMBED_LINK_HERE";
-
-    const openFormLink = document.getElementById("open-form-new-tab");
-    const formFrame = document.getElementById("google-form-frame");
     const closeButton = document.getElementById("close-contact-page");
-
-    if (GOOGLE_FORM_PUBLIC_LINK && !GOOGLE_FORM_PUBLIC_LINK.includes("PASTE_")) {
-      openFormLink.href = GOOGLE_FORM_PUBLIC_LINK;
-    }
-
-    if (GOOGLE_FORM_EMBED_LINK && !GOOGLE_FORM_EMBED_LINK.includes("PASTE_")) {
-      formFrame.src = GOOGLE_FORM_EMBED_LINK;
-    }
 
     closeButton.addEventListener("click", () => {
       window.close();
