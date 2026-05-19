@@ -232,7 +232,7 @@
         <iframe
           class="google-form-frame"
           id="google-form-frame"
-          src="https://docs.google.com/forms/d/e/1FAIpQLSePzZm2QhK51uPX6fSx91G1VRwo_Oz9PHuBP8i2KHNKtrFs3Q/viewform?embedded=true"
+          src="about:blank"
           title="Backroom contact Google Form"
           loading="lazy">
           Loading…
@@ -240,13 +240,69 @@
       </section>
 
       <p class="footer-note">
-        <strong>After submitting:</strong> use the Close button, or open the form in a new tab if the embedded form behaves strangely on mobile.
+        <strong>After submitting:</strong> use the Close button. System fields are pre-filled automatically when this page is opened from a listing.
       </p>
 
     </section>
   </main>
 
   <script>
+    const FORM_BASE_URL = "https://docs.google.com/forms/d/e/1FAIpQLSePzZm2QhK51uPX6fSx91G1VRwo_Oz9PHuBP8i2KHNKtrFs3Q/viewform";
+
+    const ENTRY_IDS = {
+      name: "entry.726004286",
+      problem: "entry.393130259",
+      email: "entry.959984559",
+      sourcePage: "entry.1403563127",
+      venueId: "entry.1775775245",
+      pageUrl: "entry.405567701"
+    };
+
+    const query = new URLSearchParams(window.location.search);
+
+    function firstParam(names) {
+      for (const name of names) {
+        const value = query.get(name);
+        if (value !== null && value !== "") return value;
+      }
+      return "";
+    }
+
+    function addEntry(params, entryId, value) {
+      if (value !== null && value !== undefined && String(value).trim() !== "") {
+        params.set(entryId, String(value).trim());
+      }
+    }
+
+    function buildGoogleFormUrl() {
+      const formParams = new URLSearchParams();
+      formParams.set("embedded", "true");
+      formParams.set("usp", "pp_url");
+
+      const referrer = document.referrer || "";
+
+      const values = {
+        name: firstParam(["name"]),
+        problem: firstParam(["problem"]),
+        email: firstParam(["email"]),
+        sourcePage: firstParam(["sourcePage", "source", "system"]) || referrer || "direct",
+        venueId: firstParam(["venueId", "venueid", "listingId", "id"]),
+        pageUrl: firstParam(["pageUrl", "PageURL", "pageURL", "url"]) || referrer
+      };
+
+      addEntry(formParams, ENTRY_IDS.name, values.name);
+      addEntry(formParams, ENTRY_IDS.problem, values.problem);
+      addEntry(formParams, ENTRY_IDS.email, values.email);
+      addEntry(formParams, ENTRY_IDS.sourcePage, values.sourcePage);
+      addEntry(formParams, ENTRY_IDS.venueId, values.venueId);
+      addEntry(formParams, ENTRY_IDS.pageUrl, values.pageUrl);
+
+      return FORM_BASE_URL + "?" + formParams.toString();
+    }
+
+    const formFrame = document.getElementById("google-form-frame");
+    formFrame.src = buildGoogleFormUrl();
+
     const closeButton = document.getElementById("close-contact-page");
 
     closeButton.addEventListener("click", () => {
