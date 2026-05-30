@@ -21,17 +21,6 @@
 
     <div id="toast-container" class="toast-container hidden"></div>
 
-    <div id="tutorial-toast" class="modal hidden" style="z-index: 5000; pointer-events: none; background: transparent;">
-        <div class="toast show" style="position: fixed; bottom: 100px; left: 50%; transform: translateX(-50%); max-width: 450px; background: var(--panel-dark); padding: 20px; border: 2px solid var(--bright-red-orange); border-radius: 12px; pointer-events: auto;">
-            <h3 class="display-font" style="color:var(--bright-red-orange); margin:0 0 10px 0;">TUTORIAL</h3>
-            <p id="tutorial-message" class="body-font" style="color:#fff; margin:0 0 15px 0;"></p>
-            <div style="display:flex; justify-content:space-between;">
-                <button id="btn-tutorial-skip" class="btn secondary-btn pill-btn" style="width: auto; padding: 6px 15px;">Skip</button>
-                <button id="btn-tutorial-next" class="btn primary-btn pill-btn" style="width: auto; padding: 6px 15px;">Next Step ▶</button>
-            </div>
-        </div>
-    </div>
-
     <div id="profile-wipe-toast" class="modal hidden" style="z-index: 3000;">
         <div class="toast show" style="position:relative; transform:none; bottom:auto; left:auto; margin: auto; max-width: 450px; display:flex; flex-direction:column; gap:15px; padding: 25px; border-radius: 12px;">
             <h3 class="display-font" style="font-size:1.8rem; margin:0; color:#fff;">NEW PROFILE</h3>
@@ -125,11 +114,20 @@
                     <div class="sidebar-item tooltip" title="Home" onclick="window.location.hash='';">
                         <span class="icon">🏠</span><span class="sidebar-text display-font">Home</span>
                     </div>
-                    <div class="sidebar-item tooltip" title="Results" id="btn-sidebar-results" onclick="window.location.hash='#results';">
-                        <span class="icon">🔍</span><span class="sidebar-text display-font">Results</span>
+                    <div class="sidebar-item tooltip" title="Venues" id="btn-sidebar-results" onclick="window.location.hash='#results';">
+                        <span class="icon">🔍</span><span class="sidebar-text display-font">Venues</span>
                     </div>
                     <div class="sidebar-item tooltip" title="Featured" onclick="window.location.hash='#featured';">
                         <span class="icon">🏛️</span><span class="sidebar-text display-font">Featured</span>
+                    </div>
+                    <div class="sidebar-item tooltip" title="Calendar" onclick="showToast('Calendar coming soon');">
+                        <span class="icon">📅</span><span class="sidebar-text display-font">Calendar</span>
+                    </div>
+                    <div class="sidebar-item tooltip" title="My Events" onclick="window.location.hash='#myevents';">
+                        <span class="icon">💖</span><span class="sidebar-text display-font">My Events</span>
+                    </div>
+                    <div class="sidebar-item tooltip" title="Cruising Guide" onclick="window.location.hash='#cruising-guide';">
+                        <span class="icon">🔥</span><span class="sidebar-text display-font">Cruising Guide</span>
                     </div>
                     <div class="sidebar-item tooltip" title="Travel" id="btn-sidebar-travel">
                         <span class="icon">🚄</span><span class="sidebar-text display-font">Travel</span>
@@ -138,20 +136,11 @@
                         <div class="submenu-item" onclick="window.location.hash='#discounts'"><span class="icon" style="font-size:1rem;">💰</span> Discounts</div>
                         <div id="travel-cities-list" class="travel-fav-box hidden"></div>
                     </div>
-                    <div class="sidebar-item tooltip" title="Cruising Guide" onclick="window.location.hash='#cruising-guide';">
-                        <span class="icon">🔥</span><span class="sidebar-text display-font">Cruising Guide</span>
-                    </div>
-                    <div class="sidebar-item tooltip" title="Events" onclick="window.location.hash='#myevents';">
-                        <span class="icon">💖</span><span class="sidebar-text display-font">Events</span>
-                    </div>
-                    <div class="sidebar-item tooltip" title="Tutorial" id="btn-tutorial" onclick="runTutorial()">
-                        <span class="icon">💡</span><span class="sidebar-text display-font">Tutorial</span>
+                    <div class="sidebar-item tooltip" title="About" onclick="window.location.hash='#about';">
+                        <span class="icon">ℹ️</span><span class="sidebar-text display-font">About</span>
                     </div>
                     <div class="sidebar-item tooltip" title="Contact" onclick="window.flagListing('N/A', 'General Message', 'General Support')">
                         <span class="icon">✉️</span><span class="sidebar-text display-font">Contact</span>
-                    </div>
-                    <div class="sidebar-item tooltip" title="About" onclick="window.location.hash='#about';">
-                        <span class="icon">ℹ️</span><span class="sidebar-text display-font">About</span>
                     </div>
                 </div>
                 <div class="sidebar-footer body-font">
@@ -293,8 +282,8 @@
             <div class="modal-body body-font">
                 
                 <div id="profile-mobile-tabs" class="mobile-only" style="display:none; justify-content:center; align-items:center; background:var(--panel-dark); padding:10px; border-radius:var(--radius-pill); margin-bottom:20px; border:1px solid var(--panel-mid);">
-                    <div id="ptab-1" onclick="switchProfileTab(1)" style="font-size:1.8rem; cursor:pointer; padding:5px; border-radius:50%; transition:all 0.2s; text-align:center;" class="tutorial-highlight">🤗 <span style="font-size: 0.8rem; display:block; color:var(--primary-blue); font-weight:bold; white-space:nowrap;">1: Your Profile</span></div>
-                    <div id="parr-1" style="color:var(--primary-blue); font-weight:bold; padding:0 5px; font-family:'Antonio', sans-serif; font-size:1.2rem;" class="tutorial-highlight">&gt;&gt;&gt;</div>
+                    <div id="ptab-1" onclick="switchProfileTab(1)" style="font-size:1.8rem; cursor:pointer; padding:5px; border-radius:50%; transition:all 0.2s; text-align:center;">🤗 <span style="font-size: 0.8rem; display:block; color:var(--primary-blue); font-weight:bold; white-space:nowrap;">1: Your Profile</span></div>
+                    <div id="parr-1" style="color:var(--primary-blue); font-weight:bold; padding:0 5px; font-family:'Antonio', sans-serif; font-size:1.2rem;">&gt;&gt;&gt;</div>
                     <div id="ptab-2" onclick="switchProfileTab(2)" style="font-size:1.8rem; cursor:pointer; padding:5px; border-radius:50%; transition:all 0.2s; text-align:center;">🤔 <span style="font-size: 0.8rem; display:block; color:var(--primary-blue); font-weight:bold; white-space:nowrap;">2: Choose Avatar</span></div>
                     <div id="parr-2" style="color:var(--primary-blue); font-weight:bold; padding:0 5px; font-family:'Antonio', sans-serif; font-size:1.2rem;">&gt;&gt;&gt;</div>
                     <div id="ptab-3" onclick="switchProfileTab(3)" style="font-size:1.8rem; cursor:pointer; padding:5px; border-radius:50%; transition:all 0.2s; text-align:center;">😎 <span style="font-size: 0.8rem; display:block; color:var(--primary-blue); font-weight:bold; white-space:nowrap;">3: Functions</span></div>
@@ -362,7 +351,6 @@
                                         <input type="file" id="import-profile-file" class="hidden" accept=".json">
                                         <button id="btn-profile-download-data" class="btn secondary-btn pill-btn btn-export-trigger">💾 Download My Data</button>
                                         <button id="btn-delete-profile" class="btn pill-btn" style="background: var(--dark-red); color: #fff;">Delete Profile</button>
-                                        <button id="btn-profile-tutorial" class="btn secondary-btn pill-btn tooltip">💡 Profile Tutorial</button>
                                     </div>
                                 </td>
                             </tr>
@@ -376,7 +364,6 @@
                                 <input type="file" id="import-profile-file-mob" class="hidden" accept=".json" onchange="document.getElementById('import-profile-file').files = this.files; document.getElementById('import-profile-file').dispatchEvent(new Event('change'))">
                                 <button id="btn-profile-download-data-mob" class="btn secondary-btn pill-btn btn-export-trigger" onclick="document.getElementById('btn-profile-download-data').click()">💾 Download My Data</button>
                                 <button id="btn-delete-profile-mob" class="btn pill-btn" style="background: var(--dark-red); color: #fff;" onclick="document.getElementById('btn-delete-profile').click()">Delete Profile</button>
-                                <button id="btn-profile-tutorial-mob" class="btn secondary-btn pill-btn tooltip" onclick="document.getElementById('btn-profile-tutorial').click()">💡 Profile Tutorial</button>
                             </div>
                             <div id="profile-stats-container-mob"></div>
                         </div>
