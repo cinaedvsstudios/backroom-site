@@ -8,7 +8,11 @@
     "Event_End_Time": "08:00",
     "Status": "Live",
     "Event_Description": "Strict naked dress code. Clothes check mandatory.",
-    "Dresscode_Info": "Naked / Shoes only"
+    "Dresscode_Info": "Naked / Shoes only",
+    "Recurrence_Type": "",
+    "Recurrence_Day": "",
+    "Recurrence_Until": "",
+    "Vibe_Tags": ""
   },
   {
     "Event_ID": "EVT-FFM-001",
@@ -22,7 +26,8 @@
     "Dresscode_Info": "",
     "Recurrence_Type": "Weekly",
     "Recurrence_Day": "Monday",
-    "Recurrence_Until": ""
+    "Recurrence_Until": "",
+    "Vibe_Tags": ""
   },
   {
     "Event_ID": "EVT-FFM-002",
@@ -36,7 +41,8 @@
     "Dresscode_Info": "",
     "Recurrence_Type": "Weekly",
     "Recurrence_Day": "Monday",
-    "Recurrence_Until": ""
+    "Recurrence_Until": "",
+    "Vibe_Tags": ""
   },
   {
     "Event_ID": "EVT-FFM-003",
@@ -50,7 +56,8 @@
     "Dresscode_Info": "",
     "Recurrence_Type": "Weekly",
     "Recurrence_Day": "Tuesday",
-    "Recurrence_Until": ""
+    "Recurrence_Until": "",
+    "Vibe_Tags": ""
   },
   {
     "Event_ID": "EVT-FFM-004",
@@ -64,7 +71,8 @@
     "Dresscode_Info": "",
     "Recurrence_Type": "",
     "Recurrence_Day": "",
-    "Recurrence_Until": ""
+    "Recurrence_Until": "",
+    "Vibe_Tags": ""
   },
   {
     "Event_ID": "EVT-FFM-005",
@@ -78,7 +86,8 @@
     "Dresscode_Info": "Naked",
     "Recurrence_Type": "Weekly",
     "Recurrence_Day": "Friday",
-    "Recurrence_Until": ""
+    "Recurrence_Until": "",
+    "Vibe_Tags": ""
   },
   {
     "Event_ID": "EVT-FFM-006",
@@ -92,7 +101,8 @@
     "Dresscode_Info": "",
     "Recurrence_Type": "",
     "Recurrence_Day": "",
-    "Recurrence_Until": ""
+    "Recurrence_Until": "",
+    "Vibe_Tags": ""
   },
   {
     "Event_ID": "EVT-FFM-007",
@@ -106,7 +116,8 @@
     "Dresscode_Info": "",
     "Recurrence_Type": "",
     "Recurrence_Day": "",
-    "Recurrence_Until": ""
+    "Recurrence_Until": "",
+    "Vibe_Tags": ""
   },
   {
     "Event_ID": "EVT-FFM-008",
@@ -120,7 +131,8 @@
     "Dresscode_Info": "",
     "Recurrence_Type": "",
     "Recurrence_Day": "",
-    "Recurrence_Until": ""
+    "Recurrence_Until": "",
+    "Vibe_Tags": ""
   },
   {
     "Event_ID": "EVT-FFM-009",
@@ -134,7 +146,8 @@
     "Dresscode_Info": "No dress code required",
     "Recurrence_Type": "",
     "Recurrence_Day": "",
-    "Recurrence_Until": ""
+    "Recurrence_Until": "",
+    "Vibe_Tags": ""
   },
   {
     "Event_ID": "EVT-FFM-010",
@@ -148,7 +161,8 @@
     "Dresscode_Info": "",
     "Recurrence_Type": "",
     "Recurrence_Day": "",
-    "Recurrence_Until": ""
+    "Recurrence_Until": "",
+    "Vibe_Tags": ""
   },
   {
     "Event_ID": "EVT-FFM-011",
@@ -162,7 +176,8 @@
     "Dresscode_Info": "",
     "Recurrence_Type": "",
     "Recurrence_Day": "",
-    "Recurrence_Until": ""
+    "Recurrence_Until": "",
+    "Vibe_Tags": ""
   },
   {
     "Event_ID": "EVT-FFM-012",
@@ -176,7 +191,8 @@
     "Dresscode_Info": "Naked; mask required",
     "Recurrence_Type": "",
     "Recurrence_Day": "",
-    "Recurrence_Until": ""
+    "Recurrence_Until": "",
+    "Vibe_Tags": ""
   },
   {
     "Event_ID": "EVT-FFM-013",
@@ -190,7 +206,8 @@
     "Dresscode_Info": "",
     "Recurrence_Type": "",
     "Recurrence_Day": "",
-    "Recurrence_Until": ""
+    "Recurrence_Until": "",
+    "Vibe_Tags": ""
   },
   {
     "Event_ID": "EVT-FFM-014",
@@ -204,7 +221,8 @@
     "Dresscode_Info": "",
     "Recurrence_Type": "",
     "Recurrence_Day": "",
-    "Recurrence_Until": ""
+    "Recurrence_Until": "",
+    "Vibe_Tags": ""
   },
   {
     "Event_ID": "EVT-FFM-015",
@@ -218,7 +236,8 @@
     "Dresscode_Info": "No dress code required",
     "Recurrence_Type": "",
     "Recurrence_Day": "",
-    "Recurrence_Until": ""
+    "Recurrence_Until": "",
+    "Vibe_Tags": ""
   },
   {
     "Event_ID": "EVT-FFM-016",
@@ -232,7 +251,8 @@
     "Dresscode_Info": "",
     "Recurrence_Type": "",
     "Recurrence_Day": "",
-    "Recurrence_Until": ""
+    "Recurrence_Until": "",
+    "Vibe_Tags": ""
   },
   {
     "Event_ID": "EVT-FFM-017",
@@ -246,7 +266,8 @@
     "Dresscode_Info": "No dress code required",
     "Recurrence_Type": "",
     "Recurrence_Day": "",
-    "Recurrence_Until": ""
+    "Recurrence_Until": "",
+    "Vibe_Tags": ""
   },
   {
     "Event_ID": "EVT-MUC-001",
@@ -260,7 +281,8 @@
     "Dresscode_Info": "",
     "Recurrence_Type": "",
     "Recurrence_Day": "",
-    "Recurrence_Until": ""
+    "Recurrence_Until": "",
+    "Vibe_Tags": ""
   },
   {
     "Event_ID": "EVT-MUC-002",
@@ -274,7 +296,8 @@
     "Dresscode_Info": "",
     "Recurrence_Type": "",
     "Recurrence_Day": "",
-    "Recurrence_Until": ""
+    "Recurrence_Until": "",
+    "Vibe_Tags": ""
   },
   {
     "Event_ID": "EVT-MUC-004",
@@ -288,7 +311,8 @@
     "Dresscode_Info": "",
     "Recurrence_Type": "",
     "Recurrence_Day": "",
-    "Recurrence_Until": ""
+    "Recurrence_Until": "",
+    "Vibe_Tags": ""
   },
   {
     "Event_ID": "EVT-MUC-003",
@@ -302,7 +326,8 @@
     "Dresscode_Info": "Sportswear, rubber, neoprene or PVC outfit required.",
     "Recurrence_Type": "",
     "Recurrence_Day": "",
-    "Recurrence_Until": ""
+    "Recurrence_Until": "",
+    "Vibe_Tags": ""
   },
   {
     "Event_ID": "EVT-MUC-005",
@@ -316,7 +341,8 @@
     "Dresscode_Info": "",
     "Recurrence_Type": "Weekly",
     "Recurrence_Day": "Friday",
-    "Recurrence_Until": ""
+    "Recurrence_Until": "",
+    "Vibe_Tags": ""
   },
   {
     "Event_ID": "EVT-MUC-006",
@@ -330,7 +356,8 @@
     "Dresscode_Info": "",
     "Recurrence_Type": "",
     "Recurrence_Day": "",
-    "Recurrence_Until": ""
+    "Recurrence_Until": "",
+    "Vibe_Tags": ""
   },
   {
     "Event_ID": "EVT-MUC-007",
@@ -344,7 +371,8 @@
     "Dresscode_Info": "General MLC dress code.",
     "Recurrence_Type": "",
     "Recurrence_Day": "",
-    "Recurrence_Until": ""
+    "Recurrence_Until": "",
+    "Vibe_Tags": ""
   },
   {
     "Event_ID": "EVT-MUC-008",
@@ -358,7 +386,8 @@
     "Dresscode_Info": "",
     "Recurrence_Type": "",
     "Recurrence_Day": "",
-    "Recurrence_Until": ""
+    "Recurrence_Until": "",
+    "Vibe_Tags": ""
   },
   {
     "Event_ID": "EVT-MUC-009",
@@ -372,7 +401,8 @@
     "Dresscode_Info": "Naked or underwear with sturdy shoes.",
     "Recurrence_Type": "",
     "Recurrence_Day": "",
-    "Recurrence_Until": ""
+    "Recurrence_Until": "",
+    "Vibe_Tags": ""
   },
   {
     "Event_ID": "EVT-MUC-010",
@@ -386,7 +416,8 @@
     "Dresscode_Info": "",
     "Recurrence_Type": "",
     "Recurrence_Day": "",
-    "Recurrence_Until": ""
+    "Recurrence_Until": "",
+    "Vibe_Tags": ""
   },
   {
     "Event_ID": "EVT-MUC-011",
@@ -400,7 +431,8 @@
     "Dresscode_Info": "No dress code; fetish welcome.",
     "Recurrence_Type": "",
     "Recurrence_Day": "",
-    "Recurrence_Until": ""
+    "Recurrence_Until": "",
+    "Vibe_Tags": ""
   },
   {
     "Event_ID": "EVT-MUC-012",
@@ -414,7 +446,8 @@
     "Dresscode_Info": "Naked with sturdy shoes.",
     "Recurrence_Type": "",
     "Recurrence_Day": "",
-    "Recurrence_Until": ""
+    "Recurrence_Until": "",
+    "Vibe_Tags": ""
   },
   {
     "Event_ID": "EVT-MUC-013",
@@ -428,7 +461,8 @@
     "Dresscode_Info": "",
     "Recurrence_Type": "",
     "Recurrence_Day": "",
-    "Recurrence_Until": ""
+    "Recurrence_Until": "",
+    "Vibe_Tags": ""
   },
   {
     "Event_ID": "EVT-MUC-014",
@@ -442,7 +476,8 @@
     "Dresscode_Info": "Fetish clothing; streetwear is not accepted.",
     "Recurrence_Type": "",
     "Recurrence_Day": "",
-    "Recurrence_Until": ""
+    "Recurrence_Until": "",
+    "Vibe_Tags": ""
   },
   {
     "Event_ID": "EVT-FFM-018",
@@ -456,7 +491,8 @@
     "Dresscode_Info": "",
     "Recurrence_Type": "",
     "Recurrence_Day": "",
-    "Recurrence_Until": ""
+    "Recurrence_Until": "",
+    "Vibe_Tags": ""
   },
   {
     "Event_ID": "EVT-MUC-015",
@@ -470,7 +506,8 @@
     "Dresscode_Info": "Sportswear, rubber, neoprene or PVC outfit required.",
     "Recurrence_Type": "",
     "Recurrence_Day": "",
-    "Recurrence_Until": ""
+    "Recurrence_Until": "",
+    "Vibe_Tags": ""
   },
   {
     "Event_ID": "EVT-MUC-016",
@@ -484,7 +521,8 @@
     "Dresscode_Info": "Published event-specific dress code applies.",
     "Recurrence_Type": "",
     "Recurrence_Day": "",
-    "Recurrence_Until": ""
+    "Recurrence_Until": "",
+    "Vibe_Tags": ""
   },
   {
     "Event_ID": "EVT-FFM-027",
@@ -498,7 +536,8 @@
     "Dresscode_Info": "",
     "Recurrence_Type": "",
     "Recurrence_Day": "",
-    "Recurrence_Until": ""
+    "Recurrence_Until": "",
+    "Vibe_Tags": ""
   },
   {
     "Event_ID": "EVT-MUC-017",
@@ -512,7 +551,8 @@
     "Dresscode_Info": "Skater, sportswear, sneaker or scally outfit required.",
     "Recurrence_Type": "",
     "Recurrence_Day": "",
-    "Recurrence_Until": ""
+    "Recurrence_Until": "",
+    "Vibe_Tags": ""
   },
   {
     "Event_ID": "EVT-MUC-018",
@@ -526,7 +566,8 @@
     "Dresscode_Info": "General MLC dress code.",
     "Recurrence_Type": "",
     "Recurrence_Day": "",
-    "Recurrence_Until": ""
+    "Recurrence_Until": "",
+    "Vibe_Tags": ""
   },
   {
     "Event_ID": "EVT-FFM-019",
@@ -540,7 +581,8 @@
     "Dresscode_Info": "",
     "Recurrence_Type": "",
     "Recurrence_Day": "",
-    "Recurrence_Until": ""
+    "Recurrence_Until": "",
+    "Vibe_Tags": ""
   },
   {
     "Event_ID": "EVT-MUC-019",
@@ -554,7 +596,8 @@
     "Dresscode_Info": "General MLC dress code.",
     "Recurrence_Type": "",
     "Recurrence_Day": "",
-    "Recurrence_Until": ""
+    "Recurrence_Until": "",
+    "Vibe_Tags": ""
   },
   {
     "Event_ID": "EVT-MUC-020",
@@ -568,7 +611,8 @@
     "Dresscode_Info": "Fetish outfit with the face not recognisable.",
     "Recurrence_Type": "",
     "Recurrence_Day": "",
-    "Recurrence_Until": ""
+    "Recurrence_Until": "",
+    "Vibe_Tags": ""
   },
   {
     "Event_ID": "EVT-FFM-024",
@@ -582,7 +626,8 @@
     "Dresscode_Info": "",
     "Recurrence_Type": "",
     "Recurrence_Day": "",
-    "Recurrence_Until": ""
+    "Recurrence_Until": "",
+    "Vibe_Tags": ""
   },
   {
     "Event_ID": "EVT-MUC-022",
@@ -596,7 +641,8 @@
     "Dresscode_Info": "Skater, sportswear, sneaker or scally outfit required.",
     "Recurrence_Type": "",
     "Recurrence_Day": "",
-    "Recurrence_Until": ""
+    "Recurrence_Until": "",
+    "Vibe_Tags": ""
   },
   {
     "Event_ID": "EVT-MUC-021",
@@ -610,7 +656,8 @@
     "Dresscode_Info": "",
     "Recurrence_Type": "",
     "Recurrence_Day": "",
-    "Recurrence_Until": ""
+    "Recurrence_Until": "",
+    "Vibe_Tags": ""
   },
   {
     "Event_ID": "EVT-MUC-023",
@@ -624,7 +671,8 @@
     "Dresscode_Info": "",
     "Recurrence_Type": "",
     "Recurrence_Day": "",
-    "Recurrence_Until": ""
+    "Recurrence_Until": "",
+    "Vibe_Tags": ""
   },
   {
     "Event_ID": "EVT-MUC-024",
@@ -638,7 +686,8 @@
     "Dresscode_Info": "Naked with sturdy shoes.",
     "Recurrence_Type": "",
     "Recurrence_Day": "",
-    "Recurrence_Until": ""
+    "Recurrence_Until": "",
+    "Vibe_Tags": ""
   },
   {
     "Event_ID": "EVT-FFM-028",
@@ -652,7 +701,8 @@
     "Dresscode_Info": "",
     "Recurrence_Type": "",
     "Recurrence_Day": "",
-    "Recurrence_Until": ""
+    "Recurrence_Until": "",
+    "Vibe_Tags": ""
   },
   {
     "Event_ID": "EVT-MUC-025",
@@ -666,7 +716,8 @@
     "Dresscode_Info": "No dress code.",
     "Recurrence_Type": "",
     "Recurrence_Day": "",
-    "Recurrence_Until": ""
+    "Recurrence_Until": "",
+    "Vibe_Tags": ""
   },
   {
     "Event_ID": "EVT-MUC-026",
@@ -680,7 +731,8 @@
     "Dresscode_Info": "Nike and/or Adidas outfit required.",
     "Recurrence_Type": "",
     "Recurrence_Day": "",
-    "Recurrence_Until": ""
+    "Recurrence_Until": "",
+    "Vibe_Tags": ""
   },
   {
     "Event_ID": "EVT-FFM-033",
@@ -694,7 +746,8 @@
     "Dresscode_Info": "Naked; mask required",
     "Recurrence_Type": "",
     "Recurrence_Day": "",
-    "Recurrence_Until": ""
+    "Recurrence_Until": "",
+    "Vibe_Tags": ""
   },
   {
     "Event_ID": "EVT-FFM-020",
@@ -708,7 +761,8 @@
     "Dresscode_Info": "",
     "Recurrence_Type": "",
     "Recurrence_Day": "",
-    "Recurrence_Until": ""
+    "Recurrence_Until": "",
+    "Vibe_Tags": ""
   },
   {
     "Event_ID": "EVT-MUC-027",
@@ -722,7 +776,8 @@
     "Dresscode_Info": "Bear or otter outfit required.",
     "Recurrence_Type": "",
     "Recurrence_Day": "",
-    "Recurrence_Until": ""
+    "Recurrence_Until": "",
+    "Vibe_Tags": ""
   },
   {
     "Event_ID": "EVT-MUC-028",
@@ -736,7 +791,8 @@
     "Dresscode_Info": "MLC dress code applies.",
     "Recurrence_Type": "",
     "Recurrence_Day": "",
-    "Recurrence_Until": ""
+    "Recurrence_Until": "",
+    "Vibe_Tags": ""
   },
   {
     "Event_ID": "EVT-FFM-029",
@@ -750,7 +806,8 @@
     "Dresscode_Info": "",
     "Recurrence_Type": "",
     "Recurrence_Day": "",
-    "Recurrence_Until": ""
+    "Recurrence_Until": "",
+    "Vibe_Tags": ""
   },
   {
     "Event_ID": "EVT-MUC-029",
@@ -764,7 +821,8 @@
     "Dresscode_Info": "Sportswear, rubber, neoprene or PVC outfit required.",
     "Recurrence_Type": "",
     "Recurrence_Day": "",
-    "Recurrence_Until": ""
+    "Recurrence_Until": "",
+    "Vibe_Tags": ""
   },
   {
     "Event_ID": "EVT-MUC-030",
@@ -778,7 +836,8 @@
     "Dresscode_Info": "Published MLC dress code applies.",
     "Recurrence_Type": "",
     "Recurrence_Day": "",
-    "Recurrence_Until": ""
+    "Recurrence_Until": "",
+    "Vibe_Tags": ""
   },
   {
     "Event_ID": "EVT-MUC-031",
@@ -792,7 +851,8 @@
     "Dresscode_Info": "",
     "Recurrence_Type": "",
     "Recurrence_Day": "",
-    "Recurrence_Until": ""
+    "Recurrence_Until": "",
+    "Vibe_Tags": ""
   },
   {
     "Event_ID": "EVT-FFM-021",
@@ -806,7 +866,8 @@
     "Dresscode_Info": "",
     "Recurrence_Type": "",
     "Recurrence_Day": "",
-    "Recurrence_Until": ""
+    "Recurrence_Until": "",
+    "Vibe_Tags": ""
   },
   {
     "Event_ID": "EVT-FFM-025",
@@ -820,7 +881,8 @@
     "Dresscode_Info": "",
     "Recurrence_Type": "",
     "Recurrence_Day": "",
-    "Recurrence_Until": ""
+    "Recurrence_Until": "",
+    "Vibe_Tags": ""
   },
   {
     "Event_ID": "EVT-MUC-032",
@@ -834,7 +896,8 @@
     "Dresscode_Info": "General MLC dress code.",
     "Recurrence_Type": "",
     "Recurrence_Day": "",
-    "Recurrence_Until": ""
+    "Recurrence_Until": "",
+    "Vibe_Tags": ""
   },
   {
     "Event_ID": "EVT-MUC-033",
@@ -848,7 +911,8 @@
     "Dresscode_Info": "",
     "Recurrence_Type": "",
     "Recurrence_Day": "",
-    "Recurrence_Until": ""
+    "Recurrence_Until": "",
+    "Vibe_Tags": ""
   },
   {
     "Event_ID": "EVT-FFM-030",
@@ -862,7 +926,8 @@
     "Dresscode_Info": "",
     "Recurrence_Type": "",
     "Recurrence_Day": "",
-    "Recurrence_Until": ""
+    "Recurrence_Until": "",
+    "Vibe_Tags": ""
   },
   {
     "Event_ID": "EVT-MUC-034",
@@ -876,7 +941,8 @@
     "Dresscode_Info": "",
     "Recurrence_Type": "",
     "Recurrence_Day": "",
-    "Recurrence_Until": ""
+    "Recurrence_Until": "",
+    "Vibe_Tags": ""
   },
   {
     "Event_ID": "EVT-MUC-035",
@@ -890,7 +956,8 @@
     "Dresscode_Info": "Leather outfit required.",
     "Recurrence_Type": "",
     "Recurrence_Day": "",
-    "Recurrence_Until": ""
+    "Recurrence_Until": "",
+    "Vibe_Tags": ""
   },
   {
     "Event_ID": "EVT-MUC-036",
@@ -904,7 +971,8 @@
     "Dresscode_Info": "",
     "Recurrence_Type": "",
     "Recurrence_Day": "",
-    "Recurrence_Until": ""
+    "Recurrence_Until": "",
+    "Vibe_Tags": ""
   },
   {
     "Event_ID": "EVT-FFM-032",
@@ -918,7 +986,8 @@
     "Dresscode_Info": "",
     "Recurrence_Type": "",
     "Recurrence_Day": "",
-    "Recurrence_Until": ""
+    "Recurrence_Until": "",
+    "Vibe_Tags": ""
   },
   {
     "Event_ID": "EVT-MUC-037",
@@ -932,7 +1001,8 @@
     "Dresscode_Info": "General MLC dress code.",
     "Recurrence_Type": "",
     "Recurrence_Day": "",
-    "Recurrence_Until": ""
+    "Recurrence_Until": "",
+    "Vibe_Tags": ""
   },
   {
     "Event_ID": "EVT-FFM-022",
@@ -946,7 +1016,8 @@
     "Dresscode_Info": "",
     "Recurrence_Type": "",
     "Recurrence_Day": "",
-    "Recurrence_Until": ""
+    "Recurrence_Until": "",
+    "Vibe_Tags": ""
   },
   {
     "Event_ID": "EVT-MUC-038",
@@ -960,7 +1031,8 @@
     "Dresscode_Info": "General MLC dress code.",
     "Recurrence_Type": "",
     "Recurrence_Day": "",
-    "Recurrence_Until": ""
+    "Recurrence_Until": "",
+    "Vibe_Tags": ""
   },
   {
     "Event_ID": "EVT-MUC-039",
@@ -974,7 +1046,8 @@
     "Dresscode_Info": "Sportswear, rubber, neoprene or PVC outfit required.",
     "Recurrence_Type": "",
     "Recurrence_Day": "",
-    "Recurrence_Until": ""
+    "Recurrence_Until": "",
+    "Vibe_Tags": ""
   },
   {
     "Event_ID": "EVT-FFM-034",
@@ -988,7 +1061,8 @@
     "Dresscode_Info": "Naked; mask required",
     "Recurrence_Type": "",
     "Recurrence_Day": "",
-    "Recurrence_Until": ""
+    "Recurrence_Until": "",
+    "Vibe_Tags": ""
   },
   {
     "Event_ID": "EVT-FFM-035",
@@ -1002,7 +1076,8 @@
     "Dresscode_Info": "",
     "Recurrence_Type": "",
     "Recurrence_Day": "",
-    "Recurrence_Until": ""
+    "Recurrence_Until": "",
+    "Vibe_Tags": ""
   },
   {
     "Event_ID": "EVT-FFM-031",
@@ -1016,7 +1091,8 @@
     "Dresscode_Info": "",
     "Recurrence_Type": "",
     "Recurrence_Day": "",
-    "Recurrence_Until": ""
+    "Recurrence_Until": "",
+    "Vibe_Tags": ""
   },
   {
     "Event_ID": "EVT-MUC-040",
@@ -1030,7 +1106,8 @@
     "Dresscode_Info": "No dress code; fetish welcome.",
     "Recurrence_Type": "",
     "Recurrence_Day": "",
-    "Recurrence_Until": ""
+    "Recurrence_Until": "",
+    "Vibe_Tags": ""
   },
   {
     "Event_ID": "EVT-MUC-041",
@@ -1044,7 +1121,8 @@
     "Dresscode_Info": "",
     "Recurrence_Type": "",
     "Recurrence_Day": "",
-    "Recurrence_Until": ""
+    "Recurrence_Until": "",
+    "Vibe_Tags": ""
   },
   {
     "Event_ID": "EVT-MUC-042",
@@ -1058,7 +1136,8 @@
     "Dresscode_Info": "General MLC dress code.",
     "Recurrence_Type": "",
     "Recurrence_Day": "",
-    "Recurrence_Until": ""
+    "Recurrence_Until": "",
+    "Vibe_Tags": ""
   },
   {
     "Event_ID": "EVT-MUC-043",
@@ -1072,7 +1151,8 @@
     "Dresscode_Info": "",
     "Recurrence_Type": "",
     "Recurrence_Day": "",
-    "Recurrence_Until": ""
+    "Recurrence_Until": "",
+    "Vibe_Tags": ""
   },
   {
     "Event_ID": "EVT-MUC-044",
@@ -1086,7 +1166,8 @@
     "Dresscode_Info": "General MLC dress code.",
     "Recurrence_Type": "",
     "Recurrence_Day": "",
-    "Recurrence_Until": ""
+    "Recurrence_Until": "",
+    "Vibe_Tags": ""
   },
   {
     "Event_ID": "EVT-MUC-045",
@@ -1100,7 +1181,8 @@
     "Dresscode_Info": "No dress code; fetish welcome.",
     "Recurrence_Type": "",
     "Recurrence_Day": "",
-    "Recurrence_Until": ""
+    "Recurrence_Until": "",
+    "Vibe_Tags": ""
   },
   {
     "Event_ID": "EVT-FFM-023",
@@ -1114,7 +1196,8 @@
     "Dresscode_Info": "",
     "Recurrence_Type": "",
     "Recurrence_Day": "",
-    "Recurrence_Until": ""
+    "Recurrence_Until": "",
+    "Vibe_Tags": ""
   },
   {
     "Event_ID": "EVT-FFM-026",
@@ -1128,7 +1211,8 @@
     "Dresscode_Info": "",
     "Recurrence_Type": "",
     "Recurrence_Day": "",
-    "Recurrence_Until": ""
+    "Recurrence_Until": "",
+    "Vibe_Tags": ""
   },
   {
     "Event_ID": "EVT-MUC-046",
@@ -1142,7 +1226,8 @@
     "Dresscode_Info": "General MLC dress code.",
     "Recurrence_Type": "",
     "Recurrence_Day": "",
-    "Recurrence_Until": ""
+    "Recurrence_Until": "",
+    "Vibe_Tags": ""
   },
   {
     "Event_ID": "EVT-MUC-047",
@@ -1156,7 +1241,8 @@
     "Dresscode_Info": "Published MLC dress code applies.",
     "Recurrence_Type": "",
     "Recurrence_Day": "",
-    "Recurrence_Until": ""
+    "Recurrence_Until": "",
+    "Vibe_Tags": ""
   },
   {
     "Event_ID": "EVT-HAM-008",
@@ -1170,7 +1256,8 @@
     "Dresscode_Info": "Fetish gear encouraged",
     "Recurrence_Type": "",
     "Recurrence_Day": "",
-    "Recurrence_Until": ""
+    "Recurrence_Until": "",
+    "Vibe_Tags": ""
   },
   {
     "Event_ID": "EVT-HAM-004",
@@ -1184,7 +1271,8 @@
     "Dresscode_Info": "",
     "Recurrence_Type": "",
     "Recurrence_Day": "",
-    "Recurrence_Until": ""
+    "Recurrence_Until": "",
+    "Vibe_Tags": ""
   },
   {
     "Event_ID": "EVT-HAM-012",
@@ -1198,7 +1286,8 @@
     "Dresscode_Info": "",
     "Recurrence_Type": "",
     "Recurrence_Day": "",
-    "Recurrence_Until": ""
+    "Recurrence_Until": "",
+    "Vibe_Tags": ""
   },
   {
     "Event_ID": "EVT-HAM-001",
@@ -1212,7 +1301,8 @@
     "Dresscode_Info": "",
     "Recurrence_Type": "",
     "Recurrence_Day": "",
-    "Recurrence_Until": ""
+    "Recurrence_Until": "",
+    "Vibe_Tags": ""
   },
   {
     "Event_ID": "EVT-HAM-015",
@@ -1226,7 +1316,8 @@
     "Dresscode_Info": "",
     "Recurrence_Type": "",
     "Recurrence_Day": "",
-    "Recurrence_Until": ""
+    "Recurrence_Until": "",
+    "Vibe_Tags": ""
   },
   {
     "Event_ID": "EVT-HAM-018",
@@ -1240,7 +1331,8 @@
     "Dresscode_Info": "",
     "Recurrence_Type": "",
     "Recurrence_Day": "",
-    "Recurrence_Until": ""
+    "Recurrence_Until": "",
+    "Vibe_Tags": ""
   },
   {
     "Event_ID": "EVT-HAM-021",
@@ -1254,7 +1346,8 @@
     "Dresscode_Info": "",
     "Recurrence_Type": "",
     "Recurrence_Day": "",
-    "Recurrence_Until": ""
+    "Recurrence_Until": "",
+    "Vibe_Tags": ""
   },
   {
     "Event_ID": "EVT-HAM-005",
@@ -1268,7 +1361,8 @@
     "Dresscode_Info": "",
     "Recurrence_Type": "",
     "Recurrence_Day": "",
-    "Recurrence_Until": ""
+    "Recurrence_Until": "",
+    "Vibe_Tags": ""
   },
   {
     "Event_ID": "EVT-HAM-009",
@@ -1282,7 +1376,8 @@
     "Dresscode_Info": "Fetish gear encouraged",
     "Recurrence_Type": "",
     "Recurrence_Day": "",
-    "Recurrence_Until": ""
+    "Recurrence_Until": "",
+    "Vibe_Tags": ""
   },
   {
     "Event_ID": "EVT-HAM-002",
@@ -1296,7 +1391,8 @@
     "Dresscode_Info": "",
     "Recurrence_Type": "",
     "Recurrence_Day": "",
-    "Recurrence_Until": ""
+    "Recurrence_Until": "",
+    "Vibe_Tags": ""
   },
   {
     "Event_ID": "EVT-HAM-024",
@@ -1310,7 +1406,8 @@
     "Dresscode_Info": "",
     "Recurrence_Type": "",
     "Recurrence_Day": "",
-    "Recurrence_Until": ""
+    "Recurrence_Until": "",
+    "Vibe_Tags": ""
   },
   {
     "Event_ID": "EVT-HAM-025",
@@ -1324,7 +1421,8 @@
     "Dresscode_Info": "",
     "Recurrence_Type": "",
     "Recurrence_Day": "",
-    "Recurrence_Until": ""
+    "Recurrence_Until": "",
+    "Vibe_Tags": ""
   },
   {
     "Event_ID": "EVT-HAM-013",
@@ -1338,7 +1436,8 @@
     "Dresscode_Info": "",
     "Recurrence_Type": "",
     "Recurrence_Day": "",
-    "Recurrence_Until": ""
+    "Recurrence_Until": "",
+    "Vibe_Tags": ""
   },
   {
     "Event_ID": "EVT-HAM-016",
@@ -1352,7 +1451,8 @@
     "Dresscode_Info": "",
     "Recurrence_Type": "",
     "Recurrence_Day": "",
-    "Recurrence_Until": ""
+    "Recurrence_Until": "",
+    "Vibe_Tags": ""
   },
   {
     "Event_ID": "EVT-HAM-019",
@@ -1366,7 +1466,8 @@
     "Dresscode_Info": "",
     "Recurrence_Type": "",
     "Recurrence_Day": "",
-    "Recurrence_Until": ""
+    "Recurrence_Until": "",
+    "Vibe_Tags": ""
   },
   {
     "Event_ID": "EVT-HAM-022",
@@ -1380,7 +1481,8 @@
     "Dresscode_Info": "",
     "Recurrence_Type": "",
     "Recurrence_Day": "",
-    "Recurrence_Until": ""
+    "Recurrence_Until": "",
+    "Vibe_Tags": ""
   },
   {
     "Event_ID": "EVT-HAM-010",
@@ -1394,7 +1496,8 @@
     "Dresscode_Info": "Fetish gear encouraged",
     "Recurrence_Type": "",
     "Recurrence_Day": "",
-    "Recurrence_Until": ""
+    "Recurrence_Until": "",
+    "Vibe_Tags": ""
   },
   {
     "Event_ID": "EVT-HAM-006",
@@ -1408,7 +1511,8 @@
     "Dresscode_Info": "",
     "Recurrence_Type": "",
     "Recurrence_Day": "",
-    "Recurrence_Until": ""
+    "Recurrence_Until": "",
+    "Vibe_Tags": ""
   },
   {
     "Event_ID": "EVT-HAM-014",
@@ -1422,7 +1526,8 @@
     "Dresscode_Info": "",
     "Recurrence_Type": "",
     "Recurrence_Day": "",
-    "Recurrence_Until": ""
+    "Recurrence_Until": "",
+    "Vibe_Tags": ""
   },
   {
     "Event_ID": "EVT-HAM-003",
@@ -1436,7 +1541,8 @@
     "Dresscode_Info": "",
     "Recurrence_Type": "",
     "Recurrence_Day": "",
-    "Recurrence_Until": ""
+    "Recurrence_Until": "",
+    "Vibe_Tags": ""
   },
   {
     "Event_ID": "EVT-HAM-017",
@@ -1450,7 +1556,8 @@
     "Dresscode_Info": "",
     "Recurrence_Type": "",
     "Recurrence_Day": "",
-    "Recurrence_Until": ""
+    "Recurrence_Until": "",
+    "Vibe_Tags": ""
   },
   {
     "Event_ID": "EVT-HAM-020",
@@ -1464,7 +1571,8 @@
     "Dresscode_Info": "",
     "Recurrence_Type": "",
     "Recurrence_Day": "",
-    "Recurrence_Until": ""
+    "Recurrence_Until": "",
+    "Vibe_Tags": ""
   },
   {
     "Event_ID": "EVT-HAM-023",
@@ -1478,7 +1586,8 @@
     "Dresscode_Info": "",
     "Recurrence_Type": "",
     "Recurrence_Day": "",
-    "Recurrence_Until": ""
+    "Recurrence_Until": "",
+    "Vibe_Tags": ""
   },
   {
     "Event_ID": "EVT-HAM-011",
@@ -1492,7 +1601,8 @@
     "Dresscode_Info": "Fetish gear encouraged",
     "Recurrence_Type": "",
     "Recurrence_Day": "",
-    "Recurrence_Until": ""
+    "Recurrence_Until": "",
+    "Vibe_Tags": ""
   },
   {
     "Event_ID": "EVT-HAM-007",
@@ -1506,6 +1616,952 @@
     "Dresscode_Info": "",
     "Recurrence_Type": "",
     "Recurrence_Day": "",
-    "Recurrence_Until": ""
+    "Recurrence_Until": "",
+    "Vibe_Tags": ""
+  },
+  {
+    "Event_ID": "EVT-CGN-001",
+    "Venue_ID": "CGN-BAR-19",
+    "Event_Name": "PullerAlarm – Only Naked Party",
+    "Event_Date": "2026-06-22",
+    "Event_Start_Time": "18:00",
+    "Event_End_Time": "",
+    "Status": "Live",
+    "Event_Description": "Weekly every Monday at Pullermanns. Men-only naked party; check the venue for holiday or special-event changes.",
+    "Dresscode_Info": "Naked",
+    "Recurrence_Type": "Weekly",
+    "Recurrence_Day": "Monday",
+    "Recurrence_Until": "",
+    "Vibe_Tags": "Bar, Cruising, Men Only, Naked"
+  },
+  {
+    "Event_ID": "EVT-CGN-025",
+    "Venue_ID": "CGN-SAU-02",
+    "Event_Name": "Twink & Puppy Special Sauna Day",
+    "Event_Date": "2026-06-23",
+    "Event_Start_Time": "18:00",
+    "Event_End_Time": "23:00",
+    "Status": "Live",
+    "Event_Description": "Confirmed current second/fourth-Tuesday Twink & Puppy Special Sauna Day at Phoenix Sauna.",
+    "Dresscode_Info": "",
+    "Recurrence_Type": "",
+    "Recurrence_Day": "",
+    "Recurrence_Until": "",
+    "Vibe_Tags": "Party, Sauna, Cruising, Young Crowd"
+  },
+  {
+    "Event_ID": "EVT-CGN-002",
+    "Venue_ID": "CGN-BAR-19",
+    "Event_Name": "Pullermanns Tuesday",
+    "Event_Date": "2026-06-23",
+    "Event_Start_Time": "21:00",
+    "Event_End_Time": "",
+    "Status": "Live",
+    "Event_Description": "Weekly every Tuesday at Pullermanns: drinks and cruising in the men-only bar. No dress code is stated.",
+    "Dresscode_Info": "",
+    "Recurrence_Type": "Weekly",
+    "Recurrence_Day": "Tuesday",
+    "Recurrence_Until": "",
+    "Vibe_Tags": "Bar, Cruising, Men Only"
+  },
+  {
+    "Event_ID": "EVT-CGN-003",
+    "Venue_ID": "CGN-BAR-11",
+    "Event_Name": "Mumu Karaoke mit Max",
+    "Event_Date": "2026-06-23",
+    "Event_Start_Time": "22:00",
+    "Event_End_Time": "04:00",
+    "Status": "Live",
+    "Event_Description": "Weekly Tuesday karaoke night at Die Mumu. Check the current venue programme for exceptions.",
+    "Dresscode_Info": "",
+    "Recurrence_Type": "Weekly",
+    "Recurrence_Day": "Tuesday",
+    "Recurrence_Until": "",
+    "Vibe_Tags": "Bar, Queer, Karaoke, Social"
+  },
+  {
+    "Event_ID": "EVT-CGN-023",
+    "Venue_ID": "CGN-SAU-02",
+    "Event_Name": "ABSOLUT NAKED – Weekend Cruising",
+    "Event_Date": "2026-06-26",
+    "Event_Start_Time": "19:00",
+    "Event_End_Time": "01:00",
+    "Status": "Live",
+    "Event_Description": "Weekly every Friday in Phoenix Sauna’s special area. Check the current programme for holiday and special-event changes.",
+    "Dresscode_Info": "Naked",
+    "Recurrence_Type": "Weekly",
+    "Recurrence_Day": "Friday",
+    "Recurrence_Until": "",
+    "Vibe_Tags": "Party, Sauna, Cruising, Naked"
+  },
+  {
+    "Event_ID": "EVT-CGN-024",
+    "Venue_ID": "CGN-SAU-02",
+    "Event_Name": "ABSOLUT NAKED – Late Night Cruising",
+    "Event_Date": "2026-06-27",
+    "Event_Start_Time": "00:00",
+    "Event_End_Time": "04:00",
+    "Status": "Live",
+    "Event_Description": "Weekly every Saturday night in Phoenix Sauna’s special area. Check the current programme for holiday and special-event changes.",
+    "Dresscode_Info": "Naked",
+    "Recurrence_Type": "Weekly",
+    "Recurrence_Day": "Saturday",
+    "Recurrence_Until": "",
+    "Vibe_Tags": "Party, Sauna, Cruising, Naked"
+  },
+  {
+    "Event_ID": "EVT-CGN-052",
+    "Venue_ID": "CGN-PAR-01",
+    "Event_Name": "HomOriental",
+    "Event_Date": "2026-06-27",
+    "Event_Start_Time": "23:00",
+    "Event_End_Time": "",
+    "Status": "Live",
+    "Event_Description": "Confirmed HomOriental at Hidden Club, Brabanter Straße 15, Cologne. Two dancefloors with DJs Kanun and Mesut.",
+    "Dresscode_Info": "",
+    "Recurrence_Type": "",
+    "Recurrence_Day": "",
+    "Recurrence_Until": "",
+    "Vibe_Tags": "Party, Dancefloor, Queer"
+  },
+  {
+    "Event_ID": "EVT-CGN-004",
+    "Venue_ID": "CGN-BAR-07",
+    "Event_Name": "Bitchy Bingo – 11th Birthday Bash Vol. I",
+    "Event_Date": "2026-06-30",
+    "Event_Start_Time": "19:00",
+    "Event_End_Time": "",
+    "Status": "Live",
+    "Event_Description": "Confirmed 11th-birthday Bitchy Bingo show at Exile, with drag, comedy and bingo.",
+    "Dresscode_Info": "",
+    "Recurrence_Type": "",
+    "Recurrence_Day": "",
+    "Recurrence_Until": "",
+    "Vibe_Tags": "Bar, Queer, Drag, Social"
+  },
+  {
+    "Event_ID": "EVT-CGN-057",
+    "Venue_ID": "CGN-PAR-04",
+    "Event_Name": "Pride Festival Cologne United 2026",
+    "Event_Date": "2026-07-03",
+    "Event_Start_Time": "15:00",
+    "Event_End_Time": "",
+    "Status": "Live",
+    "Event_Description": "Official Pride Festival Cologne programme, running 3–6 July. Check the festival ticket page for individual events and venues.",
+    "Dresscode_Info": "",
+    "Recurrence_Type": "",
+    "Recurrence_Day": "",
+    "Recurrence_Until": "",
+    "Vibe_Tags": "Party, Dancefloor, Pride"
+  },
+  {
+    "Event_ID": "EVT-CGN-005",
+    "Venue_ID": "CGN-BAR-11",
+    "Event_Name": "Mumu Pride Weekend 2026",
+    "Event_Date": "2026-07-03",
+    "Event_Start_Time": "19:00",
+    "Event_End_Time": "",
+    "Status": "Live",
+    "Event_Description": "Pride-weekend programme at Die Mumu, running 3–5 July: Friday warm-up with DJ AroundElias, Saturday Pride party with DJ Nightdrop, and Sunday closing with DJ CK.",
+    "Dresscode_Info": "",
+    "Recurrence_Type": "",
+    "Recurrence_Day": "",
+    "Recurrence_Until": "",
+    "Vibe_Tags": "Bar, Party, Dancefloor, Queer, Pride"
+  },
+  {
+    "Event_ID": "EVT-CGN-006",
+    "Venue_ID": "CGN-BAR-07",
+    "Event_Name": "Exile Pride Weekend 2026",
+    "Event_Date": "2026-07-03",
+    "Event_Start_Time": "",
+    "Event_End_Time": "",
+    "Status": "Live",
+    "Event_Description": "Confirmed Pride-weekend programme at Exile, running 3–5 July. Check the venue programme for the individual DJ and show schedule.",
+    "Dresscode_Info": "",
+    "Recurrence_Type": "",
+    "Recurrence_Day": "",
+    "Recurrence_Until": "",
+    "Vibe_Tags": "Bar, Party, Dancefloor, Queer, Pride"
+  },
+  {
+    "Event_ID": "EVT-CGN-056",
+    "Venue_ID": "CGN-PAR-05",
+    "Event_Name": "PLAY with GUYZ – Pride Festival Cologne Official Opening Party",
+    "Event_Date": "2026-07-03",
+    "Event_Start_Time": "",
+    "Event_End_Time": "",
+    "Status": "Live",
+    "Event_Description": "Confirmed joint Pride opening event at Schrotty, Vogelsanger Straße 406, Cologne, with melodic hard techno, indoor/outdoor areas and an XL playground.",
+    "Dresscode_Info": "Kinky glam preferred; streetwear is not accepted.",
+    "Recurrence_Type": "",
+    "Recurrence_Day": "",
+    "Recurrence_Until": "",
+    "Vibe_Tags": "Party, Cruising, Darkroom, Dresscode, Dancefloor, Fetish/Gear, Techno, Pride"
+  },
+  {
+    "Event_ID": "EVT-CGN-041",
+    "Venue_ID": "CGN-SAU-02",
+    "Event_Name": "STOSSZEIT Party",
+    "Event_Date": "2026-07-04",
+    "Event_Start_Time": "16:00",
+    "Event_End_Time": "22:00",
+    "Status": "Live",
+    "Event_Description": "Confirmed Phoenix Sauna XXX party with special area, bar and foam party.",
+    "Dresscode_Info": "",
+    "Recurrence_Type": "",
+    "Recurrence_Day": "",
+    "Recurrence_Until": "",
+    "Vibe_Tags": "Party, Sauna, Cruising"
+  },
+  {
+    "Event_ID": "EVT-CGN-061",
+    "Venue_ID": "DE-HWT-01",
+    "Event_Name": "Hollywood Tramp – Madonna Club Night (Early Event)",
+    "Event_Date": "2026-07-04",
+    "Event_Start_Time": "18:00",
+    "Event_End_Time": "",
+    "Status": "Live",
+    "Event_Description": "Confirmed Hollywood Tramp event at Club Bahnhof Ehrenfeld, Cologne.",
+    "Dresscode_Info": "",
+    "Recurrence_Type": "",
+    "Recurrence_Day": "",
+    "Recurrence_Until": "",
+    "Vibe_Tags": "Party, Dancefloor, Queer, Pop/Dance, Pride"
+  },
+  {
+    "Event_ID": "EVT-CGN-058",
+    "Venue_ID": "CGN-PAR-04",
+    "Event_Name": "SEXY UNIVERSE – Official Cologne Pride Main Party",
+    "Event_Date": "2026-07-04",
+    "Event_Start_Time": "22:00",
+    "Event_End_Time": "07:00",
+    "Status": "Live",
+    "Event_Description": "Confirmed official Cologne Pride main party at MMC Studios, with dancefloors, DJs, shows and performance areas.",
+    "Dresscode_Info": "",
+    "Recurrence_Type": "",
+    "Recurrence_Day": "",
+    "Recurrence_Until": "",
+    "Vibe_Tags": "Party, Dancefloor, Pride"
+  },
+  {
+    "Event_ID": "EVT-CGN-059",
+    "Venue_ID": "CGN-PAR-03",
+    "Event_Name": "GREEN KOMM Pride Festival Cologne",
+    "Event_Date": "2026-07-05",
+    "Event_Start_Time": "06:00",
+    "Event_End_Time": "18:00",
+    "Status": "Live",
+    "Event_Description": "Confirmed Green Komm Pride afterhour at Nachtflug Cologne.",
+    "Dresscode_Info": "",
+    "Recurrence_Type": "",
+    "Recurrence_Day": "",
+    "Recurrence_Until": "",
+    "Vibe_Tags": "Party, Dancefloor, Techno, Pride"
+  },
+  {
+    "Event_ID": "EVT-CGN-044",
+    "Venue_ID": "CGN-BAR-19",
+    "Event_Name": "Hochdruck",
+    "Event_Date": "2026-07-05",
+    "Event_Start_Time": "14:00",
+    "Event_End_Time": "20:00",
+    "Status": "Hold",
+    "Event_Description": "Golden-shower event. Date extrapolated from Pullermanns’ stated first- and third-Sunday monthly programme; verify this exact edition before attending.",
+    "Dresscode_Info": "",
+    "Recurrence_Type": "",
+    "Recurrence_Day": "",
+    "Recurrence_Until": "",
+    "Vibe_Tags": "Bar, Cruising, Fetish/Gear"
+  },
+  {
+    "Event_ID": "EVT-CGN-062",
+    "Venue_ID": "DE-HWT-01",
+    "Event_Name": "Hollywood Tramp – Pride Closing Party",
+    "Event_Date": "2026-07-05",
+    "Event_Start_Time": "21:00",
+    "Event_End_Time": "",
+    "Status": "Live",
+    "Event_Description": "Confirmed Hollywood Tramp Pride-closing party at Club Bahnhof Ehrenfeld, Cologne.",
+    "Dresscode_Info": "",
+    "Recurrence_Type": "",
+    "Recurrence_Day": "",
+    "Recurrence_Until": "",
+    "Vibe_Tags": "Party, Dancefloor, Queer, Pop/Dance, Pride"
+  },
+  {
+    "Event_ID": "EVT-CGN-007",
+    "Venue_ID": "CGN-SAU-01",
+    "Event_Name": "Babylon Pool Party – Cologne Pride Closing Party",
+    "Event_Date": "2026-07-06",
+    "Event_Start_Time": "10:00",
+    "Event_End_Time": "",
+    "Status": "Live",
+    "Event_Description": "Confirmed Cologne Pride closing pool party at Babylon Sauna.",
+    "Dresscode_Info": "",
+    "Recurrence_Type": "",
+    "Recurrence_Day": "",
+    "Recurrence_Until": "",
+    "Vibe_Tags": "Party, Sauna, Cruising, Pride"
+  },
+  {
+    "Event_ID": "EVT-CGN-008",
+    "Venue_ID": "CGN-SAU-01",
+    "Event_Name": "Bear Tuesday",
+    "Event_Date": "2026-07-07",
+    "Event_Start_Time": "16:00",
+    "Event_End_Time": "23:30",
+    "Status": "Hold",
+    "Event_Description": "Bear-community sauna night. Date extrapolated from Babylon’s stated first-Tuesday monthly programme; verify this exact edition before attending.",
+    "Dresscode_Info": "",
+    "Recurrence_Type": "",
+    "Recurrence_Day": "",
+    "Recurrence_Until": "",
+    "Vibe_Tags": "Party, Sauna, Cruising, Bear"
+  },
+  {
+    "Event_ID": "EVT-CGN-012",
+    "Venue_ID": "CGN-SAU-01",
+    "Event_Name": "Lange Saunanacht",
+    "Event_Date": "2026-07-11",
+    "Event_Start_Time": "16:00",
+    "Event_End_Time": "24:00",
+    "Status": "Hold",
+    "Event_Description": "Extended sauna night with themed infusions, fruit, smoothies, sparkling wine and a midnight snack. Date extrapolated from Babylon’s stated second-Saturday monthly programme; verify this exact edition before attending.",
+    "Dresscode_Info": "",
+    "Recurrence_Type": "",
+    "Recurrence_Day": "",
+    "Recurrence_Until": "",
+    "Vibe_Tags": "Party, Sauna, Cruising, Social"
+  },
+  {
+    "Event_ID": "EVT-CGN-032",
+    "Venue_ID": "CGN-SAU-02",
+    "Event_Name": "Bear – Das Sauna Event",
+    "Event_Date": "2026-07-11",
+    "Event_Start_Time": "",
+    "Event_End_Time": "",
+    "Status": "Hold",
+    "Event_Description": "Date extrapolated from Phoenix Sauna’s stated second-Saturday monthly programme; verify this exact edition before attending.",
+    "Dresscode_Info": "",
+    "Recurrence_Type": "",
+    "Recurrence_Day": "",
+    "Recurrence_Until": "",
+    "Vibe_Tags": "Party, Sauna, Cruising, Bear"
+  },
+  {
+    "Event_ID": "EVT-CGN-050",
+    "Venue_ID": "CGN-BAR-19",
+    "Event_Name": "Sneaker & Sportswear Party",
+    "Event_Date": "2026-07-12",
+    "Event_Start_Time": "14:00",
+    "Event_End_Time": "20:00",
+    "Status": "Live",
+    "Event_Description": "Confirmed sportswear party at Pullermanns.",
+    "Dresscode_Info": "Sneaker or sportswear encouraged.",
+    "Recurrence_Type": "",
+    "Recurrence_Day": "",
+    "Recurrence_Until": "",
+    "Vibe_Tags": "Bar, Cruising, Dresscode, Fetish/Gear"
+  },
+  {
+    "Event_ID": "EVT-CGN-009",
+    "Venue_ID": "CGN-SAU-01",
+    "Event_Name": "Wet Night",
+    "Event_Date": "2026-07-14",
+    "Event_Start_Time": "18:00",
+    "Event_End_Time": "22:00",
+    "Status": "Hold",
+    "Event_Description": "Watersports-themed sauna night. Date extrapolated from Babylon’s stated second-Tuesday monthly programme; verify this exact edition before attending.",
+    "Dresscode_Info": "",
+    "Recurrence_Type": "",
+    "Recurrence_Day": "",
+    "Recurrence_Until": "",
+    "Vibe_Tags": "Party, Sauna, Cruising, Fetish/Gear"
+  },
+  {
+    "Event_ID": "EVT-CGN-026",
+    "Venue_ID": "CGN-SAU-02",
+    "Event_Name": "Twink & Puppy Special Sauna Day",
+    "Event_Date": "2026-07-14",
+    "Event_Start_Time": "18:00",
+    "Event_End_Time": "23:00",
+    "Status": "Hold",
+    "Event_Description": "Date extrapolated from Phoenix Sauna’s stated second- and fourth-Tuesday programme; verify this exact edition before attending.",
+    "Dresscode_Info": "",
+    "Recurrence_Type": "",
+    "Recurrence_Day": "",
+    "Recurrence_Until": "",
+    "Vibe_Tags": "Party, Sauna, Cruising, Young Crowd"
+  },
+  {
+    "Event_ID": "EVT-CGN-035",
+    "Venue_ID": "CGN-SAU-02",
+    "Event_Name": "Gang Bang",
+    "Event_Date": "2026-07-18",
+    "Event_Start_Time": "",
+    "Event_End_Time": "",
+    "Status": "Hold",
+    "Event_Description": "Date extrapolated from Phoenix Sauna’s stated third-Saturday monthly programme; verify this exact edition before attending.",
+    "Dresscode_Info": "",
+    "Recurrence_Type": "",
+    "Recurrence_Day": "",
+    "Recurrence_Until": "",
+    "Vibe_Tags": "Party, Sauna, Cruising"
+  },
+  {
+    "Event_ID": "EVT-CGN-045",
+    "Venue_ID": "CGN-BAR-19",
+    "Event_Name": "Hochdruck",
+    "Event_Date": "2026-07-19",
+    "Event_Start_Time": "14:00",
+    "Event_End_Time": "20:00",
+    "Status": "Hold",
+    "Event_Description": "Golden-shower event. Date extrapolated from Pullermanns’ stated first- and third-Sunday monthly programme; verify this exact edition before attending.",
+    "Dresscode_Info": "",
+    "Recurrence_Type": "",
+    "Recurrence_Day": "",
+    "Recurrence_Until": "",
+    "Vibe_Tags": "Bar, Cruising, Fetish/Gear"
+  },
+  {
+    "Event_ID": "EVT-CGN-010",
+    "Venue_ID": "CGN-SAU-01",
+    "Event_Name": "Rubber und Sportswear",
+    "Event_Date": "2026-07-21",
+    "Event_Start_Time": "16:00",
+    "Event_End_Time": "23:30",
+    "Status": "Hold",
+    "Event_Description": "Kinky Tuesday for rubber, sportswear, sneakers and socks. Date extrapolated from Babylon’s stated third-Tuesday monthly programme; verify this exact edition before attending.",
+    "Dresscode_Info": "Rubber, sportswear, sneakers or socks encouraged.",
+    "Recurrence_Type": "",
+    "Recurrence_Day": "",
+    "Recurrence_Until": "",
+    "Vibe_Tags": "Party, Sauna, Cruising, Dresscode, Fetish/Gear"
+  },
+  {
+    "Event_ID": "EVT-CGN-053",
+    "Venue_ID": "CGN-PAR-01",
+    "Event_Name": "HomOriental",
+    "Event_Date": "2026-07-25",
+    "Event_Start_Time": "23:00",
+    "Event_End_Time": "",
+    "Status": "Hold",
+    "Event_Description": "Date extrapolated from HomOriental’s stated fourth-Saturday monthly schedule; verify this exact edition and host venue before attending.",
+    "Dresscode_Info": "",
+    "Recurrence_Type": "",
+    "Recurrence_Day": "",
+    "Recurrence_Until": "",
+    "Vibe_Tags": "Party, Dancefloor, Queer"
+  },
+  {
+    "Event_ID": "EVT-CGN-038",
+    "Venue_ID": "CGN-SAU-02",
+    "Event_Name": "Naked Xtend",
+    "Event_Date": "2026-07-25",
+    "Event_Start_Time": "",
+    "Event_End_Time": "",
+    "Status": "Hold",
+    "Event_Description": "Date extrapolated from Phoenix Sauna’s stated fourth-Saturday monthly programme; verify this exact edition before attending.",
+    "Dresscode_Info": "Naked",
+    "Recurrence_Type": "",
+    "Recurrence_Day": "",
+    "Recurrence_Until": "",
+    "Vibe_Tags": "Party, Sauna, Cruising, Naked"
+  },
+  {
+    "Event_ID": "EVT-CGN-011",
+    "Venue_ID": "CGN-SAU-01",
+    "Event_Name": "Puppy Night",
+    "Event_Date": "2026-07-28",
+    "Event_Start_Time": "16:00",
+    "Event_End_Time": "23:30",
+    "Status": "Hold",
+    "Event_Description": "Puppy-themed sauna night with a dedicated area. Date extrapolated from Babylon’s stated fourth-Tuesday monthly programme; verify this exact edition before attending.",
+    "Dresscode_Info": "",
+    "Recurrence_Type": "",
+    "Recurrence_Day": "",
+    "Recurrence_Until": "",
+    "Vibe_Tags": "Party, Sauna, Cruising"
+  },
+  {
+    "Event_ID": "EVT-CGN-027",
+    "Venue_ID": "CGN-SAU-02",
+    "Event_Name": "Twink & Puppy Special Sauna Day",
+    "Event_Date": "2026-07-28",
+    "Event_Start_Time": "18:00",
+    "Event_End_Time": "23:00",
+    "Status": "Hold",
+    "Event_Description": "Date extrapolated from Phoenix Sauna’s stated second- and fourth-Tuesday programme; verify this exact edition before attending.",
+    "Dresscode_Info": "",
+    "Recurrence_Type": "",
+    "Recurrence_Day": "",
+    "Recurrence_Until": "",
+    "Vibe_Tags": "Party, Sauna, Cruising, Young Crowd"
+  },
+  {
+    "Event_ID": "EVT-CGN-046",
+    "Venue_ID": "CGN-BAR-19",
+    "Event_Name": "Hochdruck",
+    "Event_Date": "2026-08-02",
+    "Event_Start_Time": "14:00",
+    "Event_End_Time": "20:00",
+    "Status": "Hold",
+    "Event_Description": "Golden-shower event. Date extrapolated from Pullermanns’ stated first- and third-Sunday monthly programme; verify this exact edition before attending.",
+    "Dresscode_Info": "",
+    "Recurrence_Type": "",
+    "Recurrence_Day": "",
+    "Recurrence_Until": "",
+    "Vibe_Tags": "Bar, Cruising, Fetish/Gear"
+  },
+  {
+    "Event_ID": "EVT-CGN-013",
+    "Venue_ID": "CGN-SAU-01",
+    "Event_Name": "Bear Tuesday",
+    "Event_Date": "2026-08-04",
+    "Event_Start_Time": "16:00",
+    "Event_End_Time": "23:30",
+    "Status": "Hold",
+    "Event_Description": "Bear-community sauna night. Date extrapolated from Babylon’s stated first-Tuesday monthly programme; verify this exact edition before attending.",
+    "Dresscode_Info": "",
+    "Recurrence_Type": "",
+    "Recurrence_Day": "",
+    "Recurrence_Until": "",
+    "Vibe_Tags": "Party, Sauna, Cruising, Bear"
+  },
+  {
+    "Event_ID": "EVT-CGN-063",
+    "Venue_ID": "DE-HWT-01",
+    "Event_Name": "Hollywood Tramp – Britney Spears Club Night (Early Event)",
+    "Event_Date": "2026-08-07",
+    "Event_Start_Time": "18:00",
+    "Event_End_Time": "",
+    "Status": "Live",
+    "Event_Description": "Confirmed Hollywood Tramp event at Club Bahnhof Ehrenfeld, Cologne.",
+    "Dresscode_Info": "",
+    "Recurrence_Type": "",
+    "Recurrence_Day": "",
+    "Recurrence_Until": "",
+    "Vibe_Tags": "Party, Dancefloor, Queer, Pop/Dance"
+  },
+  {
+    "Event_ID": "EVT-CGN-017",
+    "Venue_ID": "CGN-SAU-01",
+    "Event_Name": "Lange Saunanacht",
+    "Event_Date": "2026-08-08",
+    "Event_Start_Time": "16:00",
+    "Event_End_Time": "24:00",
+    "Status": "Hold",
+    "Event_Description": "Extended sauna night with themed infusions, fruit, smoothies, sparkling wine and a midnight snack. Date extrapolated from Babylon’s stated second-Saturday monthly programme; verify this exact edition before attending.",
+    "Dresscode_Info": "",
+    "Recurrence_Type": "",
+    "Recurrence_Day": "",
+    "Recurrence_Until": "",
+    "Vibe_Tags": "Party, Sauna, Cruising, Social"
+  },
+  {
+    "Event_ID": "EVT-CGN-033",
+    "Venue_ID": "CGN-SAU-02",
+    "Event_Name": "Bear – Das Sauna Event",
+    "Event_Date": "2026-08-08",
+    "Event_Start_Time": "",
+    "Event_End_Time": "",
+    "Status": "Hold",
+    "Event_Description": "Date extrapolated from Phoenix Sauna’s stated second-Saturday monthly programme; verify this exact edition before attending.",
+    "Dresscode_Info": "",
+    "Recurrence_Type": "",
+    "Recurrence_Day": "",
+    "Recurrence_Until": "",
+    "Vibe_Tags": "Party, Sauna, Cruising, Bear"
+  },
+  {
+    "Event_ID": "EVT-CGN-014",
+    "Venue_ID": "CGN-SAU-01",
+    "Event_Name": "Wet Night",
+    "Event_Date": "2026-08-11",
+    "Event_Start_Time": "18:00",
+    "Event_End_Time": "22:00",
+    "Status": "Hold",
+    "Event_Description": "Watersports-themed sauna night. Date extrapolated from Babylon’s stated second-Tuesday monthly programme; verify this exact edition before attending.",
+    "Dresscode_Info": "",
+    "Recurrence_Type": "",
+    "Recurrence_Day": "",
+    "Recurrence_Until": "",
+    "Vibe_Tags": "Party, Sauna, Cruising, Fetish/Gear"
+  },
+  {
+    "Event_ID": "EVT-CGN-028",
+    "Venue_ID": "CGN-SAU-02",
+    "Event_Name": "Twink & Puppy Special Sauna Day",
+    "Event_Date": "2026-08-11",
+    "Event_Start_Time": "18:00",
+    "Event_End_Time": "23:00",
+    "Status": "Hold",
+    "Event_Description": "Date extrapolated from Phoenix Sauna’s stated second- and fourth-Tuesday programme; verify this exact edition before attending.",
+    "Dresscode_Info": "",
+    "Recurrence_Type": "",
+    "Recurrence_Day": "",
+    "Recurrence_Until": "",
+    "Vibe_Tags": "Party, Sauna, Cruising, Young Crowd"
+  },
+  {
+    "Event_ID": "EVT-CGN-036",
+    "Venue_ID": "CGN-SAU-02",
+    "Event_Name": "Gang Bang",
+    "Event_Date": "2026-08-15",
+    "Event_Start_Time": "",
+    "Event_End_Time": "",
+    "Status": "Hold",
+    "Event_Description": "Date extrapolated from Phoenix Sauna’s stated third-Saturday monthly programme; verify this exact edition before attending.",
+    "Dresscode_Info": "",
+    "Recurrence_Type": "",
+    "Recurrence_Day": "",
+    "Recurrence_Until": "",
+    "Vibe_Tags": "Party, Sauna, Cruising"
+  },
+  {
+    "Event_ID": "EVT-CGN-047",
+    "Venue_ID": "CGN-BAR-19",
+    "Event_Name": "Hochdruck",
+    "Event_Date": "2026-08-16",
+    "Event_Start_Time": "14:00",
+    "Event_End_Time": "20:00",
+    "Status": "Hold",
+    "Event_Description": "Golden-shower event. Date extrapolated from Pullermanns’ stated first- and third-Sunday monthly programme; verify this exact edition before attending.",
+    "Dresscode_Info": "",
+    "Recurrence_Type": "",
+    "Recurrence_Day": "",
+    "Recurrence_Until": "",
+    "Vibe_Tags": "Bar, Cruising, Fetish/Gear"
+  },
+  {
+    "Event_ID": "EVT-CGN-015",
+    "Venue_ID": "CGN-SAU-01",
+    "Event_Name": "Rubber und Sportswear",
+    "Event_Date": "2026-08-18",
+    "Event_Start_Time": "16:00",
+    "Event_End_Time": "23:30",
+    "Status": "Hold",
+    "Event_Description": "Kinky Tuesday for rubber, sportswear, sneakers and socks. Date extrapolated from Babylon’s stated third-Tuesday monthly programme; verify this exact edition before attending.",
+    "Dresscode_Info": "Rubber, sportswear, sneakers or socks encouraged.",
+    "Recurrence_Type": "",
+    "Recurrence_Day": "",
+    "Recurrence_Until": "",
+    "Vibe_Tags": "Party, Sauna, Cruising, Dresscode, Fetish/Gear"
+  },
+  {
+    "Event_ID": "EVT-CGN-051",
+    "Venue_ID": "CGN-BAR-19",
+    "Event_Name": "COLOURcode Party by Rheinfetisch",
+    "Event_Date": "2026-08-21",
+    "Event_Start_Time": "22:00",
+    "Event_End_Time": "",
+    "Status": "Live",
+    "Event_Description": "Confirmed men-only fetish party at Pullermanns by Rheinfetisch.",
+    "Dresscode_Info": "Fetish gear encouraged.",
+    "Recurrence_Type": "",
+    "Recurrence_Day": "",
+    "Recurrence_Until": "",
+    "Vibe_Tags": "Bar, Cruising, Men Only, Dresscode, Fetish/Gear"
+  },
+  {
+    "Event_ID": "EVT-CGN-054",
+    "Venue_ID": "CGN-PAR-01",
+    "Event_Name": "HomOriental",
+    "Event_Date": "2026-08-22",
+    "Event_Start_Time": "23:00",
+    "Event_End_Time": "",
+    "Status": "Hold",
+    "Event_Description": "Date extrapolated from HomOriental’s stated fourth-Saturday monthly schedule; verify this exact edition and host venue before attending.",
+    "Dresscode_Info": "",
+    "Recurrence_Type": "",
+    "Recurrence_Day": "",
+    "Recurrence_Until": "",
+    "Vibe_Tags": "Party, Dancefloor, Queer"
+  },
+  {
+    "Event_ID": "EVT-CGN-039",
+    "Venue_ID": "CGN-SAU-02",
+    "Event_Name": "Naked Xtend",
+    "Event_Date": "2026-08-22",
+    "Event_Start_Time": "",
+    "Event_End_Time": "",
+    "Status": "Hold",
+    "Event_Description": "Date extrapolated from Phoenix Sauna’s stated fourth-Saturday monthly programme; verify this exact edition before attending.",
+    "Dresscode_Info": "Naked",
+    "Recurrence_Type": "",
+    "Recurrence_Day": "",
+    "Recurrence_Until": "",
+    "Vibe_Tags": "Party, Sauna, Cruising, Naked"
+  },
+  {
+    "Event_ID": "EVT-CGN-016",
+    "Venue_ID": "CGN-SAU-01",
+    "Event_Name": "Puppy Night",
+    "Event_Date": "2026-08-25",
+    "Event_Start_Time": "16:00",
+    "Event_End_Time": "23:30",
+    "Status": "Hold",
+    "Event_Description": "Puppy-themed sauna night with a dedicated area. Date extrapolated from Babylon’s stated fourth-Tuesday monthly programme; verify this exact edition before attending.",
+    "Dresscode_Info": "",
+    "Recurrence_Type": "",
+    "Recurrence_Day": "",
+    "Recurrence_Until": "",
+    "Vibe_Tags": "Party, Sauna, Cruising"
+  },
+  {
+    "Event_ID": "EVT-CGN-029",
+    "Venue_ID": "CGN-SAU-02",
+    "Event_Name": "Twink & Puppy Special Sauna Day",
+    "Event_Date": "2026-08-25",
+    "Event_Start_Time": "18:00",
+    "Event_End_Time": "23:00",
+    "Status": "Hold",
+    "Event_Description": "Date extrapolated from Phoenix Sauna’s stated second- and fourth-Tuesday programme; verify this exact edition before attending.",
+    "Dresscode_Info": "",
+    "Recurrence_Type": "",
+    "Recurrence_Day": "",
+    "Recurrence_Until": "",
+    "Vibe_Tags": "Party, Sauna, Cruising, Young Crowd"
+  },
+  {
+    "Event_ID": "EVT-CGN-018",
+    "Venue_ID": "CGN-SAU-01",
+    "Event_Name": "Bear Tuesday",
+    "Event_Date": "2026-09-01",
+    "Event_Start_Time": "16:00",
+    "Event_End_Time": "23:30",
+    "Status": "Hold",
+    "Event_Description": "Bear-community sauna night. Date extrapolated from Babylon’s stated first-Tuesday monthly programme; verify this exact edition before attending.",
+    "Dresscode_Info": "",
+    "Recurrence_Type": "",
+    "Recurrence_Day": "",
+    "Recurrence_Until": "",
+    "Vibe_Tags": "Party, Sauna, Cruising, Bear"
+  },
+  {
+    "Event_ID": "EVT-CGN-042",
+    "Venue_ID": "CGN-SAU-02",
+    "Event_Name": "LADS Wanna Play",
+    "Event_Date": "2026-09-05",
+    "Event_Start_Time": "",
+    "Event_End_Time": "",
+    "Status": "Live",
+    "Event_Description": "Confirmed Phoenix Sauna youngster event with live shows, foam party, infusions and a cruising-area programme.",
+    "Dresscode_Info": "",
+    "Recurrence_Type": "",
+    "Recurrence_Day": "",
+    "Recurrence_Until": "",
+    "Vibe_Tags": "Party, Sauna, Cruising, Young Crowd"
+  },
+  {
+    "Event_ID": "EVT-CGN-048",
+    "Venue_ID": "CGN-BAR-19",
+    "Event_Name": "Hochdruck",
+    "Event_Date": "2026-09-06",
+    "Event_Start_Time": "14:00",
+    "Event_End_Time": "20:00",
+    "Status": "Hold",
+    "Event_Description": "Golden-shower event. Date extrapolated from Pullermanns’ stated first- and third-Sunday monthly programme; verify this exact edition before attending.",
+    "Dresscode_Info": "",
+    "Recurrence_Type": "",
+    "Recurrence_Day": "",
+    "Recurrence_Until": "",
+    "Vibe_Tags": "Bar, Cruising, Fetish/Gear"
+  },
+  {
+    "Event_ID": "EVT-CGN-060",
+    "Venue_ID": "CGN-PAR-03",
+    "Event_Name": "GREEN KOMM",
+    "Event_Date": "2026-09-06",
+    "Event_Start_Time": "",
+    "Event_End_Time": "",
+    "Status": "Live",
+    "Event_Description": "Confirmed Green Komm date. Check the official ticket page for the final time and host-venue information.",
+    "Dresscode_Info": "",
+    "Recurrence_Type": "",
+    "Recurrence_Day": "",
+    "Recurrence_Until": "",
+    "Vibe_Tags": "Party, Dancefloor, Techno"
+  },
+  {
+    "Event_ID": "EVT-CGN-019",
+    "Venue_ID": "CGN-SAU-01",
+    "Event_Name": "Wet Night",
+    "Event_Date": "2026-09-08",
+    "Event_Start_Time": "18:00",
+    "Event_End_Time": "22:00",
+    "Status": "Hold",
+    "Event_Description": "Watersports-themed sauna night. Date extrapolated from Babylon’s stated second-Tuesday monthly programme; verify this exact edition before attending.",
+    "Dresscode_Info": "",
+    "Recurrence_Type": "",
+    "Recurrence_Day": "",
+    "Recurrence_Until": "",
+    "Vibe_Tags": "Party, Sauna, Cruising, Fetish/Gear"
+  },
+  {
+    "Event_ID": "EVT-CGN-030",
+    "Venue_ID": "CGN-SAU-02",
+    "Event_Name": "Twink & Puppy Special Sauna Day",
+    "Event_Date": "2026-09-08",
+    "Event_Start_Time": "18:00",
+    "Event_End_Time": "23:00",
+    "Status": "Hold",
+    "Event_Description": "Date extrapolated from Phoenix Sauna’s stated second- and fourth-Tuesday programme; verify this exact edition before attending.",
+    "Dresscode_Info": "",
+    "Recurrence_Type": "",
+    "Recurrence_Day": "",
+    "Recurrence_Until": "",
+    "Vibe_Tags": "Party, Sauna, Cruising, Young Crowd"
+  },
+  {
+    "Event_ID": "EVT-CGN-022",
+    "Venue_ID": "CGN-SAU-01",
+    "Event_Name": "Lange Saunanacht",
+    "Event_Date": "2026-09-12",
+    "Event_Start_Time": "16:00",
+    "Event_End_Time": "24:00",
+    "Status": "Hold",
+    "Event_Description": "Extended sauna night with themed infusions, fruit, smoothies, sparkling wine and a midnight snack. Date extrapolated from Babylon’s stated second-Saturday monthly programme; verify this exact edition before attending.",
+    "Dresscode_Info": "",
+    "Recurrence_Type": "",
+    "Recurrence_Day": "",
+    "Recurrence_Until": "",
+    "Vibe_Tags": "Party, Sauna, Cruising, Social"
+  },
+  {
+    "Event_ID": "EVT-CGN-034",
+    "Venue_ID": "CGN-SAU-02",
+    "Event_Name": "Bear – Das Sauna Event",
+    "Event_Date": "2026-09-12",
+    "Event_Start_Time": "",
+    "Event_End_Time": "",
+    "Status": "Hold",
+    "Event_Description": "Date extrapolated from Phoenix Sauna’s stated second-Saturday monthly programme; verify this exact edition before attending.",
+    "Dresscode_Info": "",
+    "Recurrence_Type": "",
+    "Recurrence_Day": "",
+    "Recurrence_Until": "",
+    "Vibe_Tags": "Party, Sauna, Cruising, Bear"
+  },
+  {
+    "Event_ID": "EVT-CGN-020",
+    "Venue_ID": "CGN-SAU-01",
+    "Event_Name": "Rubber und Sportswear",
+    "Event_Date": "2026-09-15",
+    "Event_Start_Time": "16:00",
+    "Event_End_Time": "23:30",
+    "Status": "Hold",
+    "Event_Description": "Kinky Tuesday for rubber, sportswear, sneakers and socks. Date extrapolated from Babylon’s stated third-Tuesday monthly programme; verify this exact edition before attending.",
+    "Dresscode_Info": "Rubber, sportswear, sneakers or socks encouraged.",
+    "Recurrence_Type": "",
+    "Recurrence_Day": "",
+    "Recurrence_Until": "",
+    "Vibe_Tags": "Party, Sauna, Cruising, Dresscode, Fetish/Gear"
+  },
+  {
+    "Event_ID": "EVT-CGN-037",
+    "Venue_ID": "CGN-SAU-02",
+    "Event_Name": "Gang Bang",
+    "Event_Date": "2026-09-19",
+    "Event_Start_Time": "",
+    "Event_End_Time": "",
+    "Status": "Hold",
+    "Event_Description": "Date extrapolated from Phoenix Sauna’s stated third-Saturday monthly programme; verify this exact edition before attending.",
+    "Dresscode_Info": "",
+    "Recurrence_Type": "",
+    "Recurrence_Day": "",
+    "Recurrence_Until": "",
+    "Vibe_Tags": "Party, Sauna, Cruising"
+  },
+  {
+    "Event_ID": "EVT-CGN-049",
+    "Venue_ID": "CGN-BAR-19",
+    "Event_Name": "Hochdruck",
+    "Event_Date": "2026-09-20",
+    "Event_Start_Time": "14:00",
+    "Event_End_Time": "20:00",
+    "Status": "Hold",
+    "Event_Description": "Golden-shower event. Date extrapolated from Pullermanns’ stated first- and third-Sunday monthly programme; verify this exact edition before attending.",
+    "Dresscode_Info": "",
+    "Recurrence_Type": "",
+    "Recurrence_Day": "",
+    "Recurrence_Until": "",
+    "Vibe_Tags": "Bar, Cruising, Fetish/Gear"
+  },
+  {
+    "Event_ID": "EVT-CGN-021",
+    "Venue_ID": "CGN-SAU-01",
+    "Event_Name": "Puppy Night",
+    "Event_Date": "2026-09-22",
+    "Event_Start_Time": "16:00",
+    "Event_End_Time": "23:30",
+    "Status": "Hold",
+    "Event_Description": "Puppy-themed sauna night with a dedicated area. Date extrapolated from Babylon’s stated fourth-Tuesday monthly programme; verify this exact edition before attending.",
+    "Dresscode_Info": "",
+    "Recurrence_Type": "",
+    "Recurrence_Day": "",
+    "Recurrence_Until": "",
+    "Vibe_Tags": "Party, Sauna, Cruising"
+  },
+  {
+    "Event_ID": "EVT-CGN-031",
+    "Venue_ID": "CGN-SAU-02",
+    "Event_Name": "Twink & Puppy Special Sauna Day",
+    "Event_Date": "2026-09-22",
+    "Event_Start_Time": "18:00",
+    "Event_End_Time": "23:00",
+    "Status": "Hold",
+    "Event_Description": "Date extrapolated from Phoenix Sauna’s stated second- and fourth-Tuesday programme; verify this exact edition before attending.",
+    "Dresscode_Info": "",
+    "Recurrence_Type": "",
+    "Recurrence_Day": "",
+    "Recurrence_Until": "",
+    "Vibe_Tags": "Party, Sauna, Cruising, Young Crowd"
+  },
+  {
+    "Event_ID": "EVT-CGN-043",
+    "Venue_ID": "CGN-SAU-02",
+    "Event_Name": "ALPHA STEAM – International Puppy Sauna Meeting",
+    "Event_Date": "2026-09-25",
+    "Event_Start_Time": "",
+    "Event_End_Time": "",
+    "Status": "Live",
+    "Event_Description": "Confirmed international puppy-sauna meeting with puppy bar, foam party, playground and special-area programme.",
+    "Dresscode_Info": "",
+    "Recurrence_Type": "",
+    "Recurrence_Day": "",
+    "Recurrence_Until": "",
+    "Vibe_Tags": "Party, Sauna, Cruising"
+  },
+  {
+    "Event_ID": "EVT-CGN-055",
+    "Venue_ID": "CGN-PAR-01",
+    "Event_Name": "HomOriental",
+    "Event_Date": "2026-09-26",
+    "Event_Start_Time": "23:00",
+    "Event_End_Time": "",
+    "Status": "Hold",
+    "Event_Description": "Date extrapolated from HomOriental’s stated fourth-Saturday monthly schedule; verify this exact edition and host venue before attending.",
+    "Dresscode_Info": "",
+    "Recurrence_Type": "",
+    "Recurrence_Day": "",
+    "Recurrence_Until": "",
+    "Vibe_Tags": "Party, Dancefloor, Queer"
+  },
+  {
+    "Event_ID": "EVT-CGN-040",
+    "Venue_ID": "CGN-SAU-02",
+    "Event_Name": "Naked Xtend",
+    "Event_Date": "2026-09-26",
+    "Event_Start_Time": "",
+    "Event_End_Time": "",
+    "Status": "Hold",
+    "Event_Description": "Date extrapolated from Phoenix Sauna’s stated fourth-Saturday monthly programme; verify this exact edition before attending.",
+    "Dresscode_Info": "Naked",
+    "Recurrence_Type": "",
+    "Recurrence_Day": "",
+    "Recurrence_Until": "",
+    "Vibe_Tags": "Party, Sauna, Cruising, Naked"
   }
 ]
