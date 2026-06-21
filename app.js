@@ -1,5 +1,5 @@
 // --- Application State ---
-const APP_VERSION = "v0.90";
+const APP_VERSION = "v0.91";
 const APP_DATE = "21 June 2026";
 
 let systemInfo = {}, designTheme = {}, venues = [], events = [];
@@ -10,6 +10,8 @@ let currentTargetVenue = null;
 let currentShortlistTarget = null;
 let currentEventCityFilter = 'All';
 let isTutorialRunning = false; 
+let activeShortlistContentFilter = 'all';
+let activeShortlistContentName = '';
 let searchUsesFuzzyMatching = false;
 let searchResultTypeFilter = 'All';
 
@@ -97,6 +99,26 @@ function linkifyText(value) {
         const url = candidate.slice(0, candidate.length - trailing.length);
         return `<a class="auto-link" href="${url}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation();">${url}</a>${trailing}`;
     });
+}
+
+// Hyphenated party names such as "2-4-1" should wrap as one unit, not at each hyphen.
+function formatEventTitleForDisplay(value) {
+    const protectedTitle = String(value || 'Event')
+        .split(/(\s+)/)
+        .map(part => /^\s+$/.test(part) ? part : part.replace(/-/g, '\u2011'))
+        .join('');
+    return escapeHTML(protectedTitle);
+}
+
+function buildEventDateBadge(event, extraClass = '') {
+    const badgeData = getBadgeDateParts(getEventDisplayDate(event));
+    return `
+        <div class="event-date-badge ${extraClass}" aria-label="${escapeHTML(getEventDisplayDate(event))}">
+            <span class="event-day">${escapeHTML(badgeData.d)}</span>
+            <span class="event-month">${escapeHTML(badgeData.m)}</span>
+            <span class="event-year">${escapeHTML(badgeData.y)}</span>
+        </div>
+    `;
 }
 
 function getEventTags(event, venue = null) {
@@ -960,40 +982,103 @@ function checkSharedListRoute() {
     return false;
 }
 
-function renderSharedShortlistEvents(entries, container) {
-    const eventIds = entries.filter(entry => entry.type === 'event').map(entry => entry.id);
-    const sharedEvents = (events || [])
+function getShortlistEventOccurrences(entries) {
+    const eventIds = (entries || []).filter(entry => entry.type === 'event').map(entry => entry.id);
+    return (events || [])
         .filter(event => eventIds.includes(event.Event_ID))
         .map(event => getEventDisplayOccurrence(event))
         .filter(Boolean)
         .sort(compareEventOccurrences);
+}
 
-    if (!sharedEvents.length) return;
-
-    const section = document.createElement('section');
-    section.style.cssText = 'grid-column:1 / -1; margin-top:10px;';
-    section.innerHTML = '<h2 class="display-font" style="color:var(--primary-blue); margin:0 0 12px;">📅 EVENTS</h2>';
-
-    sharedEvents.forEach(event => {
-        const venue = (venues || []).find(item => item.Venue_ID === event.Venue_ID);
-        const card = document.createElement('article');
-        card.className = 'event-card';
-        card.innerHTML = `
-            <div class="event-content">
-                <h4 class="event-title">${event.Event_Name || 'Event'}</h4>
-                <p class="event-meta meta-text">${getEventDisplayMeta(event)}${venue?.Name ? ` · ${venue.Name}` : ''}</p>
-                <div class="event-action-row">
-                    <button type="button" class="event-action-btn" onclick="event.stopPropagation(); shareURL('${window.location.origin}${window.location.pathname}?event=${event.Event_ID}', '${String(event.Event_Name || 'Event').replace(/'/g, "\\'")}')" title="Share event">${BR_ICONS.share}</button>
-                    <button type="button" class="event-action-btn" onclick="event.stopPropagation(); window.promptAddEventToShortlist('${event.Event_ID}')" title="Add to Shortlist"><img src="shortlist.png" alt="" aria-hidden="true"></button>
-                    ${venue ? `<button type="button" class="event-action-btn" onclick="event.stopPropagation(); window.location.hash='#venue=${venue.Venue_ID}'" title="Open venue">🏛️</button>` : ''}
+function createShortlistEventCard(event) {
+    const venue = (venues || []).find(item => item.Venue_ID === event.Venue_ID) || null;
+    const safeEventName = String(event.Event_Name || 'Event').replace(/'/g, "\\'");
+    const eventTags = getEventTags(event, venue);
+    const card = document.createElement('article');
+    card.className = 'card shortlist-event-card';
+    card.innerHTML = `
+        <div class="shortlist-event-card-inner">
+            ${buildEventDateBadge(event, 'shortlist-event-date')}
+            <div class="shortlist-event-content">
+                <div class="shortlist-event-header">
+                    <div class="shortlist-event-heading">
+                        <h3 class="shortlist-event-title display-font">${formatEventTitleForDisplay(event.Event_Name)}</h3>
+                        <p class="shortlist-event-meta">${escapeHTML(getEventDisplayMeta(event))}${venue?.Name ? ` · ${escapeHTML(venue.Name)}` : ''}</p>
+                    </div>
+                    <div class="shortlist-event-actions" aria-label="Event actions">
+                        <button type="button" class="event-action-btn" onclick="event.stopPropagation(); shareURL('${window.location.origin}${window.location.pathname}?event=${event.Event_ID}', '${safeEventName}')" title="Share event">${BR_ICONS.share}</button>
+                        <button type="button" class="event-action-btn" onclick="event.stopPropagation(); window.promptAddEventToShortlist('${event.Event_ID}')" title="Add to another shortlist"><img src="shortlist.png" alt="" aria-hidden="true"></button>
+                        ${venue ? `<button type="button" class="event-action-btn" onclick="event.stopPropagation(); window.location.hash='#venue=${venue.Venue_ID}'" title="Open ${escapeHTML(venue.Name)}">🏛️</button>` : ''}
+                    </div>
                 </div>
-                ${event.Event_Description ? `<p class="event-description">${linkifyText(event.Event_Description)}</p>` : ''}
+                ${event.Event_Description ? `<p class="shortlist-event-description">${linkifyText(event.Event_Description)}</p>` : ''}
+                ${eventTags.length ? `<div class="feature-chips shortlist-event-tags">${renderTagPills(eventTags, 'font-size:0.72rem; padding:3px 8px;')}</div>` : ''}
             </div>
-        `;
-        section.appendChild(card);
+        </div>
+    `;
+
+    card.addEventListener('click', clickEvent => {
+        if (clickEvent.target.closest('a, button')) return;
+        if (venue?.Venue_ID) {
+            venueReturnHash = window.location.hash || '#myshortlists';
+            window.location.hash = `#venue=${venue.Venue_ID}`;
+        }
     });
 
-    container.appendChild(section);
+    return card;
+}
+
+function renderShortlistCollection(entries, container, filter = 'all') {
+    if (!container) return { venueCount: 0, eventCount: 0 };
+
+    const venueIds = (entries || []).filter(entry => entry.type === 'venue').map(entry => entry.id);
+    const shortlistVenues = (venues || []).filter(venue => venueIds.includes(venue.Venue_ID));
+    const shortlistEvents = getShortlistEventOccurrences(entries);
+    const showVenues = filter !== 'events';
+    const showEvents = filter !== 'venues';
+
+    const layout = document.createElement('div');
+    layout.className = `shortlist-layout${(showVenues && showEvents) ? '' : ' shortlist-layout-single'}`;
+
+    if (showVenues && shortlistVenues.length) {
+        const venueSection = document.createElement('section');
+        venueSection.className = 'shortlist-section shortlist-venues-section';
+        venueSection.innerHTML = '<h2 class="display-font shortlist-section-title">🏛️ VENUES</h2>';
+        const venueGrid = document.createElement('div');
+        venueGrid.className = 'shortlist-venue-grid';
+        venueSection.appendChild(venueGrid);
+        renderListings(shortlistVenues, true, venueGrid);
+        layout.appendChild(venueSection);
+    }
+
+    if (showEvents && shortlistEvents.length) {
+        const eventSection = document.createElement('section');
+        eventSection.className = 'shortlist-section shortlist-events-section';
+        eventSection.innerHTML = '<h2 class="display-font shortlist-section-title">📅 EVENTS</h2>';
+        const eventGrid = document.createElement('div');
+        eventGrid.className = 'shortlist-event-grid';
+        shortlistEvents.forEach(event => eventGrid.appendChild(createShortlistEventCard(event)));
+        eventSection.appendChild(eventGrid);
+        layout.appendChild(eventSection);
+    }
+
+    if (!layout.children.length) {
+        const empty = document.createElement('p');
+        empty.className = 'shortlist-empty-state';
+        const filterLabel = filter === 'venues' ? 'venues' : filter === 'events' ? 'events' : 'items';
+        empty.textContent = `No ${filterLabel} are available in this shortlist.`;
+        container.appendChild(empty);
+    } else {
+        container.appendChild(layout);
+    }
+
+    return { venueCount: shortlistVenues.length, eventCount: shortlistEvents.length };
+}
+
+function renderSharedShortlistEvents(entries, container) {
+    // Kept as the shared public helper, now using the same visual card system as saved shortlists.
+    return renderShortlistCollection(entries, container, 'events');
 }
 
 function renderSharedListView(name, emoji, entries) {
@@ -1027,24 +1112,10 @@ function renderSharedListView(name, emoji, entries) {
     `;
     resultsContainer.appendChild(sharedHeader);
 
-    const venueIds = entries.filter(entry => entry.type === 'venue').map(entry => entry.id);
-    const matchingVenues = (venues || []).filter(venue => venueIds.includes(venue.Venue_ID));
-    if (matchingVenues.length) {
-        const venueHeading = document.createElement('section');
-        venueHeading.style.cssText = 'grid-column:1 / -1; margin-bottom:4px;';
-        venueHeading.innerHTML = '<h2 class="display-font" style="color:var(--primary-blue); margin:0;">🏛️ VENUES</h2>';
-        resultsContainer.appendChild(venueHeading);
+    const sharedCounts = renderShortlistCollection(entries, resultsContainer, 'all');
 
-        const venueGrid = document.createElement('section');
-        venueGrid.style.cssText = 'display:grid; grid-template-columns:repeat(auto-fill, minmax(300px, 1fr)); gap:20px; grid-column:1 / -1;';
-        resultsContainer.appendChild(venueGrid);
-        renderListings(matchingVenues, true, venueGrid);
-    }
-
-    renderSharedShortlistEvents(entries, resultsContainer);
-
-    if (!matchingVenues.length && !entries.some(entry => entry.type === 'event')) {
-        resultsContainer.innerHTML += '<p style="text-align:center; color:var(--label-grey); grid-column:1 / -1;">No active shortlist items found.</p>';
+    if (!sharedCounts.venueCount && !sharedCounts.eventCount) {
+        resultsContainer.innerHTML += '<p class="shortlist-empty-state">No active shortlist items found.</p>';
     }
 
     document.getElementById('btn-save-shared')?.addEventListener('click', () => {
@@ -1075,6 +1146,7 @@ function handleRouting() {
     document.querySelectorAll('.modal').forEach(m => m.classList.add('hidden'));
     contextHeader?.classList.add('hidden');
     document.getElementById('event-city-filters')?.classList.add('hidden');
+    document.getElementById('shortlist-view-filters')?.classList.add('hidden');
     document.getElementById('btn-new-shortlist-view')?.classList.add('hidden');
     document.getElementById('main-filters')?.classList.remove('hidden');
     ['discounts', 'about', 'featured', 'cruising-guide'].forEach(page => document.getElementById(`${page}-container`)?.classList.add('hidden'));
@@ -1156,31 +1228,43 @@ function renderSingleShortlist(name) {
     const cTitle = document.getElementById('context-title');
     const cDesc = document.getElementById('context-desc');
     const eIcon = userShortlistEmojis[name] || '📑';
-    if(cTitle) cTitle.innerHTML = `${eIcon} ${name}`;
+    if(cTitle) cTitle.innerHTML = `${eIcon} ${escapeHTML(name)}`;
     if(cDesc) cDesc.innerText = `A saved shortlist collection: ${formatShortlistCount(name)}.`;
 
-    const entries = getShortlistEntries(name);
-    const venueIds = entries.filter(entry => entry.type === 'venue').map(entry => entry.id);
-    const matchingVenues = (venues || []).filter(venue => venueIds.includes(venue.Venue_ID));
-
-    if (resultsContainer) resultsContainer.innerHTML = '';
-
-    if (matchingVenues.length) {
-        const venueHeading = document.createElement('section');
-        venueHeading.style.cssText = 'grid-column:1 / -1; margin-bottom:4px;';
-        venueHeading.innerHTML = '<h2 class="display-font" style="color:var(--primary-blue); margin:0;">🏛️ VENUES</h2>';
-        resultsContainer?.appendChild(venueHeading);
-
-        const venueGrid = document.createElement('section');
-        venueGrid.style.cssText = 'display:grid; grid-template-columns:repeat(auto-fill, minmax(300px, 1fr)); gap:20px; grid-column:1 / -1;';
-        resultsContainer?.appendChild(venueGrid);
-        renderListings(matchingVenues, true, venueGrid);
+    if (activeShortlistContentName !== name) {
+        activeShortlistContentName = name;
+        activeShortlistContentFilter = 'all';
     }
 
-    renderSharedShortlistEvents(entries, resultsContainer);
+    const filterContainer = document.getElementById('shortlist-view-filters');
+    if (filterContainer) {
+        filterContainer.classList.remove('hidden');
+        filterContainer.innerHTML = '';
+        [
+            { value: 'all', label: 'All' },
+            { value: 'venues', label: 'Venues' },
+            { value: 'events', label: 'Events' }
+        ].forEach(item => {
+            const button = document.createElement('button');
+            button.type = 'button';
+            button.className = `chip pill-btn shortlist-view-chip ${activeShortlistContentFilter === item.value ? 'active' : ''}`;
+            button.textContent = item.label;
+            button.addEventListener('click', () => {
+                activeShortlistContentFilter = item.value;
+                renderSingleShortlist(name);
+            });
+            filterContainer.appendChild(button);
+        });
+    }
+
+    const entries = getShortlistEntries(name);
+    if (resultsContainer) resultsContainer.innerHTML = '';
+    const counts = renderShortlistCollection(entries, resultsContainer, activeShortlistContentFilter);
 
     if (!entries.length && resultsContainer) {
-        resultsContainer.innerHTML = '<p style="text-align:center; color:var(--label-grey); margin-top:20px; width:100%; grid-column:1 / -1;">This shortlist is empty.</p>';
+        resultsContainer.innerHTML = '<p class="shortlist-empty-state">This shortlist is empty.</p>';
+    } else if (!counts.venueCount && !counts.eventCount && resultsContainer) {
+        resultsContainer.innerHTML = `<p class="shortlist-empty-state">No ${activeShortlistContentFilter === 'venues' ? 'venues' : 'events'} are available in this shortlist.</p>`;
     }
 }
 
@@ -2285,7 +2369,7 @@ function renderSearchEventResults(items, targetContainer) {
             <div class="card-inner-content">
                 <div class="card-header">
                     <div>
-                        <h3 class="card-title display-font">${escapeHTML(eventName)}</h3>
+                        <h3 class="card-title display-font">${formatEventTitleForDisplay(eventName)}</h3>
                         <div class="card-meta">📅 ${escapeHTML(getEventDisplayMeta(event))}</div>
                         <div class="card-meta">🏛️ ${escapeHTML(venue?.Name || 'Venue not listed')} · ${escapeHTML(formatVenueLocation(venue))}</div>
                     </div>
@@ -2632,77 +2716,109 @@ function renderFavoritesView() {
 
 function renderMyEventsView() {
     document.getElementById('main-filters')?.classList.add('hidden');
+    document.getElementById('shortlist-view-filters')?.classList.add('hidden');
     contextHeader?.classList.remove('hidden');
     const backBtn = document.getElementById('btn-back-to-results');
     backBtn?.classList.remove('result-back-hidden');
     resetBackButton('← Back to Results', 'results');
-    
+
     const cTitle = document.getElementById('context-title');
     const cDesc = document.getElementById('context-desc');
-    if(cTitle) cTitle.innerHTML = "💖 MY EVENTS";
-    if(cDesc) cDesc.innerText = "Events you have pinned locally.";
-    
+    if(cTitle) cTitle.innerHTML = '💖 MY EVENTS';
+    if(cDesc) cDesc.innerText = 'Events you have pinned locally, ordered by date.';
+
     const cityFilterContainer = document.getElementById('event-city-filters');
     if(cityFilterContainer) {
         cityFilterContainer.classList.remove('hidden');
         cityFilterContainer.innerHTML = '';
     }
-    
-    let myEvts = (events||[]).filter(e => userEvents.includes(e.Event_ID)).map(e => getEventDisplayOccurrence(e)).filter(Boolean).sort(compareEventOccurrences);
-    
+
+    let myEvts = (events || [])
+        .filter(event => userEvents.includes(event.Event_ID))
+        .map(event => getEventDisplayOccurrence(event))
+        .filter(Boolean)
+        .sort(compareEventOccurrences);
+
     if(myEvts.length === 0) {
-        if(resultsContainer) resultsContainer.innerHTML = `<p style="text-align:center; color:var(--label-grey); margin-top:20px; width: 100%; grid-column: 1 / -1;">No saved events.</p>`;
+        if(resultsContainer) resultsContainer.innerHTML = '<p class="shortlist-empty-state">No saved events.</p>';
         cityFilterContainer?.classList.add('hidden');
         return;
     }
 
     const cities = new Set();
-    myEvts.forEach(ev => {
-        const venue = (venues||[]).find(v => v.Venue_ID === ev.Venue_ID);
+    myEvts.forEach(event => {
+        const venue = (venues || []).find(item => item.Venue_ID === event.Venue_ID);
         if(venue) getCityTokens(venue).forEach(city => cities.add(city));
     });
 
     const createCityBtn = (cityName, label) => {
         if(!cityFilterContainer) return;
-        const btn = document.createElement('button');
-        btn.className = `chip pill-btn ${currentEventCityFilter === cityName ? 'active' : ''}`;
-        btn.innerText = label;
-        btn.onclick = () => { currentEventCityFilter = cityName; renderMyEventsView(); };
-        cityFilterContainer.appendChild(btn);
+        const button = document.createElement('button');
+        button.className = `chip pill-btn ${currentEventCityFilter === cityName ? 'active' : ''}`;
+        button.textContent = label;
+        button.addEventListener('click', () => {
+            currentEventCityFilter = cityName;
+            renderMyEventsView();
+        });
+        cityFilterContainer.appendChild(button);
     };
 
     createCityBtn('All', 'All');
-    cities.forEach(city => createCityBtn(city, city));
+    [...cities].sort((a, b) => a.localeCompare(b)).forEach(city => createCityBtn(city, city));
 
     if(currentEventCityFilter !== 'All') {
-        myEvts = myEvts.filter(ev => {
-            const venue = (venues||[]).find(v => v.Venue_ID === ev.Venue_ID);
+        myEvts = myEvts.filter(event => {
+            const venue = (venues || []).find(item => item.Venue_ID === event.Venue_ID);
             return venue && venueMatchesCity(venue, currentEventCityFilter);
         });
     }
 
-    if(resultsContainer) resultsContainer.innerHTML = '';
-    myEvts.forEach(ev => {
-        const venue = (venues||[]).find(v => v.Venue_ID === ev.Venue_ID);
+    if(resultsContainer) {
+        resultsContainer.innerHTML = '';
+        resultsContainer.classList.add('my-events-grid');
+    }
+
+    if (!myEvts.length) {
+        if(resultsContainer) resultsContainer.innerHTML = '<p class="shortlist-empty-state">No saved events match this city.</p>';
+        return;
+    }
+
+    myEvts.sort(compareEventOccurrences).forEach(event => {
+        const venue = (venues || []).find(item => item.Venue_ID === event.Venue_ID) || null;
         const venueName = venue ? venue.Name : 'Unknown Venue';
-        const card = document.createElement('div');
-        card.className = 'card';
-        card.style.border = '1px solid var(--primary-blue)';
+        const safeEventName = String(event.Event_Name || 'Event').replace(/'/g, "\\'");
+        const eventTags = getEventTags(event, venue);
+        const card = document.createElement('article');
+        card.className = 'card my-event-card';
         card.innerHTML = `
-            <div class="card-inner-content">
-                <div class="card-header">
-                    <div><h3 class="card-title display-font">${ev.Event_Name}</h3><div class="card-meta">${getEventDisplayMeta(ev)}${getEventDisplayMeta(ev) ? ' | ' : ''}@ ${venueName}</div></div>
-                    <div style="display:flex; gap:10px; align-items:center;">
-                        <span class="icon-btn" onclick="event.stopPropagation(); shareURL('${window.location.origin}${window.location.pathname}?event=${ev.Event_ID}#myevents', '${ev.Event_Name.replace(/'/g, "\\'")}')" title="Share" style="font-size:1.5rem;">${BR_ICONS.share}</span>
-                        <span class="icon-btn" onclick="event.stopPropagation(); window.flagListing('${ev.Event_ID}', '${ev.Event_Name.replace(/'/g, "\\'")}', 'Event Report')" title="Report" style="display:flex; align-items:center; justify-content:center;"><img src="report.png" style="width:24px; height:24px; object-fit:contain;"></span>
-                        <button class="icon-btn" onclick="event.stopPropagation(); window.promptAddEventToShortlist('${ev.Event_ID}')" title="Add to Shortlist"><img src="shortlist.png" style="width:24px; height:24px; object-fit:contain;"></button>
-                        <button class="icon-btn fav-btn active-star" style="font-size:1.5rem;" onclick="toggleEventFavorite('${ev.Event_ID}', null, true)">❌</button>
+            <div class="my-event-card-inner">
+                ${buildEventDateBadge(event, 'my-event-date')}
+                <div class="my-event-content">
+                    <div class="my-event-header">
+                        <div class="my-event-heading">
+                            <h3 class="my-event-title display-font">${formatEventTitleForDisplay(event.Event_Name)}</h3>
+                            <p class="my-event-meta">${escapeHTML(getEventDisplayMeta(event))}${venueName ? ` · ${escapeHTML(venueName)}` : ''}</p>
+                        </div>
+                        <div class="my-event-actions" aria-label="Event actions">
+                            <button type="button" class="event-action-btn" onclick="event.stopPropagation(); shareURL('${window.location.origin}${window.location.pathname}?event=${event.Event_ID}#myevents', '${safeEventName}')" title="Share event">${BR_ICONS.share}</button>
+                            <button type="button" class="event-action-btn" onclick="event.stopPropagation(); window.flagListing('${event.Event_ID}', '${safeEventName}', 'Event Report')" title="Report event"><img src="report.png" alt="" aria-hidden="true"></button>
+                            <button type="button" class="event-action-btn" onclick="event.stopPropagation(); window.promptAddEventToShortlist('${event.Event_ID}')" title="Add to shortlist"><img src="shortlist.png" alt="" aria-hidden="true"></button>
+                            <button type="button" class="event-action-btn fav-btn active-star" onclick="event.stopPropagation(); toggleEventFavorite('${event.Event_ID}', null, true)" title="Remove from My Events">💖</button>
+                        </div>
                     </div>
+                    ${event.Event_Description ? `<p class="my-event-description">${linkifyText(event.Event_Description)}</p>` : ''}
+                    ${eventTags.length ? `<div class="feature-chips my-event-tags">${renderTagPills(eventTags, 'font-size:0.72rem; padding:3px 8px;')}</div>` : ''}
                 </div>
-                <div class="card-about">${ev.Event_Description ? linkifyText(ev.Event_Description) : ''}</div>
             </div>
         `;
-        if(resultsContainer) resultsContainer.appendChild(card);
+        card.addEventListener('click', clickEvent => {
+            if (clickEvent.target.closest('a, button')) return;
+            if (venue?.Venue_ID) {
+                venueReturnHash = '#myevents';
+                window.location.hash = `#venue=${venue.Venue_ID}`;
+            }
+        });
+        resultsContainer?.appendChild(card);
     });
 }
 
@@ -3184,7 +3300,7 @@ function renderListings(data, isContextView = false, targetContainer = resultsCo
         if(venueEvents.length > 0) {
             const nextE = venueEvents[0];
             const recurrenceText = nextE.Is_Recurring ? ` · ${nextE.Recurrence_Label}` : '';
-            nextEventHtml = `<div class="card-next-event">📅 Next: ${nextE.Event_Name} (${formatDateToDDMMYYYY(getEventDisplayDate(nextE))})${recurrenceText}</div>`;
+            nextEventHtml = `<div class="card-next-event">📅 Next: ${formatEventTitleForDisplay(nextE.Event_Name)} (${formatDateToDDMMYYYY(getEventDisplayDate(nextE))})${recurrenceText}</div>`;
         }
 
         const isFav = userFavorites.includes(venue.Venue_ID);
@@ -3361,7 +3477,7 @@ function openVenueModal(venue) {
                         <span class="event-year">${badgeData.y}</span>
                     </div>
                     <div class="event-content">
-                        <h4 class="event-title">${ev.Event_Name || 'Event'} ${isPast ? '<small>(Past)</small>' : ''}</h4>
+                        <h4 class="event-title">${formatEventTitleForDisplay(ev.Event_Name)} ${isPast ? '<small>(Past)</small>' : ''}</h4>
                         <p class="event-meta meta-text">${getEventDisplayMeta(ev)}</p>
                         <div class="event-action-row" aria-label="Event actions">
                             <button type="button" class="event-action-btn" onclick="event.stopPropagation(); shareURL('${window.location.origin}${window.location.pathname}?event=${ev.Event_ID}', '${safeEventName}')" title="Share ${safeEventName}">${BR_ICONS.share}</button>

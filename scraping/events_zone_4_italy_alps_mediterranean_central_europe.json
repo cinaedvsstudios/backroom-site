@@ -1,0 +1,62 @@
+[
+  {
+    "Event_ID": "EVT-BUD-001",
+    "Venue_ID": "BUD-PRD-01",
+    "Event_Name": "Budapest Pride March 2026",
+    "Event_Date": "2026-06-27",
+    "Event_Start_Time": "",
+    "Event_End_Time": "",
+    "Status": "Live",
+    "Event_Description": "Confirmed 31st Budapest Pride March. Check the official Pride site for the final route and start-time information.",
+    "Dresscode_Info": "",
+    "Recurrence_Type": "",
+    "Recurrence_Day": "",
+    "Recurrence_Until": "",
+    "Vibe_Tags": "Queer, Pride"
+  },
+  {
+    "Event_ID": "EVT-BUD-002",
+    "Venue_ID": "BUD-PRD-01",
+    "Event_Name": "Budapest Pride Rainbow Party 2026",
+    "Event_Date": "2026-06-27",
+    "Event_Start_Time": "22:00",
+    "Event_End_Time": "04:00",
+    "Status": "Live",
+    "Event_Description": "Confirmed official Budapest Pride afterparty at Budapest Park, running overnight into 28 June.",
+    "Dresscode_Info": "",
+    "Recurrence_Type": "",
+    "Recurrence_Day": "",
+    "Recurrence_Until": "",
+    "Vibe_Tags": "Party, Dancefloor, Queer, Pride"
+  },
+  {
+    "Event_ID": "EVT-PRG-001",
+    "Venue_ID": "PRG-PRD-01",
+    "Event_Name": "Prague Pride Festival 2026",
+    "Event_Date": "2026-08-03",
+    "Event_Start_Time": "",
+    "Event_End_Time": "",
+    "Status": "Live",
+    "Event_Description": "Confirmed Prague Pride Festival running 3–9 August 2026.",
+    "Dresscode_Info": "",
+    "Recurrence_Type": "",
+    "Recurrence_Day": "",
+    "Recurrence_Until": "",
+    "Vibe_Tags": "Party, Dancefloor, Queer, Pride"
+  },
+  {
+    "Event_ID": "EVT-PRG-002",
+    "Venue_ID": "PRG-PRD-01",
+    "Event_Name": "Prague Pride Parade 2026",
+    "Event_Date": "2026-08-08",
+    "Event_Start_Time": "",
+    "Event_End_Time": "",
+    "Status": "Live",
+    "Event_Description": "Confirmed Prague Pride Parade from Wenceslas Square to Štvanice Island.",
+    "Dresscode_Info": "",
+    "Recurrence_Type": "",
+    "Recurrence_Day": "",
+    "Recurrence_Until": "",
+    "Vibe_Tags": "Queer, Pride"
+  }
+]

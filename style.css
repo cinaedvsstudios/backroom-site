@@ -1282,3 +1282,243 @@ td.hidden-col * { display: none !important; }
 .search-event-tags {
     margin: -2px 0 14px;
 }
+
+/* v0.91 — shared My Events and Shortlist layout */
+.shortlist-view-filters {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+.shortlist-view-chip {
+    min-width: 72px;
+}
+.shortlist-layout {
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 20px;
+    align-items: start;
+}
+.shortlist-layout-single {
+    grid-template-columns: minmax(0, 1fr);
+}
+.shortlist-section {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+.shortlist-section-title {
+    color: var(--primary-blue);
+    font-size: 1.55rem;
+    margin: 0;
+}
+.shortlist-venue-grid,
+.shortlist-event-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 14px;
+}
+.shortlist-venue-grid .card,
+.shortlist-event-card,
+.my-event-card {
+    min-width: 0;
+    border-color: var(--primary-blue);
+    cursor: pointer;
+}
+.shortlist-event-card,
+.my-event-card {
+    overflow: visible;
+}
+.shortlist-event-card-inner,
+.my-event-card-inner {
+    min-width: 0;
+    display: flex;
+    align-items: stretch;
+    gap: 12px;
+    padding: 12px;
+}
+.shortlist-event-date,
+.my-event-date {
+    flex: 0 0 82px;
+    min-width: 82px;
+    min-height: 100%;
+    display: flex !important;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1px;
+    padding: 9px 6px;
+    background: var(--panel-dark);
+    border: 1px solid var(--primary-blue);
+    border-radius: 6px;
+}
+.shortlist-event-date .event-day,
+.my-event-date .event-day {
+    font-family: 'Antonio', sans-serif;
+    font-size: 2rem;
+    font-weight: 700;
+    line-height: 0.9;
+    color: var(--primary-blue);
+}
+.shortlist-event-date .event-month,
+.my-event-date .event-month {
+    font-family: 'Antonio', sans-serif;
+    font-size: 0.9rem;
+    font-weight: 700;
+    line-height: 1;
+    letter-spacing: 0.08em;
+    color: #fff;
+}
+.shortlist-event-date .event-year,
+.my-event-date .event-year {
+    font-size: 0.72rem;
+    line-height: 1.1;
+    color: var(--text-light);
+}
+.shortlist-event-content,
+.my-event-content {
+    min-width: 0;
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+}
+.shortlist-event-header,
+.my-event-header {
+    min-width: 0;
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 10px;
+}
+.shortlist-event-heading,
+.my-event-heading {
+    min-width: 0;
+    flex: 1 1 auto;
+}
+.shortlist-event-title,
+.my-event-title {
+    margin: 0;
+    color: #fff;
+    font-size: 1.22rem;
+    line-height: 1.05;
+    letter-spacing: 0.05em;
+    overflow-wrap: normal;
+    word-break: normal;
+    hyphens: none;
+}
+.shortlist-event-meta,
+.my-event-meta {
+    margin: 4px 0 0;
+    color: var(--label-grey);
+    font-size: 0.86rem;
+    line-height: 1.25;
+}
+.shortlist-event-actions,
+.my-event-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 6px;
+    flex: 0 0 auto;
+}
+.shortlist-event-actions .event-action-btn,
+.my-event-actions .event-action-btn {
+    width: 31px;
+    height: 29px;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--panel-mid);
+    border-radius: var(--radius-btn);
+    background: var(--panel-dark);
+    color: var(--text-light);
+    font-size: 1rem;
+    line-height: 1;
+    cursor: pointer;
+}
+.shortlist-event-actions .event-action-btn:hover,
+.shortlist-event-actions .event-action-btn:focus-visible,
+.my-event-actions .event-action-btn:hover,
+.my-event-actions .event-action-btn:focus-visible {
+    border-color: var(--primary-blue);
+    background: rgba(44, 168, 212, 0.16);
+    color: #fff;
+    outline: none;
+}
+.shortlist-event-actions .event-action-btn img,
+.my-event-actions .event-action-btn img {
+    width: 17px;
+    height: 17px;
+    object-fit: contain;
+}
+.shortlist-event-description,
+.my-event-description {
+    margin: 10px 0 0;
+    color: var(--text-light);
+    font-size: 0.95rem;
+    line-height: 1.42;
+    overflow-wrap: anywhere;
+}
+.shortlist-event-tags,
+.my-event-tags {
+    margin-top: 10px;
+}
+.my-events-grid {
+    align-items: stretch;
+}
+.shortlist-empty-state {
+    grid-column: 1 / -1;
+    width: 100%;
+    max-width: 620px;
+    margin: 20px auto;
+    padding: 24px;
+    text-align: center;
+    color: var(--label-grey);
+    background: var(--panel-dark);
+    border: 1px solid var(--panel-mid);
+    border-radius: var(--radius-card);
+}
+@media (max-width: 768px) {
+    .shortlist-view-filters {
+        width: 100%;
+    }
+    .shortlist-view-chip {
+        flex: 1 1 0;
+        min-width: 0;
+    }
+    .shortlist-layout {
+        grid-template-columns: minmax(0, 1fr);
+        gap: 16px;
+    }
+    .shortlist-event-card-inner,
+    .my-event-card-inner {
+        gap: 9px;
+        padding: 10px;
+    }
+    .shortlist-event-date,
+    .my-event-date {
+        flex-basis: 62px;
+        min-width: 62px;
+        padding: 7px 4px;
+    }
+    .shortlist-event-date .event-day,
+    .my-event-date .event-day { font-size: 1.55rem; }
+    .shortlist-event-date .event-month,
+    .my-event-date .event-month { font-size: 0.76rem; }
+    .shortlist-event-date .event-year,
+    .my-event-date .event-year { font-size: 0.62rem; }
+    .shortlist-event-title,
+    .my-event-title { font-size: 1.05rem; }
+    .shortlist-event-meta,
+    .my-event-meta { font-size: 0.78rem; }
+    .shortlist-event-actions,
+    .my-event-actions { gap: 5px; }
+    .shortlist-event-actions .event-action-btn,
+    .my-event-actions .event-action-btn { width: 28px; height: 27px; font-size: 0.9rem; }
+    .shortlist-event-description,
+    .my-event-description { font-size: 0.86rem; margin-top: 8px; }
+}
+
