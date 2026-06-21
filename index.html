@@ -144,12 +144,12 @@
             <button class="btn-close close-modal-btn">❌</button>
             <div class="modal-header"><h2 class="display-font">SET LOCATION</h2></div>
             <div class="modal-body body-font location-modal-body">
-                <p class="meta-text location-modal-intro">Set a city to browse its venues and events.</p>
+                <p class="meta-text location-modal-intro">Set a city to browse its venues and events. Leave City blank to browse <strong>ALL CITIES</strong>.</p>
                 <button id="btn-gps" class="btn primary-btn pill-btn location-gps-button"><img src="location.png" alt="" style="width:18px; vertical-align:middle; margin-right:8px;">Use My GPS Location</button>
                 <hr class="divider location-modal-divider">
                 <input type="text" id="loc-country" class="form-input pill-input" placeholder="Country">
                 <div class="location-city-search-row">
-                    <input type="text" id="loc-city" class="form-input pill-input" placeholder="City" list="city-suggestions" data-lat="" data-lon="">
+                    <input type="text" id="loc-city" class="form-input pill-input" placeholder="City (optional — blank = ALL CITIES)" list="city-suggestions" data-lat="" data-lon="">
                     <button class="btn secondary-btn pill-btn" id="btn-search-map" type="button" title="Show on map" aria-label="Show city on map">🔍</button>
                 </div>
                 <input type="text" id="loc-postcode" class="form-input pill-input location-postcode-input" placeholder="Postcode (optional)" maxlength="8">

@@ -120,6 +120,16 @@ function getSavedLocation() {
     }
 }
 
+function isAllCitiesLocation(location) {
+    if (!location || typeof location !== 'object') return false;
+    if (String(location.scope || '').trim().toLowerCase() === 'all') return true;
+
+    // Backward compatibility: an older saved location with no values also means the all-cities view.
+    return !String(location.city || '').trim()
+        && !String(location.country || '').trim()
+        && !String(location.postcode || '').trim();
+}
+
 function openLocationModal() {
     loadSavedLocation();
     locModal?.classList.remove('hidden');
@@ -1869,17 +1879,21 @@ function renderSavedLocationVenuesView() {
     const title = document.getElementById('context-title');
     const desc = document.getElementById('context-desc');
     const savedLocation = getSavedLocation();
+    const isAllCities = isAllCitiesLocation(savedLocation);
     const savedCity = String(savedLocation?.city || '').trim();
+    const displayCity = isAllCities ? 'ALL CITIES' : savedCity;
 
-    if (!savedCity || savedCity.toLowerCase() === 'my location') {
+    if (!isAllCities && (!savedCity || savedCity.toLowerCase() === 'my location')) {
         if (title) title.textContent = 'VENUES';
-        if (desc) desc.textContent = 'Set a city to browse all public venue listings there.';
-        renderSavedLocationEmptyState('NO CITY SELECTED', 'Choose a city in Location, then Backroom will show that city’s venues here.', true);
+        if (desc) desc.textContent = 'Choose a city, or leave it blank to browse all public venue listings.';
+        renderSavedLocationEmptyState('NO CITY SELECTED', 'Choose a city in Location, or leave City blank to browse all cities.', true);
         return;
     }
 
     const matchingVenues = sortSavedLocationVenues(
-        getPublicVenues().filter(venue => venueMatchesCity(venue, savedCity))
+        isAllCities
+            ? getPublicVenues()
+            : getPublicVenues().filter(venue => venueMatchesCity(venue, savedCity))
     );
 
     if (title) {
@@ -1888,21 +1902,31 @@ function renderSavedLocationVenuesView() {
         const cityPill = document.createElement('button');
         cityPill.type = 'button';
         cityPill.className = 'location-city-pill pill-btn';
-        cityPill.textContent = savedCity;
+        cityPill.textContent = displayCity;
         cityPill.title = 'Change location';
-        cityPill.setAttribute('aria-label', `Change location from ${savedCity}`);
+        cityPill.setAttribute('aria-label', `Change location from ${displayCity.toLowerCase()}`);
         cityPill.addEventListener('click', openLocationModal);
         title.appendChild(cityPill);
     }
 
-    if (desc) desc.textContent = matchingVenues.length === 1
-        ? '1 public venue listing found.'
-        : `${matchingVenues.length} public venue listings found.`;
+    if (desc) {
+        if (isAllCities) {
+            desc.textContent = matchingVenues.length === 1
+                ? '1 public venue listing across all cities.'
+                : `${matchingVenues.length} public venue listings across all cities.`;
+        } else {
+            desc.textContent = matchingVenues.length === 1
+                ? '1 public venue listing found.'
+                : `${matchingVenues.length} public venue listings found.`;
+        }
+    }
 
     if (!matchingVenues.length) {
         renderSavedLocationEmptyState(
-            `NO VENUES YET FOR ${savedCity.toUpperCase()}`,
-            'More coming soon. You can still use Search Results to search every city and every listing.'
+            isAllCities ? 'NO PUBLIC VENUES YET' : `NO VENUES YET FOR ${savedCity.toUpperCase()}`,
+            isAllCities
+                ? 'More coming soon.'
+                : 'More coming soon. You can still use Search Results to search every city and every listing.'
         );
         return;
     }
@@ -2896,16 +2920,26 @@ async function shareURL(url, title) {
 function saveLocation() {
     recordUserInteraction();
     const cityInp = document.getElementById('loc-city');
-    const loc = {
-        country: document.getElementById('loc-country')?.value.trim() || '',
-        city: cityInp?.value.trim() || '',
-        postcode: document.getElementById('loc-postcode')?.value.trim() || ''
-    };
+    const requestedCity = cityInp?.value.trim() || '';
 
-    if (!loc.city || loc.city.toLowerCase() === 'my location') {
-        showToast('Enter a city before loading venues.');
+    if (requestedCity.toLowerCase() === 'my location') {
+        showToast('Choose a city, or leave City blank to browse all cities.');
         return;
     }
+
+    const loc = requestedCity
+        ? {
+            country: document.getElementById('loc-country')?.value.trim() || '',
+            city: requestedCity,
+            postcode: document.getElementById('loc-postcode')?.value.trim() || '',
+            scope: 'city'
+        }
+        : {
+            country: '',
+            city: '',
+            postcode: '',
+            scope: 'all'
+        };
 
     localStorage.setItem('br_location', JSON.stringify(loc));
     updateLocationDisplay(loc);
@@ -2941,10 +2975,11 @@ function loadSavedLocation() {
     const cInp = document.getElementById('loc-country');
     const ciInp = document.getElementById('loc-city');
     const pInp = document.getElementById('loc-postcode');
+    const isAllCities = isAllCitiesLocation(loc);
 
-    if(cInp) cInp.value = loc.country || '';
-    if(ciInp) ciInp.value = loc.city || '';
-    if(pInp) pInp.value = loc.postcode || '';
+    if(cInp) cInp.value = isAllCities ? '' : (loc.country || '');
+    if(ciInp) ciInp.value = isAllCities ? '' : (loc.city || '');
+    if(pInp) pInp.value = isAllCities ? '' : (loc.postcode || '');
     updateLocationDisplay(loc);
 }
 
@@ -2954,20 +2989,21 @@ function updateLocationDisplay(loc) {
 
     const city = String(loc?.city || '').trim();
     const country = String(loc?.country || '').trim();
+    const isAllCities = isAllCitiesLocation(loc);
     display.replaceChildren();
 
-    if (city) {
+    if (isAllCities || city) {
         const label = document.createElement('span');
         label.className = 'location-current-label';
         label.textContent = 'Current city:';
 
         const cityName = document.createElement('span');
         cityName.className = 'location-current-city';
-        cityName.textContent = city;
+        cityName.textContent = isAllCities ? 'All Cities' : city;
 
         display.append(label, cityName);
 
-        if (country) {
+        if (!isAllCities && country) {
             const countryName = document.createElement('span');
             countryName.className = 'location-current-country';
             countryName.textContent = country;
