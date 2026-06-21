@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Backroom - v0.75</title>
+    <title>Backroom - v0.94</title>
     
     <meta name="description" content="Backroom - The comprehensive local guide to gay venues, cruise clubs, and events.">
     <meta name="keywords" content="gay guide, cruising, gay clubs, darkroom, fetish, gay events, queer venues">
@@ -15,7 +15,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Antonio:wght@400;700&family=Barlow+Condensed:wght@400;500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
-    <link rel="stylesheet" href="style.css?v=0.92">
+    <link rel="stylesheet" href="style.css?v=0.94">
     <link rel="stylesheet" href="calendar.css?v=0.90">
 </head>
 <body>
@@ -139,6 +139,14 @@
     <div id="venue-modal" class="modal hidden"><div class="modal-content venue-modal-style"><div class="modal-header" style="display: flex; justify-content: space-between; align-items: center;"><h2 id="modal-title" class="display-font" style="margin: 0; flex-grow: 1;">VENUE NAME</h2><div class="modal-actions-group" style="display: flex; gap: 10px; align-items: center; background: var(--panel-dark); border: 1px solid var(--panel-mid); padding: 5px 15px; border-radius: 50px; margin-right: 20px;"><button id="modal-star" class="icon-btn tooltip" title="Toggle Favorite" style="font-size: 1.8rem;">⚜️</button><button id="modal-shortlist" class="icon-btn tooltip" title="Add to Shortlist"><img src="shortlist.png" style="width:24px;"></button><button id="modal-share" class="icon-btn tooltip" title="Share" style="font-size: 1.5rem;">📣</button><button id="modal-report" class="icon-btn tooltip" title="Report" style="display:flex; align-items:center; justify-content:center;"><img src="report.png" style="width:24px; height:24px; object-fit:contain;"></button></div><button id="close-modal" class="btn-close" style="position: relative; top: auto; right: auto;">❌</button></div><div class="modal-body body-font"><div id="modal-dynamic-layout"></div></div></div></div>
 
     <datalist id="city-suggestions"><option value="Berlin">Germany</option><option value="Hamburg">Germany</option><option value="Cologne">Germany</option><option value="Frankfurt">Germany</option><option value="Munich">Germany</option><option value="London">United Kingdom</option><option value="Paris">France</option><option value="Madrid">Spain</option></datalist>
+    <div id="community-rating-modal" class="modal hidden" style="z-index: 3200;">
+        <div class="modal-content small-modal community-rating-modal-content">
+            <button type="button" class="btn-close close-modal-btn" onclick="window.closeCommunityRatingModal()">❌</button>
+            <div class="modal-header"><h2 class="display-font">🌈 RATED BY THE GAYS</h2></div>
+            <div id="community-rating-content" class="modal-body body-font"></div>
+        </div>
+    </div>
+
     <div id="location-modal" class="modal hidden">
         <div class="modal-content small-modal location-modal-content">
             <button class="btn-close close-modal-btn">❌</button>
@@ -177,7 +185,7 @@
     <div id="profile-unsaved-modal" class="modal hidden" style="z-index: 3600;"><div class="modal-content small-modal" style="background: var(--panel-dark); border: 2px solid var(--primary-blue);"><div class="modal-header"><h2 class="display-font">SAVE AVATAR CHANGES?</h2></div><div class="modal-body body-font"><p style="margin-bottom:15px; color:#fff;">Save avatar changes?</p><div style="display:flex; flex-direction:column; gap:10px;"><button id="btn-save-profile-unsaved" type="button" class="btn primary-btn pill-btn">Save changes</button><button id="btn-discard-profile-unsaved" type="button" class="btn secondary-btn pill-btn">Discard changes</button></div></div></div></div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
-    <script src="app.js?v=0.93"></script>
-    <script src="calendar.js?v=0.93"></script>
+    <script src="app.js?v=0.94"></script>
+    <script src="calendar.js?v=0.94"></script>
 </body>
 </html>

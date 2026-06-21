@@ -1,5 +1,5 @@
 // --- Application State ---
-const APP_VERSION = "v0.93";
+const APP_VERSION = "v0.94";
 const APP_DATE = "21 June 2026";
 
 let systemInfo = {}, designTheme = {}, venues = [], events = [];
@@ -57,6 +57,278 @@ const SHORTLIST_EMOJIS = ['🤠','🚄','👑','🥂','🦄','🫦','💪','🪇
 const PLACEHOLDER_POOL = ['placeholder_venue.jpg', 'placeholder_venue01.jpg', 'placeholder_venue02.jpg', 'placeholder_venue03.jpg', 'placeholder_venue04.jpg', 'placeholder_venue05.jpg', 'placeholder_venue06.jpg', 'placeholder_venue07.jpg'];
 const BR_ICONS = { share: '📣', favourite: '⚜️', savedEvent: '💖', report: 'report.png', link: 'link.png', shortlist: 'shortlist.png' };
 const FORMSUBMIT_ENDPOINT = 'https://formsubmit.cloud/f/ae0e141d-ad94-47fe-ac46-55702c6534a6/';
+
+
+// --- Shared Supabase community ratings and venue view counts ---
+// The publishable key is intentionally safe to ship in a static browser app. Database access is limited by Supabase RLS.
+const COMMUNITY_SUPABASE = Object.freeze({
+    url: 'https://dcnxvxfnxdxogesoiuyy.supabase.co',
+    publishableKey: 'sb_publishable_RM4cq6aOV7R0gVIiHFljAg_K_ByS7KH',
+    votesTable: 'venue_votes',
+    viewsTable: 'venue_views'
+});
+
+let communityStatsLoaded = false;
+let communityStatsLoading = false;
+let communityStatsAvailable = true;
+const communityVenueStats = new Map();
+
+function getCommunityClientId() {
+    const storageKey = 'br_community_vote_client_id';
+    let clientId = localStorage.getItem(storageKey);
+    if (clientId) return clientId;
+
+    if (window.crypto?.randomUUID) clientId = window.crypto.randomUUID();
+    else clientId = `browser-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+
+    localStorage.setItem(storageKey, clientId);
+    return clientId;
+}
+
+function getCommunityStats(venueId) {
+    return communityVenueStats.get(String(venueId || '')) || {
+        average: null,
+        voteCount: 0,
+        ownRating: null,
+        viewCount: null
+    };
+}
+
+function getCommunityHeaders(extra = {}) {
+    return {
+        apikey: COMMUNITY_SUPABASE.publishableKey,
+        Authorization: `Bearer ${COMMUNITY_SUPABASE.publishableKey}`,
+        ...extra
+    };
+}
+
+async function communityRequest(path, options = {}) {
+    const { method = 'GET', body = null, headers = {} } = options;
+    const response = await fetch(`${COMMUNITY_SUPABASE.url}/rest/v1/${path}`, {
+        method,
+        headers: getCommunityHeaders({
+            Accept: 'application/json',
+            ...(body !== null ? { 'Content-Type': 'application/json' } : {}),
+            ...headers
+        }),
+        body: body === null ? undefined : JSON.stringify(body)
+    });
+
+    const text = await response.text();
+    let data = null;
+    if (text) {
+        try { data = JSON.parse(text); }
+        catch { data = text; }
+    }
+
+    if (!response.ok) {
+        const detail = typeof data === 'string' ? data : (data?.message || data?.hint || response.statusText);
+        throw new Error(`Supabase ${response.status}: ${detail}`);
+    }
+
+    return data;
+}
+
+function refreshCommunityStatsMarkup() {
+    document.querySelectorAll('[data-community-stats]').forEach(container => {
+        const venueId = container.dataset.communityStats;
+        container.innerHTML = renderCommunityStatsInner(venueId);
+    });
+}
+
+function renderCommunityStatsInner(venueId) {
+    const stats = getCommunityStats(venueId);
+    const hasVotes = Number.isFinite(stats.average) && stats.voteCount > 0;
+    const scoreText = hasVotes ? `${stats.average.toFixed(1)}/5` : 'Rate it';
+    const voteText = hasVotes ? `${stats.voteCount} vote${stats.voteCount === 1 ? '' : 's'}` : 'Be the first';
+    const viewText = Number.isFinite(stats.viewCount) ? String(stats.viewCount) : '–';
+    const ownText = Number.isFinite(stats.ownRating) ? `Your rating: ${stats.ownRating}/5` : 'Rate this venue';
+
+    return `
+        <button type="button" class="community-rating-button" onclick="event.stopPropagation(); window.openCommunityRatingModal('${escapeHTML(venueId)}')" title="${escapeHTML(ownText)}">
+            <span class="community-rating-rainbow">🌈</span>
+            <span class="community-rating-name">Rated by the gays</span>
+            <strong class="community-rating-score">${escapeHTML(scoreText)}</strong>
+            <span class="community-rating-votes">${escapeHTML(voteText)}</span>
+        </button>
+        <span class="community-view-count" title="Venue views">👁️ ${escapeHTML(viewText)}</span>
+    `;
+}
+
+function renderCommunityStats(venueId) {
+    return `<div class="community-stats" data-community-stats="${escapeHTML(venueId)}">${renderCommunityStatsInner(venueId)}</div>`;
+}
+
+async function loadCommunityVenueStats({ force = false } = {}) {
+    if (communityStatsLoading || (communityStatsLoaded && !force)) return;
+    communityStatsLoading = true;
+
+    try {
+        const clientId = getCommunityClientId();
+        const [voteRows, viewRows] = await Promise.all([
+            communityRequest(`${COMMUNITY_SUPABASE.votesTable}?select=venue_id,client_id,rating`),
+            communityRequest(`${COMMUNITY_SUPABASE.viewsTable}?select=venue_id,view_count`)
+        ]);
+
+        const aggregate = new Map();
+        (Array.isArray(voteRows) ? voteRows : []).forEach(row => {
+            const venueId = String(row?.venue_id || '').trim();
+            const rating = Number(row?.rating);
+            if (!venueId || !Number.isInteger(rating) || rating < 1 || rating > 5) return;
+
+            const current = aggregate.get(venueId) || { total: 0, voteCount: 0, ownRating: null, viewCount: null };
+            current.total += rating;
+            current.voteCount += 1;
+            if (String(row?.client_id || '') === clientId) current.ownRating = rating;
+            aggregate.set(venueId, current);
+        });
+
+        (Array.isArray(viewRows) ? viewRows : []).forEach(row => {
+            const venueId = String(row?.venue_id || '').trim();
+            if (!venueId) return;
+            const current = aggregate.get(venueId) || { total: 0, voteCount: 0, ownRating: null, viewCount: null };
+            const viewCount = Number(row?.view_count);
+            current.viewCount = Number.isFinite(viewCount) && viewCount >= 0 ? viewCount : 0;
+            aggregate.set(venueId, current);
+        });
+
+        communityVenueStats.clear();
+        aggregate.forEach((value, venueId) => {
+            communityVenueStats.set(venueId, {
+                average: value.voteCount ? value.total / value.voteCount : null,
+                voteCount: value.voteCount,
+                ownRating: value.ownRating,
+                viewCount: value.viewCount
+            });
+        });
+
+        communityStatsAvailable = true;
+        communityStatsLoaded = true;
+    } catch (error) {
+        communityStatsAvailable = false;
+        console.warn('Community ratings could not be loaded.', error);
+    } finally {
+        communityStatsLoading = false;
+        refreshCommunityStatsMarkup();
+    }
+}
+
+function closeCommunityRatingModal() {
+    document.getElementById('community-rating-modal')?.classList.add('hidden');
+}
+
+function openCommunityRatingModal(venueId) {
+    const venue = venues.find(item => item?.Venue_ID === venueId);
+    const modal = document.getElementById('community-rating-modal');
+    const content = document.getElementById('community-rating-content');
+    if (!modal || !content || !venue) return;
+
+    const stats = getCommunityStats(venueId);
+    const currentRating = Number.isFinite(stats.ownRating) ? stats.ownRating : 0;
+    const averageText = Number.isFinite(stats.average) && stats.voteCount > 0
+        ? `${stats.average.toFixed(1)} / 5 from ${stats.voteCount} vote${stats.voteCount === 1 ? '' : 's'}`
+        : 'No public ratings yet.';
+
+    content.innerHTML = `
+        <p class="community-rating-venue-name display-font">${escapeHTML(venue.Name || 'Venue')}</p>
+        <p class="community-rating-summary">${escapeHTML(averageText)}</p>
+        <p class="community-rating-help">Choose your rating. Your browser keeps one editable anonymous vote for this venue.</p>
+        <div class="community-rating-options" role="group" aria-label="Rate ${escapeHTML(venue.Name || 'venue')} from 1 to 5">
+            ${[1, 2, 3, 4, 5].map(value => `
+                <button type="button" class="community-rating-option ${currentRating === value ? 'selected' : ''}" onclick="window.submitCommunityRating('${escapeHTML(venueId)}', ${value})" aria-label="${value} out of 5">
+                    <span>🌈</span><strong>${value}</strong>
+                </button>
+            `).join('')}
+        </div>
+        <p class="community-rating-current">${currentRating ? `Your current rating: ${currentRating}/5. Select another score to update it.` : 'You have not rated this venue yet.'}</p>
+    `;
+
+    modal.classList.remove('hidden');
+}
+
+async function submitCommunityRating(venueId, rating) {
+    const score = Number(rating);
+    if (!Number.isInteger(score) || score < 1 || score > 5) return;
+
+    if (!communityStatsAvailable && communityStatsLoaded) {
+        showToast('Public ratings are unavailable right now.');
+        return;
+    }
+
+    const clientId = getCommunityClientId();
+    const content = document.getElementById('community-rating-content');
+    if (content) content.classList.add('is-saving');
+
+    try {
+        const selectPath = `${COMMUNITY_SUPABASE.votesTable}?select=id&venue_id=eq.${encodeURIComponent(venueId)}&client_id=eq.${encodeURIComponent(clientId)}&limit=1`;
+        const existing = await communityRequest(selectPath);
+        const now = new Date().toISOString();
+
+        if (Array.isArray(existing) && existing[0]?.id) {
+            await communityRequest(`${COMMUNITY_SUPABASE.votesTable}?id=eq.${encodeURIComponent(existing[0].id)}`, {
+                method: 'PATCH',
+                headers: { Prefer: 'return=representation' },
+                body: { rating: score, updated_at: now }
+            });
+        } else {
+            await communityRequest(COMMUNITY_SUPABASE.votesTable, {
+                method: 'POST',
+                headers: { Prefer: 'return=representation' },
+                body: { venue_id: venueId, client_id: clientId, rating: score, updated_at: now }
+            });
+        }
+
+        await loadCommunityVenueStats({ force: true });
+        openCommunityRatingModal(venueId);
+        showToast('Your rating has been saved.');
+    } catch (error) {
+        console.error('Could not save community rating.', error);
+        showToast('Could not save your rating. Check the public Supabase policy.');
+    } finally {
+        content?.classList.remove('is-saving');
+    }
+}
+
+async function recordCommunityVenueView(venueId) {
+    const safeVenueId = String(venueId || '').trim();
+    if (!safeVenueId) return;
+
+    const sessionKey = `br_view_counted_${safeVenueId}`;
+    if (sessionStorage.getItem(sessionKey)) return;
+    sessionStorage.setItem(sessionKey, '1');
+
+    try {
+        const existing = await communityRequest(`${COMMUNITY_SUPABASE.viewsTable}?select=venue_id,view_count&venue_id=eq.${encodeURIComponent(safeVenueId)}&limit=1`);
+        const currentCount = Number(existing?.[0]?.view_count) || 0;
+        const nextCount = currentCount + 1;
+        const now = new Date().toISOString();
+
+        if (Array.isArray(existing) && existing[0]?.venue_id) {
+            await communityRequest(`${COMMUNITY_SUPABASE.viewsTable}?venue_id=eq.${encodeURIComponent(safeVenueId)}`, {
+                method: 'PATCH',
+                headers: { Prefer: 'return=representation' },
+                body: { view_count: nextCount, last_viewed_at: now }
+            });
+        } else {
+            await communityRequest(COMMUNITY_SUPABASE.viewsTable, {
+                method: 'POST',
+                headers: { Prefer: 'return=representation' },
+                body: { venue_id: safeVenueId, view_count: 1, last_viewed_at: now }
+            });
+        }
+
+        const previous = getCommunityStats(safeVenueId);
+        communityVenueStats.set(safeVenueId, { ...previous, viewCount: nextCount });
+        refreshCommunityStatsMarkup();
+    } catch (error) {
+        // Public views are a best-effort enhancement. A policy issue must never interrupt the venue screen.
+        console.warn('Community venue view could not be recorded.', error);
+    }
+}
+
+window.openCommunityRatingModal = openCommunityRatingModal;
+window.submitCommunityRating = submitCommunityRating;
+window.closeCommunityRatingModal = closeCommunityRatingModal;
 
 function getTagColorClass(tag) {
     const red = ['Cruising', 'Darkroom', 'Men Only', 'Dresscode', 'Naked', 'Underwear', 'Smoking Area', 'Fetish/Gear'];
@@ -889,6 +1161,7 @@ async function initApp() {
         }
 
         updateProfileDisplay(); // Moved here so avatarData is loaded
+        void loadCommunityVenueStats();
         checkImportPreview();
         applyTheme(); 
         populateSystemText(); 
@@ -3374,7 +3647,7 @@ function renderListings(data, isContextView = false, targetContainer = resultsCo
                 <div class="card-about">${shortDesc}</div>
                 ${nextEventHtml}
                 <div class="card-stats">
-                    <span>🌈 ${systemInfo.labels?.rated_by_gays || 'Rated by gays'}</span><span>👁️ ${venue.Views || 0}</span>
+                    ${renderCommunityStats(venue.Venue_ID)}
                     <div style="margin-left:auto; display:flex; gap:10px; align-items:center;">
                         <span class="icon-btn" onclick="event.stopPropagation(); shareURL('${window.location.origin}${window.location.pathname}?venue=${venue.Venue_ID}#venue=${venue.Venue_ID}', '${String(venue.Name || '').replace(/'/g, "\\'")}')" title="Share" style="font-size:1.5rem;">${BR_ICONS.share}</span>
                         <span class="icon-btn" onclick="event.stopPropagation(); window.flagListing('${venue.Venue_ID}', '${String(venue.Name || '').replace(/'/g, "\\'")}', 'Venue Report')" title="Report" style="display:flex; align-items:center; justify-content:center;"><img src="report.png" style="width:24px; height:24px; object-fit:contain;"></span>
@@ -3458,6 +3731,7 @@ function getRatingCells(val, type) {
 }
 
 function openVenueModal(venue) {
+    void recordCommunityVenueView(venue?.Venue_ID);
     const mTitle = document.getElementById('modal-title');
     if(mTitle) mTitle.innerText = venue.Name;
     
@@ -3468,10 +3742,7 @@ function openVenueModal(venue) {
     const featureHtml = renderTagPills(features);
 
     const statsHtml = `
-        <div class="public-stats-block">
-            <span>🌈 ${systemInfo.labels?.rated_by_gays || 'Rated'}</span> 
-            <span>👁️ ${venue.Views || 0}</span>
-        </div>
+        ${renderCommunityStats(venue.Venue_ID)}
         ${buildSocialBar(venue)}
         <div class="feature-chips" style="margin-top: 15px;">${featureHtml}</div>
     `;
