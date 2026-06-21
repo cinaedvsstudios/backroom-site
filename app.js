@@ -1,5 +1,5 @@
 // --- Application State ---
-const APP_VERSION = "v0.75";
+const APP_VERSION = "v0.80";
 const APP_DATE = "21 June 2026";
 
 let systemInfo = {}, designTheme = {}, venues = [], events = [];
@@ -47,7 +47,7 @@ const sidebar = document.getElementById('sidebar');
 const hitArea = document.getElementById('sidebar-hit-area');
 let sidebarTimeout;
 
-const MASTER_VIBE_TAGS = ["Bar","Party","Cinema","Sauna","Shop","Cruising","Darkroom","Men Only","Dresscode","Naked","Underwear","Dancefloor","Smoking Area","Cocktails","Fetish/Gear","Bear","Mature","Young Crowd","Queer","Drag","Karaoke","Pop/Dance","Techno"];
+const MASTER_VIBE_TAGS = ["Bar","Party","Cinema","Sauna","Shop","Cruising","Darkroom","Men Only","Dresscode","Naked","Underwear","Dancefloor","Smoking Area","Cocktails","Fetish/Gear","Bear","Mature","Young Crowd","Queer","Pride","Social","Drag","Karaoke","Pop/Dance","Techno"];
 const SHORTLIST_EMOJIS = ['🤠','🚄','👑','🥂','🦄','🫦','💪','🪇','🔥','🍆','🍑','💄','🛁','✈️','💥','💦','🗝️','🧿','🎧','🧭','⛓️','🎼'];
 const PLACEHOLDER_POOL = ['placeholder_venue.jpg', 'placeholder_venue01.jpg', 'placeholder_venue02.jpg', 'placeholder_venue03.jpg', 'placeholder_venue04.jpg', 'placeholder_venue05.jpg', 'placeholder_venue06.jpg', 'placeholder_venue07.jpg'];
 const BR_ICONS = { share: '📣', favourite: '⚜️', savedEvent: '💖', report: 'report.png', link: 'link.png', shortlist: 'shortlist.png' };
@@ -56,7 +56,7 @@ const FORMSUBMIT_ENDPOINT = 'https://formsubmit.cloud/f/ae0e141d-ad94-47fe-ac46-
 function getTagColorClass(tag) {
     const red = ['Cruising', 'Darkroom', 'Men Only', 'Dresscode', 'Naked', 'Underwear', 'Smoking Area', 'Fetish/Gear'];
     const blue = ['Bar', 'Party', 'Cinema', 'Sauna', 'Shop', 'Dancefloor', 'Cocktails', 'Techno', 'Pop/Dance'];
-    const yellow = ['Bear', 'Mature', 'Young Crowd', 'Queer', 'Drag', 'Karaoke'];
+    const yellow = ['Bear', 'Mature', 'Young Crowd', 'Queer', 'Pride', 'Social', 'Drag', 'Karaoke'];
     if (red.includes(tag)) return 'tag-adult-red';
     if (blue.includes(tag)) return 'tag-venue-blue';
     if (yellow.includes(tag)) return 'tag-social-yellow';
@@ -1895,16 +1895,10 @@ function renderSavedLocationVenuesView() {
     const title = document.getElementById('context-title');
     const desc = document.getElementById('context-desc');
     const savedLocation = getSavedLocation();
-    const isAllCities = isAllCitiesLocation(savedLocation);
+    // No saved city is the same as choosing ALL CITIES. The Venues screen must never stop at a setup message.
+    const isAllCities = !savedLocation || isAllCitiesLocation(savedLocation);
     const savedCity = String(savedLocation?.city || '').trim();
     const displayCity = isAllCities ? 'ALL CITIES' : savedCity;
-
-    if (!isAllCities && (!savedCity || savedCity.toLowerCase() === 'my location')) {
-        if (title) title.textContent = 'VENUES';
-        if (desc) desc.textContent = 'Choose a city, or leave it blank to browse all public venue listings.';
-        renderSavedLocationEmptyState('NO CITY SELECTED', 'Choose a city in Location, or leave City blank to browse all cities.', true);
-        return;
-    }
 
     const matchingVenues = sortSavedLocationVenues(
         isAllCities
