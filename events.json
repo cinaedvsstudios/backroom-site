@@ -4933,5 +4933,50 @@
     "Recurrence_Day": "",
     "Recurrence_Until": "",
     "Vibe_Tags": "Party, Cruising, Darkroom, Dancefloor"
+  },
+  {
+    "Event_ID": "EVT-POR-001",
+    "Venue_ID": "BER-POR-01",
+    "Event_Name": "Pornceptual: COCKO, Kandelissa, LOLSNAKE, Spacer Woman",
+    "Event_Date": "2026-07-11",
+    "Event_Start_Time": "",
+    "Event_End_Time": "",
+    "Status": "Live",
+    "Event_Description": "Pornceptual event at Virage, Paris. Artists listed: COCKO, Kandelissa, LOLSNAKE and Spacer Woman. Source/details: https://de.ra.co/promoters/52590. Ticket price was not displayed in the supplied listing.",
+    "Dresscode_Info": "",
+    "Recurrence_Type": "",
+    "Recurrence_Day": "",
+    "Recurrence_Until": "",
+    "Vibe_Tags": "Party, Cruising, Darkroom, Dresscode, Naked, Underwear, Dancefloor, Fetish/Gear, Queer, Techno"
+  },
+  {
+    "Event_ID": "EVT-POR-002",
+    "Venue_ID": "BER-POR-01",
+    "Event_Name": "Against X Prncptl – CSD",
+    "Event_Date": "2026-07-25",
+    "Event_Start_Time": "",
+    "Event_End_Time": "",
+    "Status": "Live",
+    "Event_Description": "Pornceptual’s Berlin CSD event at Berlin Complex. Artists listed: Alirio, BOYCA, Valentina Spirito, Manu Calmet, Chami, Dirty Daddy Don, Ellen Allien, Fafi Abdel Nour and Cristia… Source/details: https://de.ra.co/promoters/52590. Ticket price was not displayed in the supplied listing.",
+    "Dresscode_Info": "",
+    "Recurrence_Type": "",
+    "Recurrence_Day": "",
+    "Recurrence_Until": "",
+    "Vibe_Tags": "Party, Cruising, Darkroom, Dresscode, Naked, Underwear, Dancefloor, Fetish/Gear, Queer, Techno, Pride"
+  },
+  {
+    "Event_ID": "EVT-POR-003",
+    "Venue_ID": "BER-POR-01",
+    "Event_Name": "PRNCPTL – 13 Years Anniversary",
+    "Event_Date": "2026-08-15",
+    "Event_Start_Time": "",
+    "Event_End_Time": "",
+    "Status": "Live",
+    "Event_Description": "Pornceptual 13 Years Anniversary in Berlin. The supplied listing shows the venue as TBA. Source/details: https://de.ra.co/promoters/52590. Ticket price was not displayed in the supplied listing.",
+    "Dresscode_Info": "",
+    "Recurrence_Type": "",
+    "Recurrence_Day": "",
+    "Recurrence_Until": "",
+    "Vibe_Tags": "Party, Cruising, Darkroom, Dresscode, Naked, Underwear, Dancefloor, Fetish/Gear, Queer, Techno"
   }
 ]

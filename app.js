@@ -1,5 +1,5 @@
 // --- Application State ---
-const APP_VERSION = "v0.87";
+const APP_VERSION = "v0.88";
 const APP_DATE = "21 June 2026";
 
 let systemInfo = {}, designTheme = {}, venues = [], events = [];
@@ -7,6 +7,7 @@ let activeFilters = []; // v0.66 Multi-select Array
 let selectedCardId = null;
 let venueReturnHash = '#results';
 let currentTargetVenue = null; 
+let currentShortlistTarget = null;
 let currentEventCityFilter = 'All';
 let isTutorialRunning = false; 
 let searchUsesFuzzyMatching = false;
@@ -442,6 +443,141 @@ function getVenueEventOccurrences(venueId, options = {}) {
         .sort(compareEventOccurrences);
 }
 
+
+function normalizeShortlistEntry(entry) {
+    if (entry && typeof entry === 'object') {
+        const type = String(entry.type || entry.kind || 'venue').trim().toLowerCase() === 'event' ? 'event' : 'venue';
+        const id = String(entry.id || entry.Event_ID || entry.Venue_ID || '').trim();
+        return id ? { type, id } : null;
+    }
+
+    const raw = String(entry || '').trim();
+    if (!raw) return null;
+    if (raw.startsWith('event:')) return { type: 'event', id: raw.slice(6) };
+    if (raw.startsWith('venue:')) return { type: 'venue', id: raw.slice(6) };
+
+    // Existing saved lists used bare Venue_ID values. Keep those working as venue entries.
+    return { type: 'venue', id: raw };
+}
+
+function getShortlistEntries(name) {
+    const rawEntries = Array.isArray(userShortlists?.[name]) ? userShortlists[name] : [];
+    const seen = new Set();
+    return rawEntries
+        .map(normalizeShortlistEntry)
+        .filter(Boolean)
+        .filter(entry => {
+            const key = `${entry.type}:${entry.id}`;
+            if (seen.has(key)) return false;
+            seen.add(key);
+            return true;
+        });
+}
+
+function shortlistToken(type, id) {
+    return `${type === 'event' ? 'event' : 'venue'}:${String(id || '').trim()}`;
+}
+
+function shortlistHasItem(name, type, id) {
+    return getShortlistEntries(name).some(entry => entry.type === type && entry.id === id);
+}
+
+function hasItemInAnyShortlist(type, id) {
+    return Object.keys(userShortlists || {}).some(name => shortlistHasItem(name, type, id));
+}
+
+function setShortlistItem(name, target, shouldContain) {
+    const entries = getShortlistEntries(name);
+    const exists = entries.some(entry => entry.type === target.type && entry.id === target.id);
+    const next = shouldContain
+        ? (exists ? entries : [...entries, { type: target.type, id: target.id }])
+        : entries.filter(entry => entry.type !== target.type || entry.id !== target.id);
+    userShortlists[name] = next.map(entry => shortlistToken(entry.type, entry.id));
+}
+
+function getShortlistCounts(name) {
+    const entries = getShortlistEntries(name);
+    return {
+        venues: entries.filter(entry => entry.type === 'venue').length,
+        events: entries.filter(entry => entry.type === 'event').length,
+        total: entries.length
+    };
+}
+
+function formatShortlistCount(name) {
+    const counts = getShortlistCounts(name);
+    const parts = [];
+    if (counts.venues) parts.push(`${counts.venues} venue${counts.venues === 1 ? '' : 's'}`);
+    if (counts.events) parts.push(`${counts.events} event${counts.events === 1 ? '' : 's'}`);
+    return parts.join(' · ') || 'Empty shortlist';
+}
+
+function getShortlistTargetForEvent(event) {
+    const venue = (venues || []).find(item => item.Venue_ID === event?.Venue_ID);
+    const venueName = venue?.Name ? ` · ${venue.Name}` : '';
+    return {
+        type: 'event',
+        id: String(event?.Event_ID || '').trim(),
+        label: `Event: ${event?.Event_Name || 'Event'}${venueName}`
+    };
+}
+
+function openShortlistPicker(target) {
+    if (!target?.id) return;
+    currentShortlistTarget = target;
+    currentTargetVenue = target.type === 'venue' ? target : null;
+
+    const tName = document.getElementById('add-shortlist-target-name');
+    if (tName) tName.innerText = target.label || target.id;
+
+    const container = document.getElementById('add-shortlist-options');
+    if (!container) return;
+    container.innerHTML = '';
+
+    const lists = Object.keys(userShortlists || {});
+    if (lists.length === 0) {
+        container.innerHTML = '<p class="meta-text">No shortlists exist. Create one below.</p>';
+    } else {
+        lists.forEach(name => {
+            const isAdded = shortlistHasItem(name, target.type, target.id);
+            const button = document.createElement('button');
+            button.className = `btn pill-btn ${isAdded ? 'secondary-btn' : 'primary-btn'}`;
+            button.innerText = isAdded ? `Remove from ${name}` : `Add to ${name}`;
+            button.addEventListener('click', () => {
+                setShortlistItem(name, target, !isAdded);
+                saveCurrentToBundle();
+                addShortlistModal?.classList.add('hidden');
+                showToast(isAdded ? 'Removed from Shortlist' : `Added to ${name}`);
+
+                if (target.type === 'venue') {
+                    const buttonEl = document.getElementById('modal-shortlist');
+                    if (buttonEl) buttonEl.classList.toggle('active-star', hasItemInAnyShortlist('venue', target.id));
+                }
+            });
+            container.appendChild(button);
+        });
+    }
+
+    addShortlistModal?.classList.remove('hidden');
+}
+
+function promptAddToShortlist(venue) {
+    openShortlistPicker({
+        type: 'venue',
+        id: String(venue?.Venue_ID || '').trim(),
+        label: venue?.Name || 'Venue'
+    });
+}
+
+window.promptAddEventToShortlist = function(eventId) {
+    const event = (events || []).find(item => item.Event_ID === eventId);
+    if (!event) {
+        showToast('Event not available');
+        return;
+    }
+    openShortlistPicker(getShortlistTargetForEvent(event));
+};
+
 function recordUserInteraction() {
     sessionStorage.setItem('br_welcome_dismissed', 'true');
     welcomeScreen?.classList.add('hidden');
@@ -742,70 +878,121 @@ function checkSharedListRoute() {
         const urlParams = new URLSearchParams(hash.substring(12));
         const listName = urlParams.get('title') || 'Shared List';
         const listEmoji = urlParams.get('emoji') || '🔥';
-        const venueIds = (urlParams.get('ids') || '').split(',').filter(id => id);
+        const entries = (urlParams.get('ids') || '')
+            .split(',')
+            .map(normalizeShortlistEntry)
+            .filter(Boolean);
 
-        renderSharedListView(listName, listEmoji, venueIds);
-        return true; 
+        renderSharedListView(listName, listEmoji, entries);
+        return true;
     }
     return false;
 }
 
-function renderSharedListView(name, emoji, ids) {
+function renderSharedShortlistEvents(entries, container) {
+    const eventIds = entries.filter(entry => entry.type === 'event').map(entry => entry.id);
+    const sharedEvents = (events || [])
+        .filter(event => eventIds.includes(event.Event_ID))
+        .map(event => getEventDisplayOccurrence(event))
+        .filter(Boolean)
+        .sort(compareEventOccurrences);
+
+    if (!sharedEvents.length) return;
+
+    const section = document.createElement('section');
+    section.style.cssText = 'grid-column:1 / -1; margin-top:10px;';
+    section.innerHTML = '<h2 class="display-font" style="color:var(--primary-blue); margin:0 0 12px;">📅 EVENTS</h2>';
+
+    sharedEvents.forEach(event => {
+        const venue = (venues || []).find(item => item.Venue_ID === event.Venue_ID);
+        const card = document.createElement('article');
+        card.className = 'event-card';
+        card.innerHTML = `
+            <div class="event-content">
+                <h4 class="event-title">${event.Event_Name || 'Event'}</h4>
+                <p class="event-meta meta-text">${getEventDisplayMeta(event)}${venue?.Name ? ` · ${venue.Name}` : ''}</p>
+                <div class="event-action-row">
+                    <button type="button" class="event-action-btn" onclick="event.stopPropagation(); shareURL('${window.location.origin}${window.location.pathname}?event=${event.Event_ID}', '${String(event.Event_Name || 'Event').replace(/'/g, "\\'")}')" title="Share event">${BR_ICONS.share}</button>
+                    <button type="button" class="event-action-btn" onclick="event.stopPropagation(); window.promptAddEventToShortlist('${event.Event_ID}')" title="Add to Shortlist"><img src="shortlist.png" alt="" aria-hidden="true"></button>
+                    ${venue ? `<button type="button" class="event-action-btn" onclick="event.stopPropagation(); window.location.hash='#venue=${venue.Venue_ID}'" title="Open venue">🏛️</button>` : ''}
+                </div>
+                ${event.Event_Description ? `<p class="event-description">${event.Event_Description}</p>` : ''}
+            </div>
+        `;
+        section.appendChild(card);
+    });
+
+    container.appendChild(section);
+}
+
+function renderSharedListView(name, emoji, entries) {
     const searchInputEl = document.getElementById('search-input');
     if(searchInputEl) searchInputEl.style.display = 'none';
     const mainFilters = document.getElementById('main-filters');
     if(mainFilters) mainFilters.style.display = 'none';
     contextHeader?.classList.add('hidden');
-    
+
     if(!resultsContainer) return;
     resultsContainer.innerHTML = '';
-    
+
+    const venueCount = entries.filter(entry => entry.type === 'venue').length;
+    const eventCount = entries.filter(entry => entry.type === 'event').length;
+    const countParts = [];
+    if (venueCount) countParts.push(`${venueCount} venue${venueCount === 1 ? '' : 's'}`);
+    if (eventCount) countParts.push(`${eventCount} event${eventCount === 1 ? '' : 's'}`);
+
     const sharedHeader = document.createElement('div');
     sharedHeader.className = 'shared-list-header';
-    sharedHeader.style.cssText = 'text-align: center; padding: 30px 15px; margin-bottom: 20px; grid-column: 1 / -1;';
+    sharedHeader.style.cssText = 'text-align:center; padding:30px 15px; margin-bottom:20px; grid-column:1 / -1;';
     sharedHeader.innerHTML = `
-        <h1 style="font-size: 3rem; margin-bottom: 10px; color: #fff;">${emoji} ${name}</h1>
-        <p style="color: var(--text-light); margin-bottom: 20px;">Someone shared this Backroom list with you!</p>
-        <div style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
-            <button id="btn-save-shared" class="btn primary-btn pill-btn" style="padding: 10px 20px;">💾 Save List to Profile</button>
-            <button id="btn-open-site" class="btn secondary-btn pill-btn" style="padding: 10px 20px;">🌍 Open Main Site</button>
+        <h1 style="font-size:3rem; margin-bottom:10px; color:#fff;">${emoji} ${name}</h1>
+        <p style="color:var(--text-light); margin-bottom:8px;">Someone shared this Backroom list with you!</p>
+        <p style="color:var(--primary-blue); margin-bottom:20px;">${countParts.join(' · ') || 'Shared shortlist'}</p>
+        <div style="display:flex; gap:10px; justify-content:center; flex-wrap:wrap;">
+            <button id="btn-save-shared" class="btn primary-btn pill-btn" style="padding:10px 20px;">💾 Save List to Profile</button>
+            <button id="btn-open-site" class="btn secondary-btn pill-btn" style="padding:10px 20px;">🌍 Open Main Site</button>
         </div>
-        <p style="font-size: 0.85rem; color: var(--label-grey); margin-top: 15px;">Saving will add this to your shortlists.</p>
+        <p style="font-size:0.85rem; color:var(--label-grey); margin-top:15px;">Saving adds these venues and events to your Shortlists.</p>
     `;
-    
     resultsContainer.appendChild(sharedHeader);
 
-    const matchingVenues = venues.filter(v => ids.includes(v.Venue_ID));
-    if (matchingVenues.length === 0) {
-        resultsContainer.innerHTML += `<p style="text-align:center; color: var(--label-grey); grid-column: 1 / -1;">No active venues found in this list.</p>`;
-    } else {
-        const tempContainer = document.createElement('div');
-        const backupContainerHTML = resultsContainer.innerHTML;
-        resultsContainer.innerHTML = '';
-        renderListings(matchingVenues, true);
-        const renderedCards = resultsContainer.innerHTML;
-        resultsContainer.innerHTML = backupContainerHTML + renderedCards;
+    const venueIds = entries.filter(entry => entry.type === 'venue').map(entry => entry.id);
+    const matchingVenues = (venues || []).filter(venue => venueIds.includes(venue.Venue_ID));
+    if (matchingVenues.length) {
+        const venueHeading = document.createElement('section');
+        venueHeading.style.cssText = 'grid-column:1 / -1; margin-bottom:4px;';
+        venueHeading.innerHTML = '<h2 class="display-font" style="color:var(--primary-blue); margin:0;">🏛️ VENUES</h2>';
+        resultsContainer.appendChild(venueHeading);
+
+        const venueGrid = document.createElement('section');
+        venueGrid.style.cssText = 'display:grid; grid-template-columns:repeat(auto-fill, minmax(300px, 1fr)); gap:20px; grid-column:1 / -1;';
+        resultsContainer.appendChild(venueGrid);
+        renderListings(matchingVenues, true, venueGrid);
     }
 
-    document.getElementById('btn-save-shared').addEventListener('click', () => {
+    renderSharedShortlistEvents(entries, resultsContainer);
+
+    if (!matchingVenues.length && !entries.some(entry => entry.type === 'event')) {
+        resultsContainer.innerHTML += '<p style="text-align:center; color:var(--label-grey); grid-column:1 / -1;">No active shortlist items found.</p>';
+    }
+
+    document.getElementById('btn-save-shared')?.addEventListener('click', () => {
         if (!userProfile.name) {
             userProfile.name = 'New Profile';
             userProfile.avatar = avatarData[0]?.file || 'noavatar01.png';
             localStorage.setItem('br_profile', JSON.stringify(userProfile));
         }
-        userShortlists[name] = ids;
+        userShortlists[name] = entries.map(entry => shortlistToken(entry.type, entry.id));
         userShortlistEmojis[name] = emoji;
         saveCurrentToBundle();
-        showToast("List saved to your Shortlists!");
+        showToast('List saved to your Shortlists!');
     });
 
-    document.getElementById('btn-open-site').addEventListener('click', () => {
-        const searchInputEl = document.getElementById('search-input');
+    document.getElementById('btn-open-site')?.addEventListener('click', () => {
         if(searchInputEl) searchInputEl.style.display = '';
-        const mainFilters = document.getElementById('main-filters');
         if(mainFilters) mainFilters.style.display = '';
         window.location.hash = '';
-        window.location.reload(); 
+        window.location.reload();
     });
 }
 
@@ -894,16 +1081,36 @@ function renderSingleShortlist(name) {
     const backBtn = document.getElementById('btn-back-to-results');
     backBtn?.classList.remove('result-back-hidden');
     resetBackButton('← Back to Shortlists', 'shortlists');
-    
+
     const cTitle = document.getElementById('context-title');
     const cDesc = document.getElementById('context-desc');
     const eIcon = userShortlistEmojis[name] || '📑';
     if(cTitle) cTitle.innerHTML = `${eIcon} ${name}`;
-    if(cDesc) cDesc.innerText = "A saved shortlist collection.";
-    
-    const listIds = userShortlists[name] || [];
-    const matchingVenues = (venues||[]).filter(v => listIds.includes(v.Venue_ID));
-    renderListings(matchingVenues, true);
+    if(cDesc) cDesc.innerText = `A saved shortlist collection: ${formatShortlistCount(name)}.`;
+
+    const entries = getShortlistEntries(name);
+    const venueIds = entries.filter(entry => entry.type === 'venue').map(entry => entry.id);
+    const matchingVenues = (venues || []).filter(venue => venueIds.includes(venue.Venue_ID));
+
+    if (resultsContainer) resultsContainer.innerHTML = '';
+
+    if (matchingVenues.length) {
+        const venueHeading = document.createElement('section');
+        venueHeading.style.cssText = 'grid-column:1 / -1; margin-bottom:4px;';
+        venueHeading.innerHTML = '<h2 class="display-font" style="color:var(--primary-blue); margin:0;">🏛️ VENUES</h2>';
+        resultsContainer?.appendChild(venueHeading);
+
+        const venueGrid = document.createElement('section');
+        venueGrid.style.cssText = 'display:grid; grid-template-columns:repeat(auto-fill, minmax(300px, 1fr)); gap:20px; grid-column:1 / -1;';
+        resultsContainer?.appendChild(venueGrid);
+        renderListings(matchingVenues, true, venueGrid);
+    }
+
+    renderSharedShortlistEvents(entries, resultsContainer);
+
+    if (!entries.length && resultsContainer) {
+        resultsContainer.innerHTML = '<p style="text-align:center; color:var(--label-grey); margin-top:20px; width:100%; grid-column:1 / -1;">This shortlist is empty.</p>';
+    }
 }
 
 async function renderStaticPageView(page) {
@@ -1590,16 +1797,18 @@ function setupEventListeners() {
 
     addEvt('btn-add-create-shortlist', 'click', () => {
         const nameInp = document.getElementById('add-new-shortlist-name');
-        if(!nameInp) return;
+        if(!nameInp || !currentShortlistTarget) return;
         const name = nameInp.value.trim();
-        if(name && currentTargetVenue) { 
-            userShortlists[name] = [currentTargetVenue.Venue_ID]; 
-            userShortlistEmojis[name] = SHORTLIST_EMOJIS[Math.floor(Math.random() * SHORTLIST_EMOJIS.length)]; 
-            saveCurrentToBundle(); 
+        if(name) {
+            userShortlists[name] = [shortlistToken(currentShortlistTarget.type, currentShortlistTarget.id)];
+            userShortlistEmojis[name] = SHORTLIST_EMOJIS[Math.floor(Math.random() * SHORTLIST_EMOJIS.length)];
+            saveCurrentToBundle();
             addShortlistModal?.classList.add('hidden');
             showToast(`Added to shortlist: ${name}`);
-            const sBtn = document.getElementById('modal-shortlist');
-            if(sBtn) sBtn.classList.add('active-star');
+            if(currentShortlistTarget.type === 'venue') {
+                const sBtn = document.getElementById('modal-shortlist');
+                if(sBtn) sBtn.classList.add('active-star');
+            }
         }
     });
     
@@ -2271,6 +2480,7 @@ function renderMyEventsView() {
                     <div style="display:flex; gap:10px; align-items:center;">
                         <span class="icon-btn" onclick="event.stopPropagation(); shareURL('${window.location.origin}${window.location.pathname}?event=${ev.Event_ID}#myevents', '${ev.Event_Name.replace(/'/g, "\\'")}')" title="Share" style="font-size:1.5rem;">${BR_ICONS.share}</span>
                         <span class="icon-btn" onclick="event.stopPropagation(); window.flagListing('${ev.Event_ID}', '${ev.Event_Name.replace(/'/g, "\\'")}', 'Event Report')" title="Report" style="display:flex; align-items:center; justify-content:center;"><img src="report.png" style="width:24px; height:24px; object-fit:contain;"></span>
+                        <button class="icon-btn" onclick="event.stopPropagation(); window.promptAddEventToShortlist('${ev.Event_ID}')" title="Add to Shortlist"><img src="shortlist.png" style="width:24px; height:24px; object-fit:contain;"></button>
                         <button class="icon-btn fav-btn active-star" style="font-size:1.5rem;" onclick="toggleEventFavorite('${ev.Event_ID}', null, true)">❌</button>
                     </div>
                 </div>
@@ -2337,8 +2547,9 @@ window.openEmojiPicker = function(listName) {
 
 function shareShortlist(name) {
     const eIcon = userShortlistEmojis[name] || '📑';
-    const ids = userShortlists[name].join(',');
-    const url = `${window.location.origin}${window.location.pathname}#sharedlist?title=${encodeURIComponent(name)}&emoji=${encodeURIComponent(eIcon)}&ids=${ids}`;
+    const entries = getShortlistEntries(name);
+    const ids = entries.map(entry => shortlistToken(entry.type, entry.id)).join(',');
+    const url = `${window.location.origin}${window.location.pathname}#sharedlist?title=${encodeURIComponent(name)}&emoji=${encodeURIComponent(eIcon)}&ids=${encodeURIComponent(ids)}`;
     shareURL(url, `Backroom Shortlist: ${name}`);
 }
 
@@ -2348,17 +2559,17 @@ function renderShortlistsFullView() {
     const backBtn = document.getElementById('btn-back-to-results');
     backBtn?.classList.remove('result-back-hidden');
     resetBackButton('← Back to Results', 'results');
-    
+
     const cTitle = document.getElementById('context-title');
     const cDesc = document.getElementById('context-desc');
-    if(cTitle) cTitle.innerHTML = `<img src="shortlist.png" style="width:55px; vertical-align:bottom; margin-right:8px;"> MY SHORTLISTS`;
-    if(cDesc) cDesc.innerText = "Make a list and share it with your friends so they know where to go tonight!";
-    
+    if(cTitle) cTitle.innerHTML = '<img src="shortlist.png" style="width:55px; vertical-align:bottom; margin-right:8px;"> MY SHORTLISTS';
+    if(cDesc) cDesc.innerText = 'Build a mixed list of venues and events, then send it to someone else to plan a night out.';
+
     const newBtn = document.getElementById('btn-new-shortlist-view');
     if(newBtn) {
         newBtn.classList.remove('hidden');
         newBtn.onclick = () => {
-            const name = prompt("Enter new shortlist name:");
+            const name = prompt('Enter new shortlist name:');
             if(name && name.trim() !== '') {
                 userShortlists[name.trim()] = [];
                 userShortlistEmojis[name.trim()] = SHORTLIST_EMOJIS[Math.floor(Math.random() * SHORTLIST_EMOJIS.length)];
@@ -2369,33 +2580,32 @@ function renderShortlistsFullView() {
     }
 
     if(resultsContainer) resultsContainer.innerHTML = '';
-    const lists = Object.keys(userShortlists);
+    const lists = Object.keys(userShortlists || {});
 
     if(lists.length === 0) {
-        if(resultsContainer) resultsContainer.innerHTML = `<p style="text-align:center; color:var(--label-grey); margin-top:20px; width: 100%; grid-column: 1 / -1;">No shortlists created yet.</p>`;
+        if(resultsContainer) resultsContainer.innerHTML = '<p style="text-align:center; color:var(--label-grey); margin-top:20px; width:100%; grid-column:1 / -1;">No shortlists created yet.</p>';
         return;
     }
 
     lists.forEach(name => {
-        const count = userShortlists[name].length;
         const eIcon = userShortlistEmojis[name] || '📑';
         const card = document.createElement('div');
         card.className = 'card';
         card.style.cursor = 'pointer';
         card.innerHTML = `
             <div class="card-inner-content" style="flex-direction:row; justify-content:space-between; align-items:center;">
-                <div style="font-size:2rem; margin-right:15px; cursor:pointer;" onclick="event.stopPropagation(); openEmojiPicker('${name}')" title="Tap to change icon">${eIcon}</div>
+                <div style="font-size:2rem; margin-right:15px; cursor:pointer;" onclick="event.stopPropagation(); openEmojiPicker('${name.replace(/'/g, "\\'")}')" title="Tap to change icon">${eIcon}</div>
                 <div onclick="window.location.hash='#shortlist=${encodeURIComponent(name)}';" style="flex-grow:1;">
                     <h3 class="card-title display-font" style="color:var(--primary-blue);">${name}</h3>
-                    <p class="meta-text" style="margin-top:5px;">${count} venue${count === 1 ? '' : 's'}</p>
+                    <p class="meta-text" style="margin-top:5px;">${formatShortlistCount(name)}</p>
                 </div>
                 <div style="display:flex; gap:10px;">
-                    <button class="icon-btn" onclick="event.stopPropagation(); shareShortlist('${name}')" title="Share" style="font-size:1.35rem;">${BR_ICONS.share}</button>
-                    <button class="icon-btn" style="color:var(--bright-red-orange);" onclick="event.stopPropagation(); if(confirm('Delete shortlist ${name}?')){ delete userShortlists['${name}']; saveCurrentToBundle(); renderShortlistsFullView(); }">❌</button>
+                    <button class="icon-btn" onclick="event.stopPropagation(); shareShortlist('${name.replace(/'/g, "\\'")}')" title="Share" style="font-size:1.35rem;">${BR_ICONS.share}</button>
+                    <button class="icon-btn" style="color:var(--bright-red-orange);" onclick="event.stopPropagation(); if(confirm('Delete shortlist ${name.replace(/'/g, "\\'")}?')){ delete userShortlists['${name.replace(/'/g, "\\'")}']; saveCurrentToBundle(); renderShortlistsFullView(); }">❌</button>
                 </div>
             </div>
         `;
-        if(resultsContainer) resultsContainer.appendChild(card);
+        resultsContainer?.appendChild(card);
     });
 }
 
@@ -2633,47 +2843,6 @@ function openProfileMenu() {
 
     markProfileOpenState();
     profileModal?.classList.remove('hidden');
-}
-
-function promptAddToShortlist(venue) {
-    currentTargetVenue = venue;
-    const tName = document.getElementById('add-shortlist-target-name');
-    if(tName) tName.innerText = venue.Name;
-    const container = document.getElementById('add-shortlist-options');
-    if(!container) return;
-    
-    container.innerHTML = '';
-    
-    const lists = Object.keys(userShortlists);
-    if(lists.length === 0) {
-        container.innerHTML = '<p class="meta-text">No shortlists exist.</p>';
-    } else {
-        lists.forEach(name => {
-            const isAdded = userShortlists[name].includes(venue.Venue_ID);
-            const btn = document.createElement('button');
-            btn.className = `btn pill-btn ${isAdded ? 'secondary-btn' : 'primary-btn'}`;
-            btn.innerText = isAdded ? `Remove from ${name}` : `Add to ${name}`;
-            btn.addEventListener('click', () => {
-                if(isAdded) {
-                    userShortlists[name] = userShortlists[name].filter(id => id !== venue.Venue_ID);
-                } else {
-                    userShortlists[name].push(venue.Venue_ID);
-                }
-                saveCurrentToBundle();
-                addShortlistModal?.classList.add('hidden');
-                showToast(isAdded ? "Removed from Shortlist" : "Added to Shortlist");
-                
-                const sBtn = document.getElementById('modal-shortlist');
-                const isNowShortlisted = Object.values(userShortlists).some(list => list.includes(venue.Venue_ID));
-                if(sBtn) {
-                    if(isNowShortlisted) sBtn.classList.add('active-star');
-                    else sBtn.classList.remove('active-star');
-                }
-            });
-            container.appendChild(btn);
-        });
-    }
-    addShortlistModal?.classList.remove('hidden');
 }
 
 function exportUserData() {
@@ -2982,6 +3151,7 @@ function openVenueModal(venue) {
                         <div class="event-action-row" aria-label="Event actions">
                             <button type="button" class="event-action-btn" onclick="event.stopPropagation(); shareURL('${window.location.origin}${window.location.pathname}?event=${ev.Event_ID}', '${safeEventName}')" title="Share ${safeEventName}">${BR_ICONS.share}</button>
                             <button type="button" class="event-action-btn" onclick="event.stopPropagation(); window.flagListing('${ev.Event_ID}', '${safeEventName}', 'Event Report')" title="Report ${safeEventName}"><img src="report.png" alt="" aria-hidden="true"></button>
+                            <button type="button" class="event-action-btn" onclick="event.stopPropagation(); window.promptAddEventToShortlist('${ev.Event_ID}')" title="Add ${safeEventName} to Shortlist"><img src="shortlist.png" alt="" aria-hidden="true"></button>
                             <button type="button" class="event-action-btn fav-btn ${isSaved ? 'active-star' : ''}" onclick="toggleEventFavorite('${ev.Event_ID}', this)" title="${isSaved ? 'Remove from My Events' : 'Save event'}">💖</button>
                         </div>
                         ${ev.Event_Description ? `<p class="event-description">${ev.Event_Description}</p>` : ''}
@@ -3054,7 +3224,7 @@ function openVenueModal(venue) {
 
     const shortBtn = document.getElementById('modal-shortlist');
     if(shortBtn) {
-        const isShortlisted = Object.values(userShortlists).some(list => list.includes(venue.Venue_ID));
+        const isShortlisted = hasItemInAnyShortlist('venue', venue.Venue_ID);
         shortBtn.className = `icon-btn fav-btn ${isShortlisted ? 'active-star' : ''}`;
         shortBtn.innerHTML = '<img src="shortlist.png" style="width:24px;">';
         shortBtn.onclick = () => promptAddToShortlist(venue);
