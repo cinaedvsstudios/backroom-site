@@ -35,12 +35,13 @@ listings_zone_4_italy_alps_mediterranean_central_europe.json
 
 listings_zone_5_poland_nordics_baltics.json
   Zone 5 — Poland, Nordics & Baltics
-  Coverage: Poland, Denmark, Sweden, Finland, Estonia, Latvia and Lithuania: Warsaw, Poznań, Wrocław, Gdańsk, Copenhagen, Stockholm, Helsinki, Tallinn, Riga and Vilnius.
+  Coverage: Poland, Denmark, Sweden, Finland, Estonia, Latvia and Lithuania: Warsaw, Poznań, Wrocław, Gdańsk, Krakow, Copenhagen, Stockholm, Helsinki, Tallinn, Riga and Vilnius.
   Listings: 1
 
 listings_zone_6_other_unassigned.json
   Zone 6 — Other / Unassigned
   Coverage: Any listing outside Zones 0–5, or a cross-zone/touring listing that cannot belong to one zone without duplicating it.
+Eg: Balkans, Serbia, Croatia, Smaller cities, Thessaloniki, Bucharest, Sofia, Bratislava, Ljubljana, Malta, Iceland, Greenland, Israel, Ukraine (when war ends)
   Listings: 1
 
 Classification note:
