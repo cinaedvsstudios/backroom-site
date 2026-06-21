@@ -1,5 +1,5 @@
 // --- Application State ---
-const APP_VERSION = "v0.92";
+const APP_VERSION = "v0.93";
 const APP_DATE = "21 June 2026";
 
 let systemInfo = {}, designTheme = {}, venues = [], events = [];
@@ -92,7 +92,12 @@ function escapeHTML(value) {
 }
 
 function linkifyText(value) {
-    const escaped = escapeHTML(value);
+    const escaped = escapeHTML(value)
+        // `!!text!!` is the current guide syntax. `||text||` is also accepted so
+        // descriptions entered with the earlier wording still render correctly.
+        .replace(/!!([\s\S]*?)!!/g, '<strong>$1</strong>')
+        .replace(/\|\|([\s\S]*?)\|\|/g, '<strong>$1</strong>');
+
     const ticketFormatted = escaped.replace(/(^|\s)Tickets:/gi, (match, prefix) => {
         const startsLine = !prefix || /^\s*$/.test(prefix) && escaped.indexOf(match) === 0;
         return `${startsLine ? '' : '<br>'}<span class="tickets-inline-label">🎟️ Tickets:</span>`;
@@ -688,45 +693,84 @@ function getDistanceFromLatLonInKm(lat1, lon1, lat2, lon2) {
     return R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a))); 
 }
 
+function getPlainDescriptionText(value) {
+    return String(value ?? '')
+        .replace(/\r\n?/g, '\n')
+        .replace(/={5,}/g, ' ')
+        .replace(/------/g, ' ')
+        .replace(/(^|[^=])==(?!=)/g, '$1 ')
+        .replace(/(?:\*{5}|\+{5})\s*/g, '')
+        .replace(/!!([\s\S]*?)!!/g, '$1')
+        .replace(/\|\|([\s\S]*?)\|\|/g, '$1')
+        .replace(/\s+/g, ' ')
+        .trim();
+}
+
 function formatAboutText(text) {
     if (!text) return '';
-    let lines = text.split('==');
-    let out = [];
+
+    // The admin guide uses `==` for a line break and `=====` for a divider.
+    // Treat markers as their own lines before processing so a five-equals divider
+    // is never split into fragments by the two-equals line-break marker.
+    const normalized = String(text)
+        .replace(/\r\n?/g, '\n')
+        .replace(/={5,}/g, '\n=====\n')
+        .replace(/------/g, '\n------\n')
+        .replace(/(^|[^=])==(?!=)/g, '$1\n');
+
+    const lines = normalized.split('\n');
+    const out = [];
     let inList = false;
 
-    for (let i = 0; i < lines.length; i++) {
-        let line = lines[i].trim();
-        
+    const closeList = () => {
+        if (inList) {
+            out.push('</ul>');
+            inList = false;
+        }
+    };
+
+    for (const rawLine of lines) {
+        const line = rawLine.trim();
+        if (!line) {
+            closeList();
+            continue;
+        }
+
         if (line === '=====') {
-            if (inList) { out.push('</ul>'); inList = false; }
-            out.push('<hr style="border: 0; height: 1px; background: var(--primary-blue); margin: 15px 0;">');
+            closeList();
+            out.push('<hr style="border:0; height:1px; background:var(--bright-red-orange); margin:15px 0;">');
             continue;
         }
+
         if (line === '------') {
-            if (inList) { out.push('</ul>'); inList = false; }
+            closeList();
             continue;
         }
-        if (line.startsWith('*****')) {
-            if (inList) { out.push('</ul>'); inList = false; }
-            let heading = line.replace('*****', '').trim();
-            out.push(`<h4 style="color: var(--primary-blue); font-family: 'Antonio', sans-serif; text-transform: uppercase; margin-top: 15px; margin-bottom: 5px;">${heading}</h4>`);
+
+        // `***** Title` is the documented heading marker. `+++++ Title` is also
+        // supported for descriptions entered before the guide was corrected.
+        const headingMatch = line.match(/^(?:\*{5}|\+{5})\s*(.+)$/);
+        if (headingMatch) {
+            closeList();
+            out.push(`<h4 style="color:var(--primary-blue); font-family:'Antonio', sans-serif; text-transform:uppercase; margin:15px 0 7px;">${linkifyText(headingMatch[1])}</h4>`);
             continue;
         }
-        if (line.startsWith('-- ')) {
-            if (!inList) { out.push('<ul style="margin-left: 20px; margin-bottom: 10px; color: #fff;">'); inList = true; }
-            let bullet = line.substring(3).trim();
-            out.push(`<li style="margin-bottom: 4px;">${bullet.replace(/!!(.*?)!!/g, '<strong>$1</strong>')}</li>`);
+
+        const bulletMatch = line.match(/^--\s+(.+)$/);
+        if (bulletMatch) {
+            if (!inList) {
+                out.push('<ul style="margin:4px 0 10px 22px; padding:0; color:#fff;">');
+                inList = true;
+            }
+            out.push(`<li style="margin-bottom:4px;">${linkifyText(bulletMatch[1])}</li>`);
             continue;
         }
-        
-        if (inList) { out.push('</ul>'); inList = false; }
-        if (line !== '') {
-            line = line.replace(/!!(.*?)!!/g, '<strong>$1</strong>');
-            out.push(`${line}<br>`);
-        }
+
+        closeList();
+        out.push(`<div style="margin:0 0 7px;">${linkifyText(line)}</div>`);
     }
-    if (inList) out.push('</ul>');
-    
+
+    closeList();
     return out.join('\n');
 }
 
@@ -1017,7 +1061,7 @@ function createShortlistEventCard(event) {
                         ${venue ? `<button type="button" class="event-action-btn" onclick="event.stopPropagation(); window.location.hash='#venue=${venue.Venue_ID}'" title="Open ${escapeHTML(venue.Name)}">🏛️</button>` : ''}
                     </div>
                 </div>
-                ${event.Event_Description ? `<p class="shortlist-event-description">${linkifyText(event.Event_Description)}</p>` : ''}
+                ${event.Event_Description ? `<div class="shortlist-event-description">${formatAboutText(event.Event_Description)}</div>` : ''}
                 ${eventTags.length ? `<div class="feature-chips shortlist-event-tags">${renderTagPills(eventTags, 'font-size:0.72rem; padding:3px 8px;')}</div>` : ''}
             </div>
         </div>
@@ -2362,7 +2406,7 @@ function renderSearchEventResults(items, targetContainer) {
         const image = String(event.Event_Image_URL || venue?.Image_URL || '').trim() || `Venue_images/${venue?.Venue_ID || ''}-01.jpg`;
         const eventName = String(event.Event_Name || 'Event');
         const safeEventName = eventName.replace(/'/g, "\\'");
-        const description = String(event.Event_Description || '');
+        const description = getPlainDescriptionText(event.Event_Description || '');
         const shortDescription = description.length > 130 ? `${description.slice(0, 130)}...` : description;
         const eventTags = getEventTags(event, venue);
         const card = document.createElement('article');
@@ -2811,7 +2855,7 @@ function renderMyEventsView() {
                             <button type="button" class="event-action-btn fav-btn active-star" onclick="event.stopPropagation(); toggleEventFavorite('${event.Event_ID}', null, true)" title="Remove from My Events">💖</button>
                         </div>
                     </div>
-                    ${event.Event_Description ? `<p class="my-event-description">${linkifyText(event.Event_Description)}</p>` : ''}
+                    ${event.Event_Description ? `<div class="my-event-description">${formatAboutText(event.Event_Description)}</div>` : ''}
                     ${eventTags.length ? `<div class="feature-chips my-event-tags">${renderTagPills(eventTags, 'font-size:0.72rem; padding:3px 8px;')}</div>` : ''}
                 </div>
             </div>
@@ -3490,7 +3534,7 @@ function openVenueModal(venue) {
                             <button type="button" class="event-action-btn" onclick="event.stopPropagation(); window.promptAddEventToShortlist('${ev.Event_ID}')" title="Add ${safeEventName} to Shortlist"><img src="shortlist.png" alt="" aria-hidden="true"></button>
                             <button type="button" class="event-action-btn fav-btn ${isSaved ? 'active-star' : ''}" onclick="toggleEventFavorite('${ev.Event_ID}', this)" title="${isSaved ? 'Remove from My Events' : 'Save event'}">💖</button>
                         </div>
-                        ${ev.Event_Description ? `<p class="event-description">${linkifyText(ev.Event_Description)}</p>` : ''}
+                        ${ev.Event_Description ? `<div class="event-description">${formatAboutText(ev.Event_Description)}</div>` : ''}
                     </div>
                 </article>
             `;

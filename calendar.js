@@ -54,13 +54,69 @@
     }
 
     function linkifyText(value) {
-        const escaped = escapeHTML(value);
-        return escaped.replace(/(https?:\/\/[^\s<]+)/gi, candidate => {
+        const escaped = escapeHTML(value)
+            .replace(/!!([\s\S]*?)!!/g, '<strong>$1</strong>')
+            .replace(/\|\|([\s\S]*?)\|\|/g, '<strong>$1</strong>');
+        const ticketFormatted = escaped.replace(/(^|\s)Tickets:/gi, (match, prefix) => `${prefix ? '<br>' : ''}<span class="tickets-inline-label">🎟️ Tickets:</span>`);
+        return ticketFormatted.replace(/(https?:\/\/[^\s<]+)/gi, candidate => {
             const trailingMatch = candidate.match(/[.,;:!?]+$/);
             const trailing = trailingMatch ? trailingMatch[0] : '';
             const url = candidate.slice(0, candidate.length - trailing.length);
             return `<a class="auto-link" href="${url}" target="_blank" rel="noopener noreferrer">${url}</a>${trailing}`;
         });
+    }
+
+    function formatEventDescription(value) {
+        if (!value) return '';
+        const normalized = String(value)
+            .replace(/\r\n?/g, '\n')
+            .replace(/={5,}/g, '\n=====\n')
+            .replace(/------/g, '\n------\n')
+            .replace(/(^|[^=])==(?!=)/g, '$1\n');
+        const out = [];
+        let inList = false;
+        const closeList = () => {
+            if (inList) {
+                out.push('</ul>');
+                inList = false;
+            }
+        };
+
+        normalized.split('\n').forEach(rawLine => {
+            const line = rawLine.trim();
+            if (!line) {
+                closeList();
+                return;
+            }
+            if (line === '=====') {
+                closeList();
+                out.push('<hr style="border:0; height:1px; background:var(--bright-red-orange); margin:13px 0;">');
+                return;
+            }
+            if (line === '------') {
+                closeList();
+                return;
+            }
+            const headingMatch = line.match(/^(?:\*{5}|\+{5})\s*(.+)$/);
+            if (headingMatch) {
+                closeList();
+                out.push(`<h4 style="color:var(--primary-blue); font-family:'Antonio', sans-serif; text-transform:uppercase; margin:13px 0 6px;">${linkifyText(headingMatch[1])}</h4>`);
+                return;
+            }
+            const bulletMatch = line.match(/^--\s+(.+)$/);
+            if (bulletMatch) {
+                if (!inList) {
+                    out.push('<ul style="margin:4px 0 10px 20px; padding:0;">');
+                    inList = true;
+                }
+                out.push(`<li style="margin-bottom:4px;">${linkifyText(bulletMatch[1])}</li>`);
+                return;
+            }
+            closeList();
+            out.push(`<div style="margin:0 0 7px;">${linkifyText(line)}</div>`);
+        });
+        closeList();
+        return out.join('\n');
     }
 
     function tagClass(tag) {
@@ -351,7 +407,7 @@
         const dateText = includeDate && event.Display_Date
             ? new Date(`${event.Display_Date}T12:00:00`).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' }).toUpperCase()
             : '';
-        return `<article class="calendar-event-card"><div class="calendar-event-layout"><div class="calendar-event-media"><img class="calendar-venue-thumb" src="${escapeHTML(image)}" alt="${escapeHTML(venueName)}" onerror="this.onerror=null;this.src='placeholder_venue.jpg';"><button type="button" class="btn primary-btn pill-btn calendar-action ${saved ? 'calendar-saved' : ''}" data-calendar-save="${escapeHTML(event.Event_ID)}">${saved ? '💖 Saved' : '💖 Save Event'}</button><button type="button" class="btn secondary-btn pill-btn calendar-action" data-calendar-shortlist="${escapeHTML(event.Event_ID)}">📑 Shortlist</button>${venue ? `<button type="button" class="btn secondary-btn pill-btn calendar-action" data-calendar-venue="${escapeHTML(venue.Venue_ID)}">Open Venue</button>` : ''}</div><div class="calendar-event-body"><div class="calendar-event-top"><div><h3 class="calendar-event-name display-font">${escapeHTML(event.Event_Name || 'Event')}</h3><p class="calendar-event-meta">${escapeHTML(venueName)}${location ? ` · ${escapeHTML(location)}` : ''}</p>${dateText ? `<p class="calendar-event-date">${escapeHTML(dateText)}</p>` : ''}${times ? `<p class="calendar-event-time">${escapeHTML(times)}</p>` : ''}${event.Is_Recurring ? `<p class="calendar-event-recurrence">${escapeHTML(event.Recurrence_Label)}</p>` : ''}</div>${event.Dresscode_Info ? `<div class="calendar-event-dresscode">${escapeHTML(event.Dresscode_Info)}</div>` : ''}</div>${event.Event_Description ? `<p class="calendar-event-description">${linkifyText(event.Event_Description)}</p>` : ''}${renderEventTags(event)}</div></div></article>`;
+        return `<article class="calendar-event-card"><div class="calendar-event-layout"><div class="calendar-event-media"><img class="calendar-venue-thumb" src="${escapeHTML(image)}" alt="${escapeHTML(venueName)}" onerror="this.onerror=null;this.src='placeholder_venue.jpg';"><button type="button" class="btn primary-btn pill-btn calendar-action ${saved ? 'calendar-saved' : ''}" data-calendar-save="${escapeHTML(event.Event_ID)}">${saved ? '💖 Saved' : '💖 Save Event'}</button><button type="button" class="btn secondary-btn pill-btn calendar-action" data-calendar-shortlist="${escapeHTML(event.Event_ID)}">📑 Shortlist</button>${venue ? `<button type="button" class="btn secondary-btn pill-btn calendar-action" data-calendar-venue="${escapeHTML(venue.Venue_ID)}">Open Venue</button>` : ''}</div><div class="calendar-event-body"><div class="calendar-event-top"><div><h3 class="calendar-event-name display-font">${escapeHTML(event.Event_Name || 'Event')}</h3><p class="calendar-event-meta">${escapeHTML(venueName)}${location ? ` · ${escapeHTML(location)}` : ''}</p>${dateText ? `<p class="calendar-event-date">${escapeHTML(dateText)}</p>` : ''}${times ? `<p class="calendar-event-time">${escapeHTML(times)}</p>` : ''}${event.Is_Recurring ? `<p class="calendar-event-recurrence">${escapeHTML(event.Recurrence_Label)}</p>` : ''}</div>${event.Dresscode_Info ? `<div class="calendar-event-dresscode">${escapeHTML(event.Dresscode_Info)}</div>` : ''}</div>${event.Event_Description ? `<div class="calendar-event-description">${formatEventDescription(event.Event_Description)}</div>` : ''}${renderEventTags(event)}</div></div></article>`;
     }
 
     function renderPanel() {
