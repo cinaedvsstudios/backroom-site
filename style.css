@@ -1243,3 +1243,42 @@ td.hidden-col * { display: none !important; }
     .events-block .event-action-btn { width: 28px; height: 27px; font-size: 0.9rem; }
     .events-block .event-description { font-size: 0.84rem; margin-top: 7px; }
 }
+
+
+/* v0.90 Search result types and clickable event links */
+.auto-link {
+    color: var(--primary-blue);
+    font-weight: 700;
+    text-decoration: underline;
+    text-decoration-thickness: 1px;
+    text-underline-offset: 2px;
+    overflow-wrap: anywhere;
+}
+.auto-link:hover,
+.auto-link:focus-visible {
+    color: #fff;
+    text-decoration-thickness: 2px;
+}
+.search-result-type-chip {
+    color: #0d1d12 !important;
+    background: #42d477 !important;
+    border-color: #42d477 !important;
+    font-weight: 700;
+}
+.search-result-type-chip:hover,
+.search-result-type-chip:focus-visible,
+.search-result-type-chip.active {
+    color: #fff !important;
+    background: #168b48 !important;
+    border-color: #64f19a !important;
+    box-shadow: 0 0 10px rgba(66, 212, 119, 0.55);
+}
+.search-result-venue-holder {
+    display: contents;
+}
+.search-result-event-card .card-meta + .card-meta {
+    margin-top: 4px;
+}
+.search-event-tags {
+    margin: -2px 0 14px;
+}

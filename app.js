@@ -1,5 +1,5 @@
 // --- Application State ---
-const APP_VERSION = "v0.89";
+const APP_VERSION = "v0.90";
 const APP_DATE = "21 June 2026";
 
 let systemInfo = {}, designTheme = {}, venues = [], events = [];
@@ -11,6 +11,7 @@ let currentShortlistTarget = null;
 let currentEventCityFilter = 'All';
 let isTutorialRunning = false; 
 let searchUsesFuzzyMatching = false;
+let searchResultTypeFilter = 'All';
 
 // Profile Data Structure (Save Game Style)
 let userProfile = JSON.parse(localStorage.getItem('br_profile')) || { name: '', avatar: '' };
@@ -78,6 +79,38 @@ function getVenueTags(venue) {
         });
 }
 
+
+function escapeHTML(value) {
+    return String(value ?? '')
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#39;');
+}
+
+function linkifyText(value) {
+    const escaped = escapeHTML(value);
+    return escaped.replace(/(https?:\/\/[^\s<]+)/gi, candidate => {
+        const trailingMatch = candidate.match(/[.,;:!?]+$/);
+        const trailing = trailingMatch ? trailingMatch[0] : '';
+        const url = candidate.slice(0, candidate.length - trailing.length);
+        return `<a class="auto-link" href="${url}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation();">${url}</a>${trailing}`;
+    });
+}
+
+function getEventTags(event, venue = null) {
+    const seen = new Set();
+    return [event?.Vibe_Tags, venue?.Vibe_Tags]
+        .filter(Boolean)
+        .flatMap(value => String(value).split(','))
+        .map(tag => tag.trim())
+        .filter(tag => {
+            if (!tag || seen.has(tag) || !MASTER_VIBE_TAGS.includes(tag)) return false;
+            seen.add(tag);
+            return true;
+        });
+}
 
 function getCityTokens(venue) {
     return String(venue?.City || '')
@@ -233,6 +266,44 @@ function getSearchScopeVenues() {
     return savedCity
         ? publicVenues.filter(venue => venueMatchesCity(venue, savedCity))
         : publicVenues;
+}
+
+function getSearchScopeEvents(now = new Date()) {
+    const scopedVenues = getSearchScopeVenues();
+    const venueById = new Map(scopedVenues.map(venue => [venue.Venue_ID, venue]));
+
+    return (events || [])
+        .filter(isSearchableEvent)
+        .map(event => {
+            const venue = venueById.get(event?.Venue_ID);
+            if (!venue) return null;
+            const occurrence = getEventDisplayOccurrence(event, now);
+            if (!occurrence || occurrence.Is_Past) return null;
+            return { event: occurrence, venue };
+        })
+        .filter(Boolean)
+        .sort((a, b) => compareEventOccurrences(a.event, b.event));
+}
+
+function getEventSearchText(event, venue) {
+    return [
+        event?.Event_Name,
+        event?.Event_Description,
+        event?.Dresscode_Info,
+        event?.Vibe_Tags,
+        event?.Price_Info,
+        event?.Ticket_URL,
+        venue?.Name,
+        venue?.City,
+        venue?.Country,
+        venue?.Address
+    ].filter(Boolean).join(' ');
+}
+
+function eventMatchesActiveTags(event, venue) {
+    if (!activeFilters.length) return true;
+    const tags = getEventTags(event, venue);
+    return activeFilters.every(filterTag => tags.includes(filterTag));
 }
 
 function isSearchableEvent(event) {
@@ -916,7 +987,7 @@ function renderSharedShortlistEvents(entries, container) {
                     <button type="button" class="event-action-btn" onclick="event.stopPropagation(); window.promptAddEventToShortlist('${event.Event_ID}')" title="Add to Shortlist"><img src="shortlist.png" alt="" aria-hidden="true"></button>
                     ${venue ? `<button type="button" class="event-action-btn" onclick="event.stopPropagation(); window.location.hash='#venue=${venue.Venue_ID}'" title="Open venue">🏛️</button>` : ''}
                 </div>
-                ${event.Event_Description ? `<p class="event-description">${event.Event_Description}</p>` : ''}
+                ${event.Event_Description ? `<p class="event-description">${linkifyText(event.Event_Description)}</p>` : ''}
             </div>
         `;
         section.appendChild(card);
@@ -2032,12 +2103,23 @@ function renderDynamicFilters(filteredData) {
     const container = document.getElementById('filter-chips');
     if(!container) return;
 
+    const isResultsScreen = window.location.hash === '#results' || !window.location.hash;
     const availableTags = new Set();
     const availabilitySource = Array.isArray(filteredData) ? filteredData : getPublicVenues();
     availabilitySource.forEach(v => getVenueTags(v).forEach(t => availableTags.add(t)));
+    if (isResultsScreen) {
+        getSearchScopeEvents().forEach(({ event, venue }) => getEventTags(event, venue).forEach(tag => availableTags.add(tag)));
+    }
     activeFilters.forEach(t => availableTags.add(t));
 
-    let html = `<button class="chip pill-btn ${activeFilters.length === 0 ? 'active' : ''}" data-filter="All">All</button>`;
+    const allActive = activeFilters.length === 0 && searchResultTypeFilter === 'All';
+    let html = `<button class="chip pill-btn ${allActive ? 'active' : ''}" data-filter="All">All</button>`;
+
+    if (isResultsScreen) {
+        html += `<button class="chip pill-btn search-result-type-chip ${searchResultTypeFilter === 'Event' ? 'active' : ''}" data-search-result-type="Event">Event</button>`;
+        html += `<button class="chip pill-btn search-result-type-chip ${searchResultTypeFilter === 'Venue' ? 'active' : ''}" data-search-result-type="Venue">Venue</button>`;
+    }
+
     html += `<button class="chip pill-btn tag-social-yellow" data-filter="__close_to_me">Venues close to me</button>`;
 
     MASTER_VIBE_TAGS.forEach(tag => {
@@ -2046,7 +2128,7 @@ function renderDynamicFilters(filteredData) {
         const isAvailable = availableTags.has(tag);
         const isDisabled = (!isAvailable && !isActive);
         const disabledClass = isDisabled ? 'muted-chip' : '';
-        const disabledAttrs = isDisabled ? ' data-disabled="true" aria-disabled="true" title="No matching venues with current filters"' : '';
+        const disabledAttrs = isDisabled ? ' data-disabled="true" aria-disabled="true" title="No matching listings with current filters"' : '';
         html += `<button class="chip pill-btn ${colorClass} ${isActive ? 'active' : ''} ${disabledClass}" data-filter="${tag}"${disabledAttrs}>${tag}</button>`;
     });
     container.innerHTML = html;
@@ -2055,9 +2137,17 @@ function renderDynamicFilters(filteredData) {
         chip.addEventListener('click', (e) => {
             recordUserInteraction();
             if(e.currentTarget.dataset.disabled === 'true') {
-                showToast('No matching venues with current filters.');
+                showToast('No matching listings with current filters.');
                 return;
             }
+
+            const resultType = e.currentTarget.getAttribute('data-search-result-type');
+            if (resultType) {
+                searchResultTypeFilter = resultType;
+                applyFilters();
+                return;
+            }
+
             const tag = e.currentTarget.getAttribute('data-filter');
 
             if(tag === '__close_to_me') {
@@ -2067,6 +2157,7 @@ function renderDynamicFilters(filteredData) {
 
             if(tag === 'All') {
                 activeFilters = [];
+                searchResultTypeFilter = 'All';
             } else {
                 const idx = activeFilters.indexOf(tag);
                 if(idx > -1) activeFilters.splice(idx, 1);
@@ -2142,31 +2233,9 @@ function renderSearchNoResults(query, savedCity, isFuzzySearch) {
     resultsContainer.appendChild(panel);
 }
 
-function applyFilters() {
-    const query = String(searchInput?.value || '').trim();
-    const savedCity = getSavedSearchCity();
-    let filteredVenues = getSearchScopeVenues();
-    const scopeVenues = [...filteredVenues];
-    selectedCardId = null;
-
-    if(activeFilters.length > 0) {
-        filteredVenues = filteredVenues.filter(venue => {
-            const tags = getVenueTags(venue);
-            return activeFilters.every(filterTag => tags.includes(filterTag));
-        });
-    }
-
-    if(query) {
-        filteredVenues = filteredVenues.filter(venue => {
-            const searchableText = getVenueAndEventSearchText(venue);
-            return searchUsesFuzzyMatching
-                ? fuzzyMatch(searchableText, query)
-                : directSearchMatch(searchableText, query);
-        });
-    }
-
-    filteredVenues.sort((a, b) => {
-        const queryCity = query.toLowerCase();
+function sortSearchVenues(list, query) {
+    return [...list].sort((a, b) => {
+        const queryCity = String(query || '').toLowerCase();
         if (queryCity) {
             const aCityMatch = venueMatchesCity(a, queryCity);
             const bCityMatch = venueMatchesCity(b, queryCity);
@@ -2193,6 +2262,121 @@ function applyFilters() {
         const bPop = parseInt(b.Rating_Busyness || b.Rating_Popularity) || 0;
         return bPop - aPop;
     });
+}
+
+function renderSearchEventResults(items, targetContainer) {
+    const container = targetContainer || resultsContainer;
+    if (!container) return;
+
+    items.forEach(({ event, venue }) => {
+        const isSaved = userEvents.includes(event.Event_ID);
+        const image = String(event.Event_Image_URL || venue?.Image_URL || '').trim() || `Venue_images/${venue?.Venue_ID || ''}-01.jpg`;
+        const eventName = String(event.Event_Name || 'Event');
+        const safeEventName = eventName.replace(/'/g, "\\'");
+        const description = String(event.Event_Description || '');
+        const shortDescription = description.length > 130 ? `${description.slice(0, 130)}...` : description;
+        const eventTags = getEventTags(event, venue);
+        const card = document.createElement('article');
+        card.className = 'card search-result-event-card';
+        card.innerHTML = `
+            <div class="card-image-wrapper">
+                <img class="venue-image centered-image" src="${image}" onerror="this.onerror=null; this.src='${PLACEHOLDER_POOL[Math.floor(Math.random() * PLACEHOLDER_POOL.length)]}'" title="${eventName}">
+            </div>
+            <div class="card-inner-content">
+                <div class="card-header">
+                    <div>
+                        <h3 class="card-title display-font">${escapeHTML(eventName)}</h3>
+                        <div class="card-meta">📅 ${escapeHTML(getEventDisplayMeta(event))}</div>
+                        <div class="card-meta">🏛️ ${escapeHTML(venue?.Name || 'Venue not listed')} · ${escapeHTML(formatVenueLocation(venue))}</div>
+                    </div>
+                    <div class="status-badge live">EVENT</div>
+                </div>
+                ${shortDescription ? `<div class="card-about">${linkifyText(shortDescription)}</div>` : ''}
+                ${eventTags.length ? `<div class="feature-chips search-event-tags">${renderTagPills(eventTags, 'font-size:0.72rem; padding:3px 8px;')}</div>` : ''}
+                <div class="card-stats">
+                    <span>📅 ${escapeHTML(getEventDisplayDate(event) || 'Date TBC')}</span>
+                    <div style="margin-left:auto; display:flex; gap:10px; align-items:center;">
+                        <span class="icon-btn" onclick="event.stopPropagation(); shareURL('${window.location.origin}${window.location.pathname}?event=${event.Event_ID}', '${safeEventName}')" title="Share event" style="font-size:1.5rem;">${BR_ICONS.share}</span>
+                        <span class="icon-btn" onclick="event.stopPropagation(); window.promptAddEventToShortlist('${event.Event_ID}')" title="Add to shortlist" style="display:flex; align-items:center; justify-content:center;"><img src="shortlist.png" style="width:24px; height:24px; object-fit:contain;"></span>
+                        <span class="star-btn icon-btn fav-btn ${isSaved ? 'active-star' : ''}" title="${isSaved ? 'Remove from My Events' : 'Save event'}" style="font-size:1.55rem; line-height:1;">💖</span>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        card.addEventListener('click', clickEvent => {
+            if (clickEvent.target.closest('a, .icon-btn, .star-btn')) return;
+            if (venue?.Venue_ID) {
+                recordUserInteraction();
+                venueReturnHash = '#results';
+                window.location.hash = `#venue=${venue.Venue_ID}`;
+            }
+        });
+
+        card.querySelector('.star-btn')?.addEventListener('click', clickEvent => {
+            clickEvent.stopPropagation();
+            window.toggleEventFavorite(event.Event_ID, clickEvent.currentTarget, false);
+        });
+
+        container.appendChild(card);
+    });
+}
+
+function renderMixedSearchResults(venueResults, eventResults) {
+    if (!resultsContainer) return;
+    resultsContainer.innerHTML = '';
+
+    if (venueResults.length) {
+        const venueHolder = document.createElement('div');
+        venueHolder.className = 'search-result-venue-holder';
+        resultsContainer.appendChild(venueHolder);
+        renderListings(venueResults, false, venueHolder);
+    }
+
+    if (eventResults.length) {
+        renderSearchEventResults(eventResults, resultsContainer);
+    }
+}
+
+function applyFilters() {
+    const query = String(searchInput?.value || '').trim();
+    const savedCity = getSavedSearchCity();
+    const scopeVenues = getSearchScopeVenues();
+    const scopeEvents = getSearchScopeEvents();
+    selectedCardId = null;
+
+    let filteredVenues = [...scopeVenues];
+    let filteredEvents = [...scopeEvents];
+
+    if(activeFilters.length > 0) {
+        filteredVenues = filteredVenues.filter(venue => {
+            const tags = getVenueTags(venue);
+            return activeFilters.every(filterTag => tags.includes(filterTag));
+        });
+        filteredEvents = filteredEvents.filter(({ event, venue }) => eventMatchesActiveTags(event, venue));
+    }
+
+    if(query) {
+        filteredVenues = filteredVenues.filter(venue => {
+            const searchableText = getVenueSearchText(venue);
+            return searchUsesFuzzyMatching
+                ? fuzzyMatch(searchableText, query)
+                : directSearchMatch(searchableText, query);
+        });
+        filteredEvents = filteredEvents.filter(({ event, venue }) => {
+            const searchableText = getEventSearchText(event, venue);
+            return searchUsesFuzzyMatching
+                ? fuzzyMatch(searchableText, query)
+                : directSearchMatch(searchableText, query);
+        });
+    }
+
+    filteredVenues = sortSearchVenues(filteredVenues, query);
+    filteredEvents.sort((a, b) => compareEventOccurrences(a.event, b.event));
+
+    const displayVenues = searchResultTypeFilter === 'Event' ? [] : filteredVenues;
+    const displayEvents = searchResultTypeFilter === 'Venue' ? [] : filteredEvents;
+    const totalResults = displayVenues.length + displayEvents.length;
 
     if(contextHeader) {
         contextHeader.classList.remove('hidden');
@@ -2202,23 +2386,27 @@ function applyFilters() {
         const title = document.getElementById('context-title');
         const desc = document.getElementById('context-desc');
         const locationText = savedCity ? `in ${savedCity}` : 'across all cities';
-        const resultCountText = `${filteredVenues.length} result${filteredVenues.length === 1 ? '' : 's'} found ${locationText}`;
+        const resultTypeText = searchResultTypeFilter === 'All'
+            ? 'results'
+            : `${searchResultTypeFilter.toLowerCase()} result${totalResults === 1 ? '' : 's'}`;
 
         if(title) title.innerText = savedCity ? `Results in ${savedCity}` : 'Results';
         if(desc) {
             const searchText = query ? ` for “${query}”` : '';
             const fuzzyText = searchUsesFuzzyMatching && query ? ' · Similar words search' : '';
-            desc.innerText = `${resultCountText}${searchText}${fuzzyText}`;
+            desc.innerText = `${totalResults} ${resultTypeText} found ${locationText}${searchText}${fuzzyText}`;
         }
     }
 
     // The tag availability follows the saved city, not the current text query.
     renderDynamicFilters(scopeVenues);
 
-    if(query && filteredVenues.length === 0) {
+    if(query && totalResults === 0) {
         renderSearchNoResults(query, savedCity, searchUsesFuzzyMatching);
+    } else if (totalResults === 0) {
+        resultsContainer.innerHTML = '<p style="text-align:center; color:var(--label-grey); margin-top:20px; width:100%; grid-column:1 / -1;">No matching listings found.</p>';
     } else {
-        renderListings(filteredVenues);
+        renderMixedSearchResults(displayVenues, displayEvents);
     }
 
     updateTravelSidebarHighlight();
@@ -2511,7 +2699,7 @@ function renderMyEventsView() {
                         <button class="icon-btn fav-btn active-star" style="font-size:1.5rem;" onclick="toggleEventFavorite('${ev.Event_ID}', null, true)">❌</button>
                     </div>
                 </div>
-                <div class="card-about">${ev.Event_Description || ''}</div>
+                <div class="card-about">${ev.Event_Description ? linkifyText(ev.Event_Description) : ''}</div>
             </div>
         `;
         if(resultsContainer) resultsContainer.appendChild(card);
@@ -3181,7 +3369,7 @@ function openVenueModal(venue) {
                             <button type="button" class="event-action-btn" onclick="event.stopPropagation(); window.promptAddEventToShortlist('${ev.Event_ID}')" title="Add ${safeEventName} to Shortlist"><img src="shortlist.png" alt="" aria-hidden="true"></button>
                             <button type="button" class="event-action-btn fav-btn ${isSaved ? 'active-star' : ''}" onclick="toggleEventFavorite('${ev.Event_ID}', this)" title="${isSaved ? 'Remove from My Events' : 'Save event'}">💖</button>
                         </div>
-                        ${ev.Event_Description ? `<p class="event-description">${ev.Event_Description}</p>` : ''}
+                        ${ev.Event_Description ? `<p class="event-description">${linkifyText(ev.Event_Description)}</p>` : ''}
                     </div>
                 </article>
             `;
