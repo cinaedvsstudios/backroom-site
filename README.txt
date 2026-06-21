@@ -1,14 +1,13 @@
-BACKROOM v0.68 — NAVIGATION UPDATE
+Backroom Admin v0.69 — Save-to-Repository Export
 
-Replace the repository root app.js with this file.
+Replace the repository root admin.js with this file.
 
-Changes:
-- Adds Search Results above Venues in the sidebar.
-- Venues now shows all live venues in the saved Location city; with no saved city, it shows all venues.
-- Changes the Venues emoji to 🏢.
-- Renames the Calendar sidebar item to Events and places it directly after Venues; it remains the same calendar page.
-- Moves My Events beside Favourites in the top bar and removes it from the sidebar.
-- Hides Travel and its dropdown from the sidebar without deleting travel data/code.
-- Back to Search Results keeps the existing query rather than clearing it.
+What changes:
+- Export JSON now opens the operating-system Save dialog in Chrome/Edge.
+- Venues suggests listings.json; Events suggests events.json.
+- Choose the existing JSON file inside your local Backroom-site folder and confirm Windows overwrite.
+- Once saved, GitHub Desktop will see the file change and you can commit/sync normally.
+- Export CSV uses the same picker with listings.csv or events.csv.
+- Firefox/Safari and any browser without the File System Access API still download the file normally.
 
-Because the current index.html still cache-busts app.js using ?v=0.66, hard-refresh once after upload (Ctrl+F5) if the old menu remains visible.
+Use the individual Export JSON button from the Venues or Events tab. The older Download All button remains a download-only backup tool because browsers cannot reliably open two separate save dialogs from one click.

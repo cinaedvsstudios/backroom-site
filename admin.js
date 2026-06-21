@@ -32,6 +32,71 @@ function showToast(message) {
     }, 2500);
 }
 
+const EXPORT_FILE_NAMES = {
+    venues: 'listings.json',
+    events: 'events.json'
+};
+
+function legacyDownloadText(content, filename, mimeType) {
+    const blob = new Blob([content], { type: mimeType });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1500);
+}
+
+/**
+ * Saves through the operating-system file picker when the browser supports the
+ * File System Access API. Choosing an existing file lets the user overwrite
+ * their repository copy after the OS confirmation. Browsers without support
+ * keep the existing download fallback.
+ */
+async function exportTextToLocalFile(content, options) {
+    const {
+        suggestedName,
+        mimeType,
+        description,
+        extensions,
+        pickerId
+    } = options;
+
+    const canUseSavePicker = typeof window.showSaveFilePicker === 'function' && window.isSecureContext;
+    if (!canUseSavePicker) {
+        legacyDownloadText(content, suggestedName, mimeType);
+        showToast(`Downloaded ${suggestedName}. This browser cannot open the overwrite picker.`);
+        return;
+    }
+
+    try {
+        const handle = await window.showSaveFilePicker({
+            id: pickerId,
+            suggestedName,
+            types: [{
+                description,
+                accept: { [mimeType]: extensions }
+            }]
+        });
+
+        const writable = await handle.createWritable();
+        await writable.write(new Blob([content], { type: mimeType }));
+        await writable.close();
+        showToast(`Saved ${handle.name || suggestedName}. GitHub Desktop can now sync it.`);
+    } catch (error) {
+        if (error?.name === 'AbortError') {
+            showToast('Export cancelled.');
+            return;
+        }
+
+        console.warn('File picker export failed; using download fallback.', error);
+        legacyDownloadText(content, suggestedName, mimeType);
+        showToast(`Downloaded ${suggestedName}. The file picker was unavailable.`);
+    }
+}
+
 let lastJsonErrorText = "";
 function handleJSONError(err, fileText) {
     const modal = document.getElementById('json-error-modal');
@@ -1397,23 +1462,32 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     document.getElementById('btn-copy-error')?.addEventListener('click', () => { navigator.clipboard.writeText(lastJsonErrorText); showToast("Copied"); });
-    document.getElementById('btn-export-csv')?.addEventListener('click', () => {
+    document.getElementById('btn-export-csv')?.addEventListener('click', async () => {
         if(!draftData || !draftData.length) return showToast('No data to export');
         const cols = Object.keys(draftData[0]);
         const esc = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`;
         const csv = [cols.map(esc).join(','), ...draftData.map(row => cols.map(c => esc(row[c])).join(','))].join('\n');
-        const a = document.createElement('a');
-        a.href = URL.createObjectURL(new Blob([csv], {type: 'text/csv;charset=utf-8'}));
-        a.download = `backroom_${currentMode}_${new Date().toISOString().split('T')[0]}.csv`;
-        a.click();
+        const baseName = currentMode === 'venues' ? 'listings.csv' : 'events.csv';
+        await exportTextToLocalFile(csv, {
+            suggestedName: baseName,
+            mimeType: 'text/csv',
+            description: 'CSV file',
+            extensions: ['.csv'],
+            pickerId: `backroom-${currentMode}-csv`
+        });
     });
 
-    document.getElementById('btn-export-json')?.addEventListener('click', () => {
-        const dataStr = JSON.stringify(draftData, null, 2);
-        const a = document.createElement('a');
-        a.href = URL.createObjectURL(new Blob([dataStr], {type: 'application/json'}));
-        a.download = `backroom_${currentMode}_${new Date().toISOString().split('T')[0]}.json`;
-        a.click();
+    document.getElementById('btn-export-json')?.addEventListener('click', async () => {
+        if(!draftData || !draftData.length) return showToast('No data to export');
+        const dataStr = JSON.stringify(draftData, null, 2) + '\n';
+        const fileName = EXPORT_FILE_NAMES[currentMode] || `backroom_${currentMode}.json`;
+        await exportTextToLocalFile(dataStr, {
+            suggestedName: fileName,
+            mimeType: 'application/json',
+            description: 'JSON data file',
+            extensions: ['.json'],
+            pickerId: `backroom-${currentMode}-json`
+        });
     });
     
     document.getElementById('btn-download-all')?.addEventListener('click', () => {
