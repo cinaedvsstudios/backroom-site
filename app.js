@@ -881,38 +881,38 @@ const FEATURED_CITY_CONFIG = {
     },
     Hamburg: {
         topPicks: [
-            { label: 'Toms', aliases: ['Toms', "Tom's"] },
-            { label: 'Babylon', aliases: ['Babylon'] },
-            { label: 'WunderBar', aliases: ['WunderBar', 'Wunderbar'] }
+            { label: 'Toms', venueId: 'HAM-BAR-14' },
+            { label: 'Babylon', venueId: 'HAM-PAR-03' },
+            { label: 'WunderBar', venueId: 'HAM-BAR-12' }
         ],
         recommended: [
-            { label: 'Dragon Sauna', aliases: ['Dragon Sauna'] }
+            { label: 'Dragon Sauna', venueId: 'HAM-SAU-01' }
         ]
     },
     Cologne: {
         topPicks: [
-            { label: 'Sexy Party', aliases: ['Sexy Party'] },
-            { label: 'Mumu', aliases: ['Mumu'] },
-            { label: 'Exile', aliases: ['Exile'] },
-            { label: 'Phoenix', aliases: ['Phoenix', 'Phoenix Sauna', 'Phoenix Sauna Cologne'] }
+            { label: 'SEXY Party', venueId: 'CGN-PAR-04' },
+            { label: 'Mumu', venueId: 'CGN-BAR-11' },
+            { label: 'Exile', venueId: 'CGN-BAR-07' },
+            { label: 'Phoenix', venueId: 'CGN-SAU-02' }
         ],
         recommended: [
-            { label: 'Guyz', aliases: ['Guyz'] },
-            { label: 'Play', aliases: ['Play'] },
-            { label: 'Babylon Sauna', aliases: ['Babylon Sauna', 'Badehaus Babylon Cologne', 'Badehaus Babylon'] }
+            { label: 'Guyz', venueId: 'CGN-PAR-02' },
+            { label: 'Play', venueId: 'CGN-PAR-05' },
+            { label: 'Babylon Sauna', venueId: 'CGN-SAU-01' }
         ]
     },
     Frankfurt: {
         topPicks: [
-            { label: 'Pink', aliases: ['Pink'] },
-            { label: 'Saunawerk', aliases: ['Saunawerk'] }
+            { label: 'PINK Frankfurt', venueId: 'FFM-BAR-04' },
+            { label: 'Saunawerk', venueId: 'FFM-SAU-01' }
         ],
         recommended: []
     },
     Munich: {
         topPicks: [
-            { label: 'NY Club', aliases: ['NY Club', 'NY.Club'] },
-            { label: 'Sauna Deutsche Eiche', aliases: ['Sauna Deutsche Eiche', 'Deutsche Eiche'] }
+            { label: 'NY Club', venueId: 'MUC-PAR-01' },
+            { label: 'Sauna Deutsche Eiche', venueId: 'MUC-SAU-01' }
         ],
         recommended: []
     }
@@ -937,11 +937,27 @@ function featuredCityMatches(venue, cityName) {
     return getCityTokens(venue).some(city => accepted.includes(normalizeFeaturedLookupText(city)));
 }
 
+function featuredEntryNameMatches(venueName, entry) {
+    const actualName = normalizeFeaturedLookupText(venueName);
+    if (!actualName) return false;
+
+    return (entry.aliases || [entry.label])
+        .map(normalizeFeaturedLookupText)
+        .filter(Boolean)
+        .some(alias => actualName === alias || actualName.startsWith(alias));
+}
+
 function findConfiguredFeaturedVenue(cityName, entry) {
-    const acceptedNames = (entry.aliases || [entry.label]).map(normalizeFeaturedLookupText);
-    return getPublicVenues().find(venue => {
+    const publicVenues = getPublicVenues();
+
+    // Curated Featured cards are bound to their exact Venue_IDs, never guessed from names.
+    if (entry?.venueId) {
+        return publicVenues.find(venue => venue?.Venue_ID === entry.venueId) || null;
+    }
+
+    return publicVenues.find(venue => {
         if (!featuredCityMatches(venue, cityName)) return false;
-        return acceptedNames.includes(normalizeFeaturedLookupText(venue?.Name));
+        return featuredEntryNameMatches(venue?.Name, entry);
     }) || null;
 }
 
