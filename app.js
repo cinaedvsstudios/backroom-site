@@ -1,5 +1,5 @@
 // --- Application State ---
-const APP_VERSION = "v0.88";
+const APP_VERSION = "v0.89";
 const APP_DATE = "21 June 2026";
 
 let systemInfo = {}, designTheme = {}, venues = [], events = [];
@@ -2072,8 +2072,14 @@ function renderDynamicFilters(filteredData) {
                 if(idx > -1) activeFilters.splice(idx, 1);
                 else activeFilters.push(tag);
             }
-            if(window.location.hash !== '#results') window.location.hash = '#results';
-            else handleRouting();
+            // The Venues screen has its own city-scoped list, so keep tag filtering there.
+            if(window.location.hash === '#venues') {
+                renderSavedLocationVenuesView();
+            } else if(window.location.hash === '#results' || !window.location.hash) {
+                applyFilters();
+            } else {
+                window.location.hash = '#results';
+            }
         });
     });
 }
@@ -2274,7 +2280,8 @@ function renderSavedLocationEmptyState(titleText, bodyText, showLocationButton =
 }
 
 function renderSavedLocationVenuesView() {
-    document.getElementById('main-filters')?.classList.add('hidden');
+    // Venues uses the same filter chips as Search Results, scoped to the saved city.
+    document.getElementById('main-filters')?.classList.remove('hidden');
     contextHeader?.classList.remove('hidden');
     resetBackButton('← Back to Results', 'results');
     document.getElementById('btn-back-to-results')?.classList.add('result-back-hidden');
@@ -2287,10 +2294,20 @@ function renderSavedLocationVenuesView() {
     const savedCity = String(savedLocation?.city || '').trim();
     const displayCity = isAllCities ? 'ALL CITIES' : savedCity;
 
+    const cityVenues = isAllCities
+        ? getPublicVenues()
+        : getPublicVenues().filter(venue => venueMatchesCity(venue, savedCity));
+
+    // Keep the filter bar available even when a tag produces zero matching cards.
+    renderDynamicFilters(cityVenues);
+
     const matchingVenues = sortSavedLocationVenues(
-        isAllCities
-            ? getPublicVenues()
-            : getPublicVenues().filter(venue => venueMatchesCity(venue, savedCity))
+        activeFilters.length > 0
+            ? cityVenues.filter(venue => {
+                const tags = getVenueTags(venue);
+                return activeFilters.every(filterTag => tags.includes(filterTag));
+            })
+            : cityVenues
     );
 
     if (title) {
@@ -2307,7 +2324,12 @@ function renderSavedLocationVenuesView() {
     }
 
     if (desc) {
-        if (isAllCities) {
+        const locationText = isAllCities ? 'across all cities' : 'found';
+        if (activeFilters.length > 0) {
+            desc.textContent = matchingVenues.length === 1
+                ? `1 public venue listing matches these tags ${isAllCities ? 'across all cities' : 'in this city'}.`
+                : `${matchingVenues.length} public venue listings match these tags ${isAllCities ? 'across all cities' : 'in this city'}.`;
+        } else if (isAllCities) {
             desc.textContent = matchingVenues.length === 1
                 ? '1 public venue listing across all cities.'
                 : `${matchingVenues.length} public venue listings across all cities.`;
@@ -2320,16 +2342,21 @@ function renderSavedLocationVenuesView() {
 
     if (!matchingVenues.length) {
         renderSavedLocationEmptyState(
-            isAllCities ? 'NO PUBLIC VENUES YET' : `NO VENUES YET FOR ${savedCity.toUpperCase()}`,
-            isAllCities
-                ? 'More coming soon.'
-                : 'More coming soon. You can still use Search Results to search every city and every listing.'
+            activeFilters.length > 0
+                ? 'NO VENUES MATCH THESE TAGS'
+                : (isAllCities ? 'NO PUBLIC VENUES YET' : `NO VENUES YET FOR ${savedCity.toUpperCase()}`),
+            activeFilters.length > 0
+                ? 'Choose another tag or select All to clear the venue filters.'
+                : (isAllCities
+                    ? 'More coming soon.'
+                    : 'More coming soon. You can still use Search Results to search every city and every listing.')
         );
         return;
     }
 
     renderListings(matchingVenues, true);
 }
+
 
 
 function getLevenshteinDistance(a, b) {
