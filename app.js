@@ -1,5 +1,5 @@
 // --- Application State ---
-const APP_VERSION = "v0.91";
+const APP_VERSION = "v0.92";
 const APP_DATE = "21 June 2026";
 
 let systemInfo = {}, designTheme = {}, venues = [], events = [];
@@ -93,7 +93,12 @@ function escapeHTML(value) {
 
 function linkifyText(value) {
     const escaped = escapeHTML(value);
-    return escaped.replace(/(https?:\/\/[^\s<]+)/gi, candidate => {
+    const ticketFormatted = escaped.replace(/(^|\s)Tickets:/gi, (match, prefix) => {
+        const startsLine = !prefix || /^\s*$/.test(prefix) && escaped.indexOf(match) === 0;
+        return `${startsLine ? '' : '<br>'}<span class="tickets-inline-label">🎟️ Tickets:</span>`;
+    });
+
+    return ticketFormatted.replace(/(https?:\/\/[^\s<]+)/gi, candidate => {
         const trailingMatch = candidate.match(/[.,;:!?]+$/);
         const trailing = trailingMatch ? trailingMatch[0] : '';
         const url = candidate.slice(0, candidate.length - trailing.length);

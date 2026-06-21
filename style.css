@@ -1259,6 +1259,12 @@ td.hidden-col * { display: none !important; }
     color: #fff;
     text-decoration-thickness: 2px;
 }
+.tickets-inline-label {
+    display: inline-block;
+    margin-top: 4px;
+    color: var(--primary-blue);
+    font-weight: 700;
+}
 .search-result-type-chip {
     color: #0d1d12 !important;
     background: #42d477 !important;
