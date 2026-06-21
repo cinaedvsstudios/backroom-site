@@ -1,5 +1,5 @@
 // --- Application State ---
-const APP_VERSION = "v0.67";
+const APP_VERSION = "v0.68";
 const APP_DATE = "21 June 2026";
 
 let systemInfo = {}, designTheme = {}, venues = [], events = [];
@@ -485,6 +485,7 @@ async function initApp() {
         applyTheme(); 
         populateSystemText(); 
         setupEventListeners(); 
+        setupNavigationLayoutV068();
         loadSavedLocation();
         updateMobileTopBarOffset(); 
         
@@ -522,7 +523,7 @@ async function initApp() {
                 }]; 
                 if(!events) events = [];
                 
-                applyTheme(); populateSystemText(); setupEventListeners(); loadSavedLocation(); updateMobileTopBarOffset(); 
+                applyTheme(); populateSystemText(); setupEventListeners(); setupNavigationLayoutV068(); loadSavedLocation(); updateMobileTopBarOffset(); 
                 if(localStorage.getItem('br_age_verified') === 'true') {
                     showToast("Backroom " + APP_VERSION);
                     handleRouting();
@@ -731,6 +732,9 @@ function handleRouting() {
     } else if (hash === '#results') {
         recordUserInteraction();
         applyFilters();
+    } else if (hash === '#venues') {
+        recordUserInteraction();
+        renderLocationVenuesView();
     } else if (hash === '#favorites') {
         recordUserInteraction();
         renderFavoritesView();
@@ -1197,10 +1201,13 @@ function setupEventListeners() {
         const target = btn?.dataset.backTarget || 'results';
         if(target === 'shortlists') {
             window.location.hash = '#myshortlists';
+        } else if(target === 'venues') {
+            window.location.hash = '#venues';
         } else {
-            if(searchInput) searchInput.value = '';
+            // Search Results is a return view, not a reset: keep the current text and filters.
             updateSearchClearButton();
             window.location.hash = '#results';
+            if(window.location.hash === '#results') handleRouting();
             updateTravelSidebarHighlight();
         }
     });
@@ -1624,6 +1631,118 @@ function applyFilters() {
     renderListings(filteredVenues);
     renderDynamicFilters(filteredVenues);
     updateTravelSidebarHighlight();
+}
+
+// --- v0.68 Navigation: Search Results, saved-location Venues, Events label, top-bar My Events ---
+function getSavedLocationForVenueBrowse() {
+    try {
+        const value = JSON.parse(localStorage.getItem('br_location') || '{}');
+        return {
+            city: String(value?.city || '').trim(),
+            country: String(value?.country || '').trim()
+        };
+    } catch (error) {
+        return { city: '', country: '' };
+    }
+}
+
+function renderLocationVenuesView() {
+    document.getElementById('main-filters')?.classList.add('hidden');
+    contextHeader?.classList.remove('hidden');
+    document.getElementById('btn-back-to-results')?.classList.remove('result-back-hidden');
+    resetBackButton('← Back to Search Results', 'results');
+
+    const { city, country } = getSavedLocationForVenueBrowse();
+    const publicVenues = getPublicVenues();
+    const matchingVenues = city
+        ? publicVenues.filter(venue => venueMatchesCity(venue, city))
+        : publicVenues;
+
+    matchingVenues.sort((a, b) => String(a?.Name || '').localeCompare(String(b?.Name || '')));
+
+    const title = document.getElementById('context-title');
+    const desc = document.getElementById('context-desc');
+    if(title) title.innerText = city ? `Venues: ${city}` : 'All Venues';
+    if(desc) {
+        if(city) {
+            desc.innerText = `${matchingVenues.length} venue${matchingVenues.length === 1 ? '' : 's'} in ${city}${country ? `, ${country}` : ''}.`;
+        } else {
+            desc.innerText = `No location is set. Showing all ${matchingVenues.length} venues.`;
+        }
+    }
+
+    renderListings(matchingVenues, true);
+}
+
+function setupNavigationLayoutV068() {
+    const sidebarMenu = document.querySelector('#sidebar .sidebar-menu');
+    const venuesItem = document.getElementById('btn-sidebar-results');
+
+    if(venuesItem) {
+        const icon = venuesItem.querySelector('.icon');
+        const label = venuesItem.querySelector('.sidebar-text');
+        if(icon) icon.textContent = '🏢';
+        if(label) label.textContent = 'Venues';
+        venuesItem.title = 'Venues in saved location';
+        venuesItem.onclick = () => {
+            window.location.hash = '#venues';
+            if(window.location.hash === '#venues') handleRouting();
+        };
+
+        let searchItem = document.getElementById('btn-sidebar-search-results');
+        if(!searchItem && sidebarMenu) {
+            searchItem = document.createElement('div');
+            searchItem.id = 'btn-sidebar-search-results';
+            searchItem.className = 'sidebar-item tooltip';
+            searchItem.title = 'Search Results';
+            searchItem.innerHTML = '<span class="icon">🔍</span><span class="sidebar-text display-font">Search Results</span>';
+            venuesItem.parentNode.insertBefore(searchItem, venuesItem);
+        }
+        if(searchItem) {
+            searchItem.onclick = () => {
+                window.location.hash = '#results';
+                if(window.location.hash === '#results') handleRouting();
+            };
+        }
+    }
+
+    // Calendar is the Events section; there is deliberately no separate duplicate Events page.
+    document.querySelectorAll('#sidebar .sidebar-item').forEach(item => {
+        const label = item.querySelector('.sidebar-text');
+        if(!label) return;
+        const text = label.textContent.trim().toLowerCase();
+        if(text === 'calendar') {
+            label.textContent = 'Events';
+            item.title = 'Events';
+            // Events is the same calendar view, positioned directly after Venues.
+            if(venuesItem) venuesItem.insertAdjacentElement('afterend', item);
+        }
+        if(text === 'my events') item.remove();
+    });
+
+    // Place saved events beside Favourites in the desktop/mobile top controls.
+    const favouritesButton = document.getElementById('btn-favorites');
+    let topEventsButton = document.getElementById('btn-top-my-events');
+    if(!topEventsButton && favouritesButton) {
+        topEventsButton = document.createElement('button');
+        topEventsButton.id = 'btn-top-my-events';
+        topEventsButton.className = 'top-btn pill-btn tooltip';
+        topEventsButton.title = 'My Events';
+        topEventsButton.innerHTML = '<span class="btn-icon">💖</span><span class="btn-text"> My Events</span>';
+        favouritesButton.insertAdjacentElement('afterend', topEventsButton);
+    }
+    if(topEventsButton) {
+        topEventsButton.onclick = () => {
+            window.location.hash = '#myevents';
+            if(window.location.hash === '#myevents') handleRouting();
+        };
+    }
+
+    // Keep the code/data intact, but take Travel out of the public navigation until it is ready.
+    const travelButton = document.getElementById('btn-sidebar-travel');
+    if(travelButton) travelButton.style.display = 'none';
+    const travelDropdown = document.getElementById('travel-dropdown');
+    if(travelDropdown) travelDropdown.style.display = 'none';
 }
 
 function getLevenshteinDistance(a, b) {
@@ -2666,5 +2785,15 @@ function updateLocationDisplay(loc) {
     if(loc && (loc.city || loc.country)) display.innerText = `Current: ${loc.city ? loc.city : ''} ${loc.country ? loc.country : ''}`; 
     else display.innerText = 'No location set.';
 }
+
+
+window.openVenueBrowse = function() {
+    window.location.hash = '#venues';
+    if(window.location.hash === '#venues') handleRouting();
+};
+window.openSearchResults = function() {
+    window.location.hash = '#results';
+    if(window.location.hash === '#results') handleRouting();
+};
 
 document.addEventListener('DOMContentLoaded', initApp);
