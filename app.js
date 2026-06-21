@@ -423,7 +423,7 @@ function setupCriticalListeners() {
         localStorage.setItem('br_age_verified', 'true');
         ageGate?.classList.add('hidden');
         appShell?.classList.remove('hidden');
-        updateMobileTopBarOffset();
+        
         showToast("Backroom " + APP_VERSION);
         handleRouting(); 
     };
@@ -444,17 +444,12 @@ function setupCriticalListeners() {
             }
         });
     }
-    if(!window.brMobileTopBarResizeBound) {
-        window.brMobileTopBarResizeBound = true;
-        window.addEventListener('resize', updateMobileTopBarOffset);
-        window.addEventListener('orientationchange', () => setTimeout(updateMobileTopBarOffset, 250));
-    }
 }
 
 async function initApp() {
     loadActiveProfileData(); 
     setupCriticalListeners();
-    updateMobileTopBarOffset();
+    
     const verDisplay = document.getElementById('sidebar-version-display');
     if(verDisplay) verDisplay.innerHTML = `${APP_VERSION}<br>${APP_DATE}`;
     
@@ -485,9 +480,9 @@ async function initApp() {
         applyTheme(); 
         populateSystemText(); 
         setupEventListeners(); 
-        setupNavigationLayoutV068();
+       
         loadSavedLocation();
-        updateMobileTopBarOffset(); 
+         
         
         if(localStorage.getItem('br_age_verified') === 'true') handleRouting();
         
@@ -523,7 +518,7 @@ async function initApp() {
                 }]; 
                 if(!events) events = [];
                 
-                applyTheme(); populateSystemText(); setupEventListeners(); setupNavigationLayoutV068(); loadSavedLocation(); updateMobileTopBarOffset(); 
+                applyTheme(); populateSystemText(); setupEventListeners(); loadSavedLocation();  
                 if(localStorage.getItem('br_age_verified') === 'true') {
                     showToast("Backroom " + APP_VERSION);
                     handleRouting();
@@ -555,12 +550,11 @@ function populateSystemText() {
 }
 
 window.addEventListener('hashchange', handleRouting);
-window.addEventListener('resize', updateMobileSidebarOffset);
 
 
 function getCurrentListHashForVenueReturn() {
     const hash = window.location.hash || '#results';
-    const listRoutes = ['#results', '#featured', '#favorites', '#myshortlists', '#myevents', '#mytravel', '#discounts', '#about', '#cruising-guide'];
+    const listRoutes = ['#results', '#venues', '#featured', '#favorites', '#myshortlists', '#myevents', '#mytravel', '#discounts', '#about', '#cruising-guide'];
     if (listRoutes.includes(hash)) return hash;
     if (hash.startsWith('#shortlist=')) return '#myshortlists';
     return '#results';
@@ -589,18 +583,6 @@ function sortFeaturedVenues(list) {
     });
 }
 
-function updateMobileTopBarOffset() {
-    const topBar = document.getElementById('top-bar');
-    if (!topBar) return;
-    const height = Math.ceil(topBar.getBoundingClientRect().height || 126);
-    const offset = `${height}px`;
-    document.documentElement.style.setProperty('--mobile-topbar-height', offset);
-    document.documentElement.style.setProperty('--mobile-sidebar-top', offset);
-}
-
-function updateMobileSidebarOffset() {
-    updateMobileTopBarOffset();
-}
 
 function closeSidebarImmediately() {
     if (!sidebar) return;
@@ -610,7 +592,7 @@ function closeSidebarImmediately() {
 
 function openSidebarTemporarily() {
     if (!sidebar) return;
-    updateMobileSidebarOffset();
+    
     sidebar.classList.add('visible', 'sidebar-opening');
     sidebar.scrollTop = 0;
     window.clearTimeout(sidebar.dataset.openingTimer);
@@ -734,7 +716,10 @@ function handleRouting() {
         applyFilters();
     } else if (hash === '#venues') {
         recordUserInteraction();
-        renderLocationVenuesView();
+        renderSavedLocationVenuesView();
+    } else if (hash === '#venues') {
+        recordUserInteraction();
+        renderSavedLocationVenuesView();
     } else if (hash === '#favorites') {
         recordUserInteraction();
         renderFavoritesView();
@@ -1412,7 +1397,7 @@ function setupEventListeners() {
             if(e.target.closest('#sidebar') || e.target.closest('#sidebar-hit-area')) return;
             closeSidebarImmediately();
         }, {passive:true});
-        updateMobileSidebarOffset();
+        
     }
 
     if(searchInput) {
@@ -1633,117 +1618,6 @@ function applyFilters() {
     updateTravelSidebarHighlight();
 }
 
-// --- v0.68 Navigation: Search Results, saved-location Venues, Events label, top-bar My Events ---
-function getSavedLocationForVenueBrowse() {
-    try {
-        const value = JSON.parse(localStorage.getItem('br_location') || '{}');
-        return {
-            city: String(value?.city || '').trim(),
-            country: String(value?.country || '').trim()
-        };
-    } catch (error) {
-        return { city: '', country: '' };
-    }
-}
-
-function renderLocationVenuesView() {
-    document.getElementById('main-filters')?.classList.add('hidden');
-    contextHeader?.classList.remove('hidden');
-    document.getElementById('btn-back-to-results')?.classList.remove('result-back-hidden');
-    resetBackButton('← Back to Search Results', 'results');
-
-    const { city, country } = getSavedLocationForVenueBrowse();
-    const publicVenues = getPublicVenues();
-    const matchingVenues = city
-        ? publicVenues.filter(venue => venueMatchesCity(venue, city))
-        : publicVenues;
-
-    matchingVenues.sort((a, b) => String(a?.Name || '').localeCompare(String(b?.Name || '')));
-
-    const title = document.getElementById('context-title');
-    const desc = document.getElementById('context-desc');
-    if(title) title.innerText = city ? `Venues: ${city}` : 'All Venues';
-    if(desc) {
-        if(city) {
-            desc.innerText = `${matchingVenues.length} venue${matchingVenues.length === 1 ? '' : 's'} in ${city}${country ? `, ${country}` : ''}.`;
-        } else {
-            desc.innerText = `No location is set. Showing all ${matchingVenues.length} venues.`;
-        }
-    }
-
-    renderListings(matchingVenues, true);
-}
-
-function setupNavigationLayoutV068() {
-    const sidebarMenu = document.querySelector('#sidebar .sidebar-menu');
-    const venuesItem = document.getElementById('btn-sidebar-results');
-
-    if(venuesItem) {
-        const icon = venuesItem.querySelector('.icon');
-        const label = venuesItem.querySelector('.sidebar-text');
-        if(icon) icon.textContent = '🏢';
-        if(label) label.textContent = 'Venues';
-        venuesItem.title = 'Venues in saved location';
-        venuesItem.onclick = () => {
-            window.location.hash = '#venues';
-            if(window.location.hash === '#venues') handleRouting();
-        };
-
-        let searchItem = document.getElementById('btn-sidebar-search-results');
-        if(!searchItem && sidebarMenu) {
-            searchItem = document.createElement('div');
-            searchItem.id = 'btn-sidebar-search-results';
-            searchItem.className = 'sidebar-item tooltip';
-            searchItem.title = 'Search Results';
-            searchItem.innerHTML = '<span class="icon">🔍</span><span class="sidebar-text display-font">Search Results</span>';
-            venuesItem.parentNode.insertBefore(searchItem, venuesItem);
-        }
-        if(searchItem) {
-            searchItem.onclick = () => {
-                window.location.hash = '#results';
-                if(window.location.hash === '#results') handleRouting();
-            };
-        }
-    }
-
-    // Calendar is the Events section; there is deliberately no separate duplicate Events page.
-    document.querySelectorAll('#sidebar .sidebar-item').forEach(item => {
-        const label = item.querySelector('.sidebar-text');
-        if(!label) return;
-        const text = label.textContent.trim().toLowerCase();
-        if(text === 'calendar') {
-            label.textContent = 'Events';
-            item.title = 'Events';
-            // Events is the same calendar view, positioned directly after Venues.
-            if(venuesItem) venuesItem.insertAdjacentElement('afterend', item);
-        }
-        if(text === 'my events') item.remove();
-    });
-
-    // Place saved events beside Favourites in the desktop/mobile top controls.
-    const favouritesButton = document.getElementById('btn-favorites');
-    let topEventsButton = document.getElementById('btn-top-my-events');
-    if(!topEventsButton && favouritesButton) {
-        topEventsButton = document.createElement('button');
-        topEventsButton.id = 'btn-top-my-events';
-        topEventsButton.className = 'top-btn pill-btn tooltip';
-        topEventsButton.title = 'My Events';
-        topEventsButton.innerHTML = '<span class="btn-icon">💖</span><span class="btn-text"> My Events</span>';
-        favouritesButton.insertAdjacentElement('afterend', topEventsButton);
-    }
-    if(topEventsButton) {
-        topEventsButton.onclick = () => {
-            window.location.hash = '#myevents';
-            if(window.location.hash === '#myevents') handleRouting();
-        };
-    }
-
-    // Keep the code/data intact, but take Travel out of the public navigation until it is ready.
-    const travelButton = document.getElementById('btn-sidebar-travel');
-    if(travelButton) travelButton.style.display = 'none';
-    const travelDropdown = document.getElementById('travel-dropdown');
-    if(travelDropdown) travelDropdown.style.display = 'none';
-}
 
 function getLevenshteinDistance(a, b) {
     if (a.length === 0) return b.length;

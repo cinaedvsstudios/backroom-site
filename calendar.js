@@ -1,16 +1,20 @@
-// Backroom public calendar screen — initial mobile-first events browser
+// Backroom Events calendar — static stylesheet, no runtime style injection.
 (function () {
     'use strict';
 
-    if (window.__backroomCalendarLoaded) {
-        if (typeof window.openCalendarScreen === 'function') window.openCalendarScreen();
-        return;
-    }
+    if (window.__backroomCalendarLoaded) return;
     window.__backroomCalendarLoaded = true;
 
-    const calendarState = {
+    const WEEKDAY_INDEX = {
+        sunday: 0, sun: 0, monday: 1, mon: 1, tuesday: 2, tue: 2, tues: 2,
+        wednesday: 3, wed: 3, thursday: 4, thu: 4, thur: 4, thurs: 4,
+        friday: 5, fri: 5, saturday: 6, sat: 6
+    };
+    const WEEKDAY_LABELS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+
+    const state = {
         month: new Date(new Date().getFullYear(), new Date().getMonth(), 1),
-        selectedDate: toDateKey(new Date()),
+        selectedDate: dateKey(new Date()),
         city: 'All',
         events: [],
         venues: [],
@@ -18,24 +22,17 @@
         loaded: false
     };
 
-    function ensureCalendarContainer() {
-        let container = document.getElementById('calendar-container');
-        if (container) return container;
-        container = document.createElement('div');
-        container.id = 'calendar-container';
-        container.className = 'hidden';
-        const contentWrapper = document.querySelector('#main-content .content-wrapper');
-        const filters = document.getElementById('main-filters');
-        if (contentWrapper && filters) contentWrapper.insertBefore(container, filters);
-        else contentWrapper?.appendChild(container);
-        return container;
+    function dateKey(date) {
+        return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
     }
 
-    function toDateKey(date) {
-        const year = date.getFullYear();
-        const month = String(date.getMonth() + 1).padStart(2, '0');
-        const day = String(date.getDate()).padStart(2, '0');
-        return `${year}-${month}-${day}`;
+    function parseDate(value) {
+        const match = String(value || '').trim().match(/^(\d{4})-(\d{2})-(\d{2})$/);
+        if (!match) return null;
+        const date = new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
+        if (date.getFullYear() !== Number(match[1]) || date.getMonth() !== Number(match[2]) - 1 || date.getDate() !== Number(match[3])) return null;
+        date.setHours(0, 0, 0, 0);
+        return date;
     }
 
     function escapeHTML(value) {
@@ -47,142 +44,184 @@
             .replaceAll("'", '&#39;');
     }
 
-    function eventVenue(event) {
-        return calendarState.venues.find(venue => venue.Venue_ID === event.Venue_ID) || null;
+    function isWeekly(event) {
+        return String(event?.Recurrence_Type || '').trim().toLowerCase() === 'weekly';
     }
 
-    function eventCity(event) {
-        const venue = eventVenue(event);
+    function weeklyDay(event) {
+        const key = String(event?.Recurrence_Day || '').trim().toLowerCase();
+        return Object.hasOwn(WEEKDAY_INDEX, key) ? WEEKDAY_INDEX[key] : null;
+    }
+
+    function recurrenceLabel(event) {
+        const day = weeklyDay(event);
+        return day === null ? 'Every week' : `Every ${WEEKDAY_LABELS[day]}`;
+    }
+
+    function venueFor(event) {
+        return state.venues.find(venue => venue.Venue_ID === event.Venue_ID) || null;
+    }
+
+    function cityFor(event) {
+        const venue = venueFor(event);
         return String(venue?.City || event.City || '').split(',')[0].trim();
     }
 
-    function publicEvents() {
-        return calendarState.events.filter(event => {
-            const status = String(event.Status || '').trim();
-            if (status === 'Hold' || status === 'Flag' || status === 'Closed') return false;
-            if (!event.Event_Date) return false;
-            if (calendarState.city !== 'All' && eventCity(event) !== calendarState.city) return false;
-            return true;
-        });
+    function isPublic(event) {
+        const status = String(event?.Status || '').trim();
+        if (['Hold', 'Flag', 'Closed', 'Cancelled'].includes(status)) return false;
+        if (!event?.Event_Date) return false;
+        if (state.city !== 'All' && cityFor(event) !== state.city) return false;
+        return true;
     }
 
-    function eventsOnDate(dateKey) {
-        return publicEvents().filter(event => event.Event_Date === dateKey).sort((a, b) => String(a.Event_Start_Time || '').localeCompare(String(b.Event_Start_Time || '')));
+    function occurrenceForDate(event, targetDate) {
+        const firstDate = parseDate(event.Event_Date);
+        const untilDate = parseDate(event.Recurrence_Until);
+        const target = new Date(targetDate);
+        target.setHours(0, 0, 0, 0);
+
+        if (!isWeekly(event)) {
+            return firstDate && firstDate.getTime() === target.getTime()
+                ? { ...event, Display_Date: dateKey(target), Is_Recurring: false, Recurrence_Label: '' }
+                : null;
+        }
+
+        const weekday = weeklyDay(event);
+        if (weekday === null || !firstDate || target < firstDate || (untilDate && target > untilDate) || target.getDay() !== weekday) return null;
+        return { ...event, Display_Date: dateKey(target), Is_Recurring: true, Recurrence_Label: recurrenceLabel(event) };
+    }
+
+    function eventsOnDate(key) {
+        const target = parseDate(key);
+        if (!target) return [];
+        return state.events
+            .filter(isPublic)
+            .map(event => occurrenceForDate(event, target))
+            .filter(Boolean)
+            .sort((a, b) => String(a.Event_Start_Time || '').localeCompare(String(b.Event_Start_Time || '')));
+    }
+
+    function eventsForMonth() {
+        const year = state.month.getFullYear();
+        const month = state.month.getMonth();
+        const count = new Date(year, month + 1, 0).getDate();
+        const all = [];
+        for (let day = 1; day <= count; day += 1) all.push(...eventsOnDate(dateKey(new Date(year, month, day))));
+        return all;
+    }
+
+    function ensureContainer() {
+        let container = document.getElementById('calendar-container');
+        if (container) return container;
+        container = document.createElement('div');
+        container.id = 'calendar-container';
+        container.className = 'hidden';
+        const wrapper = document.querySelector('#main-content .content-wrapper');
+        const filters = document.getElementById('main-filters');
+        if (wrapper && filters) wrapper.insertBefore(container, filters);
+        else wrapper?.appendChild(container);
+        return container;
     }
 
     function savedEventIds() {
         try { return JSON.parse(localStorage.getItem('br_events')) || []; }
-        catch (error) { return []; }
+        catch { return []; }
     }
 
     function monthLabel() {
-        return calendarState.month.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' }).toUpperCase();
+        return state.month.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' }).toUpperCase();
     }
 
-    function selectedDayLabel() {
-        return new Date(`${calendarState.selectedDate}T12:00:00`).toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' }).toUpperCase();
+    function selectedLabel() {
+        return new Date(`${state.selectedDate}T12:00:00`).toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' }).toUpperCase();
     }
 
-    function getMonthDates() {
-        const first = new Date(calendarState.month.getFullYear(), calendarState.month.getMonth(), 1);
+    function monthCells() {
+        const first = new Date(state.month.getFullYear(), state.month.getMonth(), 1);
         const startOffset = (first.getDay() + 6) % 7;
-        const daysInMonth = new Date(calendarState.month.getFullYear(), calendarState.month.getMonth() + 1, 0).getDate();
-        const cells = [];
-        for (let i = 0; i < startOffset; i += 1) cells.push(null);
-        for (let day = 1; day <= daysInMonth; day += 1) cells.push(new Date(calendarState.month.getFullYear(), calendarState.month.getMonth(), day));
-        while (cells.length % 7 !== 0) cells.push(null);
+        const days = new Date(state.month.getFullYear(), state.month.getMonth() + 1, 0).getDate();
+        const cells = Array(startOffset).fill(null);
+        for (let day = 1; day <= days; day += 1) cells.push(new Date(state.month.getFullYear(), state.month.getMonth(), day));
+        while (cells.length % 7) cells.push(null);
         return cells;
     }
 
-    function ensureSelectedDateForMonth() {
-        const date = new Date(`${calendarState.selectedDate}T12:00:00`);
-        if (date.getMonth() !== calendarState.month.getMonth() || date.getFullYear() !== calendarState.month.getFullYear()) {
-            const prefix = `${calendarState.month.getFullYear()}-${String(calendarState.month.getMonth() + 1).padStart(2, '0')}-`;
-            const relevant = publicEvents().filter(event => event.Event_Date.startsWith(prefix)).sort((a, b) => a.Event_Date.localeCompare(b.Event_Date));
-            calendarState.selectedDate = relevant[0]?.Event_Date || toDateKey(new Date(calendarState.month.getFullYear(), calendarState.month.getMonth(), 1));
+    function ensureSelectedDate() {
+        const selected = parseDate(state.selectedDate);
+        if (!selected || selected.getMonth() !== state.month.getMonth() || selected.getFullYear() !== state.month.getFullYear()) {
+            const firstEvent = eventsForMonth().sort((a, b) => a.Display_Date.localeCompare(b.Display_Date))[0];
+            state.selectedDate = firstEvent?.Display_Date || dateKey(new Date(state.month.getFullYear(), state.month.getMonth(), 1));
         }
     }
 
     function renderCityPicker() {
-        const cities = [...new Set(calendarState.events.map(eventCity).filter(Boolean))].sort();
-        const options = ['All', ...cities].map(city => `<option value="${escapeHTML(city)}" ${calendarState.city === city ? 'selected' : ''}>${escapeHTML(city === 'All' ? 'All cities' : city)}</option>`).join('');
-        return `<label class="calendar-city-label">CITY<select id="calendar-city-select" class="calendar-city-select">${options}</select></label>`;
+        const cities = [...new Set(state.events.map(cityFor).filter(Boolean))].sort();
+        return `<label class="calendar-city-label">CITY<select id="calendar-city-select" class="calendar-city-select">${['All', ...cities].map(city => `<option value="${escapeHTML(city)}" ${state.city === city ? 'selected' : ''}>${escapeHTML(city === 'All' ? 'All cities' : city)}</option>`).join('')}</select></label>`;
     }
 
-    function renderDateGrid() {
-        const todayKey = toDateKey(new Date());
-        const weekdayHtml = ['M', 'T', 'W', 'T', 'F', 'S', 'S'].map(day => `<div class="calendar-weekday">${day}</div>`).join('');
-        const cells = getMonthDates().map(date => {
+    function renderGrid() {
+        const today = dateKey(new Date());
+        const weekdays = ['M', 'T', 'W', 'T', 'F', 'S', 'S'].map(day => `<div class="calendar-weekday">${day}</div>`).join('');
+        const days = monthCells().map(date => {
             if (!date) return '<div class="calendar-day blank" aria-hidden="true"></div>';
-            const key = toDateKey(date);
-            const dayEvents = eventsOnDate(key);
-            return `<button type="button" class="calendar-day${key === calendarState.selectedDate ? ' selected' : ''}${key === todayKey ? ' today' : ''}${dayEvents.length ? ' has-events' : ''}" data-calendar-date="${key}"><span class="calendar-number">${date.getDate()}</span><span class="calendar-indicators">${dayEvents.length ? `<span class="calendar-dot"></span>${dayEvents.length > 1 ? `<span class="calendar-count">${dayEvents.length}</span>` : ''}` : ''}</span></button>`;
+            const key = dateKey(date);
+            const count = eventsOnDate(key).length;
+            return `<button type="button" class="calendar-day${key === state.selectedDate ? ' selected' : ''}${key === today ? ' today' : ''}${count ? ' has-events' : ''}" data-calendar-date="${key}"><span class="calendar-number">${date.getDate()}</span><span class="calendar-indicators">${count ? `<span class="calendar-dot"></span>${count > 1 ? `<span class="calendar-count">${count}</span>` : ''}` : ''}</span></button>`;
         }).join('');
-        return `<div class="calendar-grid">${weekdayHtml}${cells}</div>`;
+        return `<div class="calendar-grid">${weekdays}${days}</div>`;
+    }
+
+    function eventTags(event) {
+        return String(event?.Vibe_Tags || '').split(',').map(value => value.trim()).filter(Boolean).map(tag => `<span class="calendar-tag">${escapeHTML(tag)}</span>`).join('');
     }
 
     function renderEventCard(event) {
-        const venue = eventVenue(event);
+        const venue = venueFor(event);
         const venueName = venue?.Name || 'Venue not listed';
         const location = [venue?.City, venue?.Country].filter(Boolean).join(' · ');
         const times = [event.Event_Start_Time, event.Event_End_Time].filter(Boolean).join(' – ');
         const saved = savedEventIds().includes(event.Event_ID);
-        const imageUrl = String(venue?.Image_URL || '').trim() || 'placeholder_venue.jpg';
-        return `<article class="calendar-event-card">
-            <div class="calendar-event-layout">
-                <div class="calendar-event-media">
-                    <img class="calendar-venue-thumb" src="${escapeHTML(imageUrl)}" alt="${escapeHTML(venueName)}" onerror="this.onerror=null;this.src='placeholder_venue.jpg';">
-                    <button type="button" class="btn primary-btn pill-btn calendar-action ${saved ? 'calendar-saved' : ''}" data-calendar-save="${escapeHTML(event.Event_ID)}">${saved ? '💖 Saved' : '💖 Save Event'}</button>
-                    ${venue ? `<button type="button" class="btn secondary-btn pill-btn calendar-action" data-calendar-venue="${escapeHTML(venue.Venue_ID)}">Open Venue</button>` : ''}
-                </div>
-                <div class="calendar-event-body">
-                    <div class="calendar-event-top">
-                        <div><h3 class="calendar-event-name display-font">${escapeHTML(event.Event_Name || 'Event')}</h3><p class="calendar-event-meta">${escapeHTML(venueName)}${location ? ` · ${escapeHTML(location)}` : ''}</p>${times ? `<p class="calendar-event-time">${escapeHTML(times)}</p>` : ''}</div>
-                        ${event.Dresscode_Info ? `<div class="calendar-event-tag">${escapeHTML(event.Dresscode_Info)}</div>` : ''}
-                    </div>
-                    ${event.Event_Description ? `<p class="calendar-event-description">${escapeHTML(event.Event_Description)}</p>` : ''}
-                </div>
-            </div>
-        </article>`;
+        const image = String(venue?.Image_URL || '').trim() || 'placeholder_venue.jpg';
+        return `<article class="calendar-event-card"><div class="calendar-event-layout"><div class="calendar-event-media"><img class="calendar-venue-thumb" src="${escapeHTML(image)}" alt="${escapeHTML(venueName)}" onerror="this.onerror=null;this.src='placeholder_venue.jpg';"><button type="button" class="btn primary-btn pill-btn calendar-action ${saved ? 'calendar-saved' : ''}" data-calendar-save="${escapeHTML(event.Event_ID)}">${saved ? '💖 Saved' : '💖 Save Event'}</button>${venue ? `<button type="button" class="btn secondary-btn pill-btn calendar-action" data-calendar-venue="${escapeHTML(venue.Venue_ID)}">Open Venue</button>` : ''}</div><div class="calendar-event-body"><div class="calendar-event-top"><div><h3 class="calendar-event-name display-font">${escapeHTML(event.Event_Name || 'Event')}</h3><p class="calendar-event-meta">${escapeHTML(venueName)}${location ? ` · ${escapeHTML(location)}` : ''}</p>${times ? `<p class="calendar-event-time">${escapeHTML(times)}</p>` : ''}${event.Is_Recurring ? `<p class="calendar-event-recurrence">${escapeHTML(event.Recurrence_Label)}</p>` : ''}</div>${event.Dresscode_Info ? `<div class="calendar-event-tag">${escapeHTML(event.Dresscode_Info)}</div>` : ''}</div>${event.Event_Description ? `<p class="calendar-event-description">${escapeHTML(event.Event_Description)}</p>` : ''}${eventTags(event) ? `<div class="calendar-tag-row">${eventTags(event)}</div>` : ''}</div></div></article>`;
     }
 
-    function renderEventPanel() {
-        const selectedEvents = eventsOnDate(calendarState.selectedDate);
-        if (!selectedEvents.length) return `<section class="calendar-event-panel"><h2 class="display-font">${selectedDayLabel()}</h2><div class="calendar-empty">No listed events on this date yet.</div></section>`;
-        return `<section class="calendar-event-panel"><h2 class="display-font">${selectedDayLabel()}</h2><p class="calendar-day-count">${selectedEvents.length} event${selectedEvents.length === 1 ? '' : 's'} listed</p>${selectedEvents.map(renderEventCard).join('')}</section>`;
+    function renderPanel() {
+        const items = eventsOnDate(state.selectedDate);
+        if (!items.length) return `<section class="calendar-event-panel"><h2 class="display-font">${selectedLabel()}</h2><div class="calendar-empty">No listed events on this date yet.</div></section>`;
+        return `<section class="calendar-event-panel"><h2 class="display-font">${selectedLabel()}</h2><p class="calendar-day-count">${items.length} event${items.length === 1 ? '' : 's'} listed</p>${items.map(renderEventCard).join('')}</section>`;
     }
 
-    function renderCalendar() {
-        const container = ensureCalendarContainer();
-        ensureSelectedDateForMonth();
-        container.innerHTML = `<div class="calendar-page">
-            <div class="calendar-title-row"><div><h1 class="display-font">📅 CALENDAR</h1><p>Choose a date to see what is on.</p></div>${renderCityPicker()}</div>
-            <div class="calendar-layout"><section class="calendar-selector"><div class="calendar-month-row"><button type="button" class="calendar-month-button" id="calendar-prev-month">‹</button><h2 class="display-font">${monthLabel()}</h2><button type="button" class="calendar-month-button" id="calendar-next-month">›</button></div>${renderDateGrid()}<p class="calendar-key"><span class="calendar-dot"></span> Events listed on this date</p></section>${renderEventPanel()}</div>
-        </div>`;
-        bindCalendarControls();
+    function render() {
+        const container = ensureContainer();
+        ensureSelectedDate();
+        container.innerHTML = `<div class="calendar-page"><div class="calendar-title-row"><div><h1 class="display-font">📅 EVENTS</h1><p>Choose a date to see what is on.</p></div>${renderCityPicker()}</div><div class="calendar-layout"><section class="calendar-selector"><div class="calendar-month-row"><button type="button" class="calendar-month-button" id="calendar-prev-month" aria-label="Previous month">‹</button><h2 class="display-font">${monthLabel()}</h2><button type="button" class="calendar-month-button" id="calendar-next-month" aria-label="Next month">›</button></div>${renderGrid()}<p class="calendar-key"><span class="calendar-dot"></span> Events listed on this date</p></section>${renderPanel()}</div></div>`;
+        bindControls();
     }
 
-    function bindCalendarControls() {
-        document.getElementById('calendar-prev-month')?.addEventListener('click', () => { calendarState.month = new Date(calendarState.month.getFullYear(), calendarState.month.getMonth() - 1, 1); ensureSelectedDateForMonth(); renderCalendar(); });
-        document.getElementById('calendar-next-month')?.addEventListener('click', () => { calendarState.month = new Date(calendarState.month.getFullYear(), calendarState.month.getMonth() + 1, 1); ensureSelectedDateForMonth(); renderCalendar(); });
-        document.getElementById('calendar-city-select')?.addEventListener('change', event => { calendarState.city = event.target.value; ensureSelectedDateForMonth(); renderCalendar(); });
-        document.querySelectorAll('[data-calendar-date]').forEach(button => button.addEventListener('click', () => { calendarState.selectedDate = button.dataset.calendarDate; renderCalendar(); }));
-        document.querySelectorAll('[data-calendar-save]').forEach(button => button.addEventListener('click', () => { if (typeof window.toggleEventFavorite === 'function') { window.toggleEventFavorite(button.dataset.calendarSave, button, false); renderCalendar(); } }));
-        document.querySelectorAll('[data-calendar-venue]').forEach(button => button.addEventListener('click', () => { closeCalendarScreen(false); window.location.hash = `#venue=${button.dataset.calendarVenue}`; }));
+    function bindControls() {
+        document.getElementById('calendar-prev-month')?.addEventListener('click', () => { state.month = new Date(state.month.getFullYear(), state.month.getMonth() - 1, 1); ensureSelectedDate(); render(); });
+        document.getElementById('calendar-next-month')?.addEventListener('click', () => { state.month = new Date(state.month.getFullYear(), state.month.getMonth() + 1, 1); ensureSelectedDate(); render(); });
+        document.getElementById('calendar-city-select')?.addEventListener('change', event => { state.city = event.target.value; ensureSelectedDate(); render(); });
+        document.querySelectorAll('[data-calendar-date]').forEach(button => button.addEventListener('click', () => { state.selectedDate = button.dataset.calendarDate; render(); }));
+        document.querySelectorAll('[data-calendar-save]').forEach(button => button.addEventListener('click', () => { window.toggleEventFavorite?.(button.dataset.calendarSave, button, false); render(); }));
+        document.querySelectorAll('[data-calendar-venue]').forEach(button => button.addEventListener('click', () => { close(false); window.location.hash = `#venue=${button.dataset.calendarVenue}`; }));
     }
 
-    async function loadCalendarData() {
-        if (calendarState.loading) return;
-        calendarState.loading = true;
+    async function loadData() {
+        if (state.loading) return;
+        state.loading = true;
         try {
-            const [eventResponse, venueResponse] = await Promise.all([fetch(`events.json?v=${Date.now()}`), fetch(`listings.json?v=${Date.now()}`)]);
-            if (!eventResponse.ok || !venueResponse.ok) throw new Error('Calendar data unavailable');
-            calendarState.events = await eventResponse.json();
-            calendarState.venues = await venueResponse.json();
-            calendarState.loaded = true;
+            const [eventResponse, venueResponse] = await Promise.all([fetch('events.json', { cache: 'no-store' }), fetch('listings.json', { cache: 'no-store' })]);
+            if (!eventResponse.ok || !venueResponse.ok) throw new Error('Event data unavailable');
+            state.events = await eventResponse.json();
+            state.venues = await venueResponse.json();
+            state.loaded = true;
         } catch (error) {
-            ensureCalendarContainer().innerHTML = '<div class="calendar-page"><h1 class="display-font">📅 CALENDAR</h1><p class="calendar-empty">Calendar data could not be loaded.</p></div>';
-        } finally { calendarState.loading = false; }
+            ensureContainer().innerHTML = '<div class="calendar-page"><h1 class="display-font">📅 EVENTS</h1><p class="calendar-empty">Events could not be loaded.</p></div>';
+        } finally {
+            state.loading = false;
+        }
     }
 
     function hideStandardPanels() {
@@ -193,29 +232,24 @@
         if (results) results.style.display = 'none';
     }
 
-    function closeCalendarScreen(clearDisplay = true) {
+    function close(clear = true) {
         const container = document.getElementById('calendar-container');
         container?.classList.add('hidden');
-        if (container && clearDisplay) container.innerHTML = '';
+        if (container && clear) container.innerHTML = '';
         const results = document.getElementById('results-container');
         if (results) results.style.display = '';
     }
 
-    window.closeCalendarScreen = closeCalendarScreen;
+    window.closeCalendarScreen = close;
     window.openCalendarScreen = async function () {
         if (window.location.hash !== '#calendar') history.pushState(null, '', '#calendar');
         hideStandardPanels();
-        const container = ensureCalendarContainer();
+        const container = ensureContainer();
         container.classList.remove('hidden');
-        container.innerHTML = '<div class="calendar-page"><h1 class="display-font">📅 CALENDAR</h1><p class="calendar-loading">Loading events…</p></div>';
-        if (!calendarState.loaded) await loadCalendarData();
-        if (calendarState.loaded) renderCalendar();
+        container.innerHTML = '<div class="calendar-page"><h1 class="display-font">📅 EVENTS</h1><p class="calendar-loading">Loading events…</p></div>';
+        if (!state.loaded) await loadData();
+        if (state.loaded) render();
     };
 
-    window.addEventListener('hashchange', () => { if (window.location.hash !== '#calendar') closeCalendarScreen(false); });
-
-    const style = document.createElement('style');
-    style.textContent = `#calendar-container{padding:0 20px 20px}.calendar-page{max-width:1120px;margin:0 auto;background:var(--panel-dark);border:1px solid var(--panel-mid);border-radius:var(--radius-card);padding:24px;color:#fff}.calendar-title-row{display:flex;justify-content:space-between;align-items:flex-end;gap:20px;margin-bottom:22px}.calendar-title-row h1{margin:0;color:var(--primary-blue);font-size:2.2rem}.calendar-title-row p{color:var(--text-light);margin:4px 0 0}.calendar-city-label{display:flex;flex-direction:column;gap:5px;color:var(--text-light);font-size:.85rem;font-weight:bold;min-width:180px}.calendar-city-select{background:var(--panel-mid);border:1px solid var(--primary-blue);border-radius:999px;padding:9px 14px;color:#fff;font:inherit;font-size:1rem}.calendar-layout{display:grid;grid-template-columns:minmax(300px,400px) 1fr;gap:22px;align-items:start}.calendar-selector,.calendar-event-panel{background:var(--near-black);border:1px solid var(--panel-mid);border-radius:var(--radius-card);padding:18px}.calendar-month-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}.calendar-month-row h2{margin:0;color:var(--primary-blue);font-size:1.55rem}.calendar-month-button{height:40px;width:40px;border-radius:50%;border:1px solid var(--primary-blue);background:transparent;color:#fff;font-size:2rem;line-height:1;cursor:pointer}.calendar-month-button:hover{background:var(--primary-blue)}.calendar-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}.calendar-weekday{text-align:center;color:var(--text-light);font-weight:bold;padding:7px 0;font-size:.9rem}.calendar-day{min-height:48px;position:relative;background:var(--panel-dark);color:#fff;border:1px solid transparent;border-radius:8px;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px}.calendar-day.blank{background:transparent;cursor:default}.calendar-day:hover:not(.blank){border-color:var(--primary-blue)}.calendar-day.today{border-color:var(--bright-red-orange)}.calendar-day.selected{background:var(--primary-blue);border-color:var(--primary-blue);font-weight:bold}.calendar-indicators{height:8px;display:flex;align-items:center;gap:3px}.calendar-dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--bright-red-orange)}.calendar-count{font-size:.65rem;color:var(--bright-red-orange);font-weight:bold}.calendar-day.selected .calendar-dot{background:#fff}.calendar-day.selected .calendar-count{color:#fff}.calendar-key{display:flex;align-items:center;gap:7px;color:var(--text-light);font-size:.9rem;margin:14px 0 0}.calendar-event-panel h2{color:var(--primary-blue);font-size:1.55rem;margin:0 0 4px}.calendar-day-count{margin:0 0 14px;color:var(--text-light)}.calendar-event-card{background:var(--panel-dark);border:1px solid var(--panel-mid);border-radius:var(--radius-card);padding:15px;margin-bottom:12px}.calendar-event-layout{display:flex;gap:14px;align-items:flex-start}.calendar-event-media{width:96px;flex:0 0 96px;display:flex;flex-direction:column;gap:6px}.calendar-venue-thumb{width:96px;height:96px;border-radius:8px;object-fit:cover;border:1px solid var(--panel-mid);background:var(--near-black)}.calendar-event-body{flex:1;min-width:0}.calendar-event-top{display:flex;justify-content:space-between;gap:12px;align-items:start}.calendar-event-name{color:#fff;font-size:1.35rem;margin:0 0 4px}.calendar-event-meta,.calendar-event-time{margin:0 0 3px;color:var(--text-light)}.calendar-event-time{color:#fff;font-weight:bold}.calendar-event-tag{font-size:.85rem;color:#fff;background:var(--dark-red);border-radius:999px;padding:5px 10px;white-space:nowrap}.calendar-event-description{color:#fff;margin:10px 0 8px;line-height:1.4}.calendar-action{width:96px;min-height:25px;padding:3px 5px;font-size:.68rem;line-height:1.15;white-space:normal}.calendar-saved{background:var(--dark-red)}.calendar-empty,.calendar-loading{padding:30px 10px;text-align:center;color:var(--text-light)}@media(max-width:768px){#calendar-container{padding:0 10px 14px}.calendar-page{padding:15px}.calendar-title-row{flex-direction:column;align-items:stretch;margin-bottom:14px}.calendar-title-row h1{font-size:1.8rem}.calendar-city-label{min-width:0}.calendar-layout{grid-template-columns:1fr;gap:14px}.calendar-selector,.calendar-event-panel{padding:12px}.calendar-month-row h2{font-size:1.3rem}.calendar-day{min-height:43px}.calendar-event-layout{gap:10px}.calendar-event-media{width:78px;flex-basis:78px}.calendar-venue-thumb{width:78px;height:78px}.calendar-action{width:78px;font-size:.63rem;padding:3px 4px}.calendar-event-top{flex-direction:column;gap:7px}}`;
-    document.head.appendChild(style);
-    if (window.location.hash === '#calendar') window.openCalendarScreen();
+    window.addEventListener('hashchange', () => { if (window.location.hash !== '#calendar') close(false); });
 }());
