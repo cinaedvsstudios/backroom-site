@@ -257,7 +257,7 @@ window.toggleMagentaCol = function(btn, idx) {
 
 const headerMapping = {
     "Event_Start_Time": "Start Time", "Event_End_Time": "End Time", "Venue_ID": "ID", "Event_ID": "ID",
-    "Description": "Desc", "Event_Description": "Desc", "Rating_General": "Gen", "Rating_Darkroom": "Dark", "Priority": "Priority", "Priority": "Priority"
+    "Description": "Desc", "Event_Description": "Desc", "Recurrence_Type": "Repeat", "Recurrence_Day": "Weekly Day", "Recurrence_Until": "Repeat Until", "Rating_General": "Gen", "Rating_Darkroom": "Dark", "Priority": "Priority", "Priority": "Priority"
 };
 
 function renderFilters() {
@@ -272,7 +272,7 @@ function renderFilters() {
 function generatePreviewTableHTML(dataObj) {
     if (!dataObj || dataObj.length === 0) return "<p style='padding:20px;'>No data available.</p>";
 
-    const columns = Object.keys(dataObj[0] || {});
+    const columns = getAdminColumns(dataObj);
     let html = `<table><thead id="preview-thead"><tr>`;
     html += `<th style="min-width:40px;">🗑️</th>`; 
     
@@ -411,7 +411,10 @@ function getAdminIdField() {
 
 function getAdminColumns(dataObj) {
     const source = (dataObj && dataObj.length) ? dataObj : (draftData && draftData.length ? draftData : liveData);
-    return Object.keys(source?.[0] || {});
+    const columns = [];
+    (source || []).forEach(row => Object.keys(row || {}).forEach(key => { if(!columns.includes(key)) columns.push(key); }));
+    if(currentMode === 'events') ['Recurrence_Type', 'Recurrence_Day', 'Recurrence_Until'].forEach(key => { if(!columns.includes(key)) columns.push(key); });
+    return columns;
 }
 
 function applyDefaultHiddenColumns() {
@@ -518,10 +521,12 @@ window.editCell = function(td, rowIndex, col) {
 
     const currentVal = td.innerText.trim();
 
-    if(col === 'Status' || col === 'Priority' || col.startsWith('Rating_')) {
+    if(col === 'Status' || col === 'Priority' || col.startsWith('Rating_') || col === 'Recurrence_Type' || col === 'Recurrence_Day') {
         let options = '';
         if(col === 'Status') options = '<option value="Live">Live</option><option value="Closed">Closed</option><option value="Hold">Hold</option><option value="Flag">Flag</option>';
         else if(col === 'Priority') options = '<option value="">Normal / blank</option><option value="1">1 - highest featured priority</option><option value="2">2 - secondary featured priority</option><option value="3">3 - featured page only / lower priority</option>';
+        else if(col === 'Recurrence_Type') options = '<option value="">One-off / dated</option><option value="Weekly">Weekly</option>';
+        else if(col === 'Recurrence_Day') options = '<option value="">Not recurring</option><option value="Monday">Monday</option><option value="Tuesday">Tuesday</option><option value="Wednesday">Wednesday</option><option value="Thursday">Thursday</option><option value="Friday">Friday</option><option value="Saturday">Saturday</option><option value="Sunday">Sunday</option>';
         else if(col.startsWith('Rating_')) options = '<option value="0">0</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option>';
 
         td.innerHTML = `<select class="cell-edit" onblur="saveCell(this, ${rowIndex}, '${col}')" onchange="saveCell(this, ${rowIndex}, '${col}')">${options}</select>`;
@@ -1362,6 +1367,21 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('btn-apply-merge')?.addEventListener('click', () => {
         const validMergeData = tempMergeData.filter(d => d !== null);
         const idField = currentMode === 'venues' ? 'Venue_ID' : 'Event_ID';
+        if(currentMode === 'events') {
+            const weekdays = ['monday','tuesday','wednesday','thursday','friday','saturday','sunday'];
+            const errors = [];
+            validMergeData.forEach((row, index) => {
+                const recurrence = String(row.Recurrence_Type || '').trim();
+                if(recurrence && recurrence.toLowerCase() !== 'weekly') errors.push(`Row ${index + 1}: Recurrence_Type must be Weekly or blank.`);
+                if(recurrence.toLowerCase() === 'weekly') {
+                    if(!weekdays.includes(String(row.Recurrence_Day || '').trim().toLowerCase())) errors.push(`Row ${index + 1}: weekly events need Recurrence_Day as Monday to Sunday.`);
+                    if(!/^\d{4}-\d{2}-\d{2}$/.test(String(row.Event_Date || '').trim())) errors.push(`Row ${index + 1}: weekly events need Event_Date as the first known occurrence (YYYY-MM-DD).`);
+                    const until = String(row.Recurrence_Until || '').trim();
+                    if(until && !/^\d{4}-\d{2}-\d{2}$/.test(until)) errors.push(`Row ${index + 1}: Recurrence_Until must use YYYY-MM-DD or stay blank.`);
+                }
+            });
+            if(errors.length) { alert(`Cannot merge event data:\n\n${errors.join('\n')}`); return; }
+        }
         let mCount = 0, aCount = 0;
         
         validMergeData.forEach(newRow => {

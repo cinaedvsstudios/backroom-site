@@ -1,0 +1,42 @@
+[
+  {
+    "Event_ID": "EVT-BER-EXAMPLE-WEEKLY-THU",
+    "Venue_ID": "BER-LAB-01",
+    "Event_Name": "Example Weekly Party",
+    "Event_Date": "2026-06-25",
+    "Event_Start_Time": "22:00",
+    "Event_End_Time": "08:00",
+    "Status": "Live",
+    "Event_Description": "Replace this example with verified public event details.",
+    "Dresscode_Info": "",
+    "Event_Image_URL": "",
+    "Ticket_URL": "",
+    "Price_Info": "",
+    "Vibe_Tags": "",
+    "Source_URLs": "",
+    "Last_Updated": "2026-06-21T00:00:00Z",
+    "Recurrence_Type": "Weekly",
+    "Recurrence_Day": "Thursday",
+    "Recurrence_Until": ""
+  },
+  {
+    "Event_ID": "EVT-BER-EXAMPLE-MONTHLY-2026-07",
+    "Venue_ID": "BER-LAB-01",
+    "Event_Name": "Example Monthly Party",
+    "Event_Date": "2026-07-18",
+    "Event_Start_Time": "22:00",
+    "Event_End_Time": "08:00",
+    "Status": "Live",
+    "Event_Description": "Monthly parties remain separate dated rows; add one verified row per occurrence.",
+    "Dresscode_Info": "",
+    "Event_Image_URL": "",
+    "Ticket_URL": "",
+    "Price_Info": "",
+    "Vibe_Tags": "",
+    "Source_URLs": "",
+    "Last_Updated": "2026-06-21T00:00:00Z",
+    "Recurrence_Type": "",
+    "Recurrence_Day": "",
+    "Recurrence_Until": ""
+  }
+]

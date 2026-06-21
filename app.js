@@ -1,6 +1,6 @@
 // --- Application State ---
-const APP_VERSION = "v0.66";
-const APP_DATE = "18 May 2026";
+const APP_VERSION = "v0.67";
+const APP_DATE = "21 June 2026";
 
 let systemInfo = {}, designTheme = {}, venues = [], events = [];
 let activeFilters = []; // v0.66 Multi-select Array
@@ -187,6 +187,124 @@ function getBadgeDateParts(ymdDate) {
     const parts = ymdDate.split('-');
     if(parts.length !== 3) return { d:'', my:'' };
     return { d: parts[2], my: `${parts[1]}-${parts[0]}` };
+}
+
+// --- Weekly event recurrence: one JSON record, dynamically dated on the public site ---
+const WEEKDAY_INDEX = {
+    sunday: 0, sun: 0, monday: 1, mon: 1, tuesday: 2, tue: 2, tues: 2,
+    wednesday: 3, wed: 3, thursday: 4, thu: 4, thur: 4, thurs: 4,
+    friday: 5, fri: 5, saturday: 6, sat: 6
+};
+const WEEKDAY_LABELS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+
+function parseEventDateLocal(value) {
+    const match = String(value || '').trim().match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if(!match) return null;
+    const date = new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
+    if(date.getFullYear() !== Number(match[1]) || date.getMonth() !== Number(match[2]) - 1 || date.getDate() !== Number(match[3])) return null;
+    date.setHours(0, 0, 0, 0);
+    return date;
+}
+
+function formatEventDateYmd(date) {
+    if(!(date instanceof Date) || Number.isNaN(date.getTime())) return '';
+    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+}
+
+function getStartOfEventDay(date = new Date()) {
+    const result = new Date(date);
+    result.setHours(0, 0, 0, 0);
+    return result;
+}
+
+function getEventStartMinutes(timeValue) {
+    const match = String(timeValue || '').trim().match(/^(\d{1,2}):(\d{2})$/);
+    if(!match) return null;
+    const hours = Number(match[1]), minutes = Number(match[2]);
+    return hours <= 23 && minutes <= 59 ? (hours * 60) + minutes : null;
+}
+
+function isWeeklyRecurringEvent(event) {
+    return String(event?.Recurrence_Type || '').trim().toLowerCase() === 'weekly';
+}
+
+function getWeeklyDayIndex(event) {
+    const key = String(event?.Recurrence_Day || '').trim().toLowerCase();
+    return Object.prototype.hasOwnProperty.call(WEEKDAY_INDEX, key) ? WEEKDAY_INDEX[key] : null;
+}
+
+function getWeeklyRecurrenceLabel(event) {
+    const weekday = getWeeklyDayIndex(event);
+    return weekday === null ? 'Every week' : `Every ${WEEKDAY_LABELS[weekday]}`;
+}
+
+function getNextWeeklyOccurrenceDate(event, now = new Date()) {
+    const weekday = getWeeklyDayIndex(event);
+    if(!isWeeklyRecurringEvent(event) || weekday === null) return null;
+
+    const today = getStartOfEventDay(now);
+    const firstDate = parseEventDateLocal(event.Event_Date);
+    const untilDate = parseEventDateLocal(event.Recurrence_Until);
+    const earliest = firstDate && firstDate > today ? firstDate : today;
+    const candidate = new Date(earliest);
+    candidate.setDate(candidate.getDate() + ((weekday - candidate.getDay() + 7) % 7));
+
+    if(candidate.getTime() === today.getTime()) {
+        const startMinutes = getEventStartMinutes(event.Event_Start_Time);
+        if(startMinutes !== null) {
+            const start = new Date(candidate);
+            start.setHours(Math.floor(startMinutes / 60), startMinutes % 60, 0, 0);
+            if(now > start) candidate.setDate(candidate.getDate() + 7);
+        }
+    }
+    while(firstDate && candidate < firstDate) candidate.setDate(candidate.getDate() + 7);
+    return untilDate && candidate > untilDate ? null : candidate;
+}
+
+function getEventDisplayOccurrence(event, now = new Date()) {
+    if(!event) return null;
+    if(isWeeklyRecurringEvent(event)) {
+        const nextDate = getNextWeeklyOccurrenceDate(event, now);
+        if(!nextDate) return null;
+        return { ...event, Display_Date: formatEventDateYmd(nextDate), Is_Recurring: true, Recurrence_Label: getWeeklyRecurrenceLabel(event), Is_Past: false };
+    }
+    const displayDate = String(event.Event_Date || '').trim();
+    const eventDate = parseEventDateLocal(displayDate);
+    return { ...event, Display_Date: displayDate, Is_Recurring: false, Recurrence_Label: '', Is_Past: Boolean(eventDate && eventDate < getStartOfEventDay(now)) };
+}
+
+function getEventDisplayDate(event) {
+    return event?.Display_Date || event?.Event_Date || '';
+}
+
+function getEventDisplayMeta(event) {
+    const pieces = [];
+    const date = getEventDisplayDate(event);
+    if(date) pieces.push(formatDateToDDMMYYYY(date));
+    if(event?.Event_Start_Time) pieces.push(event.Event_Start_Time);
+    if(event?.Is_Recurring && event.Recurrence_Label) pieces.push(event.Recurrence_Label);
+    return pieces.join(' | ');
+}
+
+function compareEventOccurrences(a, b) {
+    if(Boolean(a?.Is_Past) !== Boolean(b?.Is_Past)) return a.Is_Past ? 1 : -1;
+    const dateA = parseEventDateLocal(getEventDisplayDate(a)) || new Date(8640000000000000);
+    const dateB = parseEventDateLocal(getEventDisplayDate(b)) || new Date(8640000000000000);
+    if(dateA.getTime() !== dateB.getTime()) return dateA - dateB;
+    const timeA = getEventStartMinutes(a?.Event_Start_Time), timeB = getEventStartMinutes(b?.Event_Start_Time);
+    if(timeA !== timeB) return (timeA ?? 1440) - (timeB ?? 1440);
+    return String(a?.Event_Name || '').localeCompare(String(b?.Event_Name || ''));
+}
+
+function getVenueEventOccurrences(venueId, options = {}) {
+    const { includePast = true, activeOnly = false, now = new Date() } = options;
+    return (events || [])
+        .filter(event => event?.Venue_ID === venueId)
+        .filter(event => !activeOnly || !['Hold', 'Flag'].includes(String(event?.Status || '').trim()))
+        .map(event => getEventDisplayOccurrence(event, now))
+        .filter(Boolean)
+        .filter(event => includePast || !event.Is_Past)
+        .sort(compareEventOccurrences);
 }
 
 function recordUserInteraction() {
@@ -1609,7 +1727,7 @@ function renderMyEventsView() {
         cityFilterContainer.innerHTML = '';
     }
     
-    let myEvts = (events||[]).filter(e => userEvents.includes(e.Event_ID));
+    let myEvts = (events||[]).filter(e => userEvents.includes(e.Event_ID)).map(e => getEventDisplayOccurrence(e)).filter(Boolean).sort(compareEventOccurrences);
     
     if(myEvts.length === 0) {
         if(resultsContainer) resultsContainer.innerHTML = `<p style="text-align:center; color:var(--label-grey); margin-top:20px; width: 100%; grid-column: 1 / -1;">No saved events.</p>`;
@@ -1652,7 +1770,7 @@ function renderMyEventsView() {
         card.innerHTML = `
             <div class="card-inner-content">
                 <div class="card-header">
-                    <div><h3 class="card-title display-font">${ev.Event_Name}</h3><div class="card-meta">${formatDateToDDMMYYYY(ev.Event_Date)} | @ ${venueName}</div></div>
+                    <div><h3 class="card-title display-font">${ev.Event_Name}</h3><div class="card-meta">${getEventDisplayMeta(ev)}${getEventDisplayMeta(ev) ? ' | ' : ''}@ ${venueName}</div></div>
                     <div style="display:flex; gap:10px; align-items:center;">
                         <span class="icon-btn" onclick="event.stopPropagation(); shareURL('${window.location.origin}${window.location.pathname}?event=${ev.Event_ID}#myevents', '${ev.Event_Name.replace(/'/g, "\\'")}')" title="Share" style="font-size:1.5rem;">${BR_ICONS.share}</span>
                         <span class="icon-btn" onclick="event.stopPropagation(); window.flagListing('${ev.Event_ID}', '${ev.Event_Name.replace(/'/g, "\\'")}', 'Event Report')" title="Report" style="display:flex; align-items:center; justify-content:center;"><img src="report.png" style="width:24px; height:24px; object-fit:contain;"></span>
@@ -2181,11 +2299,11 @@ function renderListings(data, isContextView = false, targetContainer = resultsCo
 
     data.forEach(venue => {
         let nextEventHtml = '';
-        let venueEvents = (events||[]).filter(e => e.Venue_ID === venue.Venue_ID && new Date(e.Event_Date) >= today && String(e.Status || '') !== 'Hold' && String(e.Status || '') !== 'Flag');
+        const venueEvents = getVenueEventOccurrences(venue.Venue_ID, { includePast: false, activeOnly: true, now: new Date() });
         if(venueEvents.length > 0) {
-            venueEvents.sort((a, b) => new Date(a.Event_Date) - new Date(b.Event_Date));
             const nextE = venueEvents[0];
-            nextEventHtml = `<div class="card-next-event">📅 Next: ${nextE.Event_Name} (${formatDateToDDMMYYYY(nextE.Event_Date)})</div>`;
+            const recurrenceText = nextE.Is_Recurring ? ` · ${nextE.Recurrence_Label}` : '';
+            nextEventHtml = `<div class="card-next-event">📅 Next: ${nextE.Event_Name} (${formatDateToDDMMYYYY(getEventDisplayDate(nextE))})${recurrenceText}</div>`;
         }
 
         const isFav = userFavorites.includes(venue.Venue_ID);
@@ -2343,49 +2461,38 @@ function openVenueModal(venue) {
     
     ratingsTableHtml += `</div>`;
 
-    let venueEvents = (events||[]).filter(e => e.Venue_ID === venue.Venue_ID);
-    const today = new Date(); today.setHours(0,0,0,0);
-    venueEvents.sort((a, b) => {
-        const dateA = new Date(a.Event_Date); const dateB = new Date(b.Event_Date);
-        const isPastA = dateA < today; const isPastB = dateB < today;
-        if (isPastA && !isPastB) return 1; if (!isPastA && isPastB) return -1;
-        return Math.abs(dateA - today) - Math.abs(dateB - today);
-    });
-
+    const venueEvents = getVenueEventOccurrences(venue.Venue_ID, { includePast: true, activeOnly: false, now: new Date() });
     let eventsHtml = '';
     if(venueEvents.length > 0) {
-        eventsHtml = `<div class="events-block"><h3 class="display-font">UPCOMING EVENTS</h3>`;
+        eventsHtml = `
+            <div class="events-block"><h3>📅 UPCOMING EVENTS</h3>
+        `;
         venueEvents.forEach(ev => {
-            const isPast = new Date(ev.Event_Date) < today;
+            const isPast = ev.Is_Past;
             const isSaved = userEvents.includes(ev.Event_ID);
-            const badgeData = getBadgeDateParts(ev.Event_Date);
+            const badgeData = getBadgeDateParts(getEventDisplayDate(ev));
             eventsHtml += `
-                <div class="event-card ${isPast ? 'past' : ''}">
-                    <div class="event-card-inner">
-                        <div class="event-date-badge">
-                            <span class="day">${badgeData.d}</span>
-                            <span class="month-year">${badgeData.my}</span>
-                        </div>
-                        <div class="event-card-details">
-                            <div style="display:flex; justify-content:space-between; align-items:flex-start;">
-                                <div>
-                                    <strong>${ev.Event_Name}</strong> ${isPast ? '<small>(Past)</small>' : ''}<br>
-                                    <span class="meta-text">${formatDateToDDMMYYYY(ev.Event_Date)} | ${ev.Event_Start_Time}</span>
-                                </div>
-                                <div style="display:flex; gap:8px; align-items:center;">
-                                    <span class="icon-btn" onclick="event.stopPropagation(); shareURL('${window.location.origin}${window.location.pathname}?event=${ev.Event_ID}', '${ev.Event_Name.replace(/'/g, "\\'")}')" title="Share" style="font-size:1.2rem;">${BR_ICONS.share}</span>
-                                    <span class="icon-btn" onclick="event.stopPropagation(); window.flagListing('${ev.Event_ID}', '${ev.Event_Name.replace(/'/g, "\\'")}', 'Event Report')" title="Report" style="display:flex; align-items:center; justify-content:center;"><img src="report.png" style="width:20px; height:20px; object-fit:contain;"></span>
-                                    <button class="icon-btn fav-btn ${isSaved ? 'active-star' : ''}" style="font-size: 1.5rem;" onclick="toggleEventFavorite('${ev.Event_ID}', this)">💖</button>
-                                </div>
+                <div class="event-card">
+                    <div class="event-date-badge"><span class="event-day">${badgeData.d}</span><span class="event-month-year">${badgeData.my}</span></div>
+                    <div class="event-content">
+                        <div class="event-header-row">
+                            <div>
+                                <strong>${ev.Event_Name}</strong> ${isPast ? '<small>(Past)</small>' : ''}<br>
+                                <span class="meta-text">${getEventDisplayMeta(ev)}</span>
                             </div>
-                            <p style="font-size:0.9rem; margin-top:5px;">${ev.Event_Description}</p>
+                            <div style="display:flex; gap:5px; align-items:center;">
+                                <span class="icon-btn" onclick="event.stopPropagation(); shareURL('${window.location.origin}${window.location.pathname}?event=${ev.Event_ID}', '${ev.Event_Name.replace(/'/g, "\'")}')" title="Share" style="font-size:1.2rem;">${BR_ICONS.share}</span>
+                                <span class="icon-btn" onclick="event.stopPropagation(); window.flagListing('${ev.Event_ID}', '${ev.Event_Name.replace(/'/g, "\'")}', 'Event Report')" title="Report" style="display:flex; align-items:center; justify-content:center;"><img src="report.png" style="width:20px; height:20px; object-fit:contain;"></span>
+                                <button class="icon-btn fav-btn ${isSaved ? 'active-star' : ''}" style="font-size: 1.5rem;" onclick="toggleEventFavorite('${ev.Event_ID}', this)">💖</button>
+                            </div>
                         </div>
+                        <p style="font-size:0.9rem; margin-top:5px;">${ev.Event_Description}</p>
                     </div>
-                </div>`;
+                </div>
+            `;
         });
         eventsHtml += `</div>`;
     }
-
     let openingHtml = '';
     if (venue.Opening_Days || venue.Opening_Open_Time) {
         openingHtml = `
