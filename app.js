@@ -1,5 +1,5 @@
 // --- Application State ---
-const APP_VERSION = "v0.82";
+const APP_VERSION = "v0.84";
 const APP_DATE = "21 June 2026";
 
 let systemInfo = {}, designTheme = {}, venues = [], events = [];
@@ -237,10 +237,16 @@ function formatDateToDDMMYYYY(ymdDate) {
 }
 
 function getBadgeDateParts(ymdDate) {
-    if(!ymdDate) return { d:'', my:'' };
+    if(!ymdDate) return { d:'', m:'', y:'' };
     const parts = ymdDate.split('-');
-    if(parts.length !== 3) return { d:'', my:'' };
-    return { d: parts[2], my: `${parts[1]}-${parts[0]}` };
+    if(parts.length !== 3) return { d:'', m:'', y:'' };
+    const monthIndex = Number(parts[1]) - 1;
+    const monthNames = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
+    return {
+        d: parts[2],
+        m: monthNames[monthIndex] || parts[1],
+        y: parts[0]
+    };
 }
 
 // --- Weekly event recurrence: one JSON record, dynamically dated on the public site ---
@@ -2790,24 +2796,25 @@ function openVenueModal(venue) {
             const isPast = ev.Is_Past;
             const isSaved = userEvents.includes(ev.Event_ID);
             const badgeData = getBadgeDateParts(getEventDisplayDate(ev));
+            const safeEventName = String(ev.Event_Name || 'Event').replace(/'/g, "\'");
             eventsHtml += `
-                <div class="event-card">
-                    <div class="event-date-badge"><span class="event-day">${badgeData.d}</span><span class="event-month-year">${badgeData.my}</span></div>
-                    <div class="event-content">
-                        <div class="event-header-row">
-                            <div>
-                                <strong>${ev.Event_Name}</strong> ${isPast ? '<small>(Past)</small>' : ''}<br>
-                                <span class="meta-text">${getEventDisplayMeta(ev)}</span>
-                            </div>
-                            <div style="display:flex; gap:5px; align-items:center;">
-                                <span class="icon-btn" onclick="event.stopPropagation(); shareURL('${window.location.origin}${window.location.pathname}?event=${ev.Event_ID}', '${ev.Event_Name.replace(/'/g, "\'")}')" title="Share" style="font-size:1.2rem;">${BR_ICONS.share}</span>
-                                <span class="icon-btn" onclick="event.stopPropagation(); window.flagListing('${ev.Event_ID}', '${ev.Event_Name.replace(/'/g, "\'")}', 'Event Report')" title="Report" style="display:flex; align-items:center; justify-content:center;"><img src="report.png" style="width:20px; height:20px; object-fit:contain;"></span>
-                                <button class="icon-btn fav-btn ${isSaved ? 'active-star' : ''}" style="font-size: 1.5rem;" onclick="toggleEventFavorite('${ev.Event_ID}', this)">💖</button>
-                            </div>
-                        </div>
-                        <p style="font-size:0.9rem; margin-top:5px;">${ev.Event_Description}</p>
+                <article class="event-card ${isPast ? 'past' : ''}">
+                    <div class="event-date-badge" aria-label="${getEventDisplayDate(ev)}">
+                        <span class="event-day">${badgeData.d}</span>
+                        <span class="event-month">${badgeData.m}</span>
+                        <span class="event-year">${badgeData.y}</span>
                     </div>
-                </div>
+                    <div class="event-content">
+                        <h4 class="event-title">${ev.Event_Name || 'Event'} ${isPast ? '<small>(Past)</small>' : ''}</h4>
+                        <p class="event-meta meta-text">${getEventDisplayMeta(ev)}</p>
+                        <div class="event-action-row" aria-label="Event actions">
+                            <button type="button" class="event-action-btn" onclick="event.stopPropagation(); shareURL('${window.location.origin}${window.location.pathname}?event=${ev.Event_ID}', '${safeEventName}')" title="Share ${safeEventName}">${BR_ICONS.share}</button>
+                            <button type="button" class="event-action-btn" onclick="event.stopPropagation(); window.flagListing('${ev.Event_ID}', '${safeEventName}', 'Event Report')" title="Report ${safeEventName}"><img src="report.png" alt="" aria-hidden="true"></button>
+                            <button type="button" class="event-action-btn fav-btn ${isSaved ? 'active-star' : ''}" onclick="toggleEventFavorite('${ev.Event_ID}', this)" title="${isSaved ? 'Remove from My Events' : 'Save event'}">💖</button>
+                        </div>
+                        ${ev.Event_Description ? `<p class="event-description">${ev.Event_Description}</p>` : ''}
+                    </div>
+                </article>
             `;
         });
         eventsHtml += `</div>`;

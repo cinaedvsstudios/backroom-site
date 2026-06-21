@@ -1097,3 +1097,143 @@ td.hidden-col * { display: none !important; }
         margin-left: 0;
     }
 }
+
+
+/* v0.84 — venue-modal event cards: compact date rail with event details alongside it. */
+.events-block .event-card {
+    display: flex;
+    flex-direction: row;
+    align-items: stretch;
+    gap: 12px;
+    padding: 12px;
+}
+.events-block .event-date-badge {
+    flex: 0 0 82px;
+    min-width: 82px;
+    min-height: 100%;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1px;
+    padding: 9px 6px;
+    background: var(--panel-standard);
+    border: 1px solid var(--primary-blue);
+    border-radius: 6px;
+}
+.events-block .event-date-badge .event-day {
+    font-family: 'Antonio', sans-serif;
+    font-size: 2rem;
+    font-weight: 700;
+    line-height: 0.9;
+    color: var(--primary-blue);
+}
+.events-block .event-date-badge .event-month {
+    font-family: 'Antonio', sans-serif;
+    font-size: 0.9rem;
+    font-weight: 700;
+    line-height: 1;
+    letter-spacing: 0.08em;
+    color: #fff;
+}
+.events-block .event-date-badge .event-year {
+    font-size: 0.72rem;
+    line-height: 1.1;
+    color: var(--text-light);
+}
+.events-block .event-content {
+    flex: 1 1 auto;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+}
+.events-block .event-title {
+    display: block;
+    margin: 0;
+    color: #fff;
+    font-family: 'Antonio', sans-serif;
+    font-size: 1.15rem;
+    line-height: 1.05;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+}
+.events-block .event-title small {
+    color: var(--bright-red-orange);
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+}
+.events-block .event-meta {
+    margin: 4px 0 0;
+    color: var(--text-light);
+    font-size: 0.84rem;
+    line-height: 1.25;
+}
+.events-block .event-action-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin: 8px 0 0;
+}
+.events-block .event-action-btn {
+    width: 31px;
+    height: 29px;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--panel-mid);
+    border-radius: var(--radius-btn);
+    background: var(--panel-dark);
+    color: var(--text-light);
+    font-size: 1rem;
+    line-height: 1;
+    cursor: pointer;
+    transition: border-color 0.2s ease, background-color 0.2s ease, color 0.2s ease, transform 0.2s ease;
+}
+.events-block .event-action-btn:hover,
+.events-block .event-action-btn:focus-visible {
+    border-color: var(--primary-blue);
+    background: rgba(44, 168, 212, 0.16);
+    color: #fff;
+    outline: none;
+    transform: translateY(-1px);
+}
+.events-block .event-action-btn img {
+    width: 17px;
+    height: 17px;
+    object-fit: contain;
+}
+.events-block .event-action-btn.active-star {
+    border-color: var(--bright-red-orange);
+    background: rgba(213, 80, 54, 0.18);
+}
+.events-block .event-description {
+    margin: 9px 0 0;
+    color: #fff;
+    font-size: 0.9rem;
+    line-height: 1.4;
+}
+@media (max-width: 768px) {
+    .events-block .event-card {
+        gap: 9px;
+        padding: 10px;
+    }
+    .events-block .event-date-badge {
+        display: flex !important;
+        flex-basis: 62px;
+        min-width: 62px;
+        padding: 7px 4px;
+    }
+    .events-block .event-date-badge .event-day { font-size: 1.55rem; }
+    .events-block .event-date-badge .event-month { font-size: 0.76rem; }
+    .events-block .event-date-badge .event-year { font-size: 0.62rem; }
+    .events-block .event-title { font-size: 1.02rem; }
+    .events-block .event-meta { font-size: 0.78rem; }
+    .events-block .event-action-row { margin-top: 6px; }
+    .events-block .event-action-btn { width: 28px; height: 27px; font-size: 0.9rem; }
+    .events-block .event-description { font-size: 0.84rem; margin-top: 7px; }
+}
