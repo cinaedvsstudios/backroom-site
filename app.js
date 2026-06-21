@@ -1,5 +1,5 @@
 // --- Application State ---
-const APP_VERSION = "v0.68";
+const APP_VERSION = "v0.72";
 const APP_DATE = "21 June 2026";
 
 let systemInfo = {}, designTheme = {}, venues = [], events = [];
@@ -84,6 +84,42 @@ function getCityTokens(venue) {
         .filter(Boolean);
 }
 
+// Saved locations must match city fields directly, rather than relying on the loose text search.
+// This also accepts normal German/English spellings for the cities currently supported by Backroom.
+const CITY_NAME_ALIASES = {
+    munchen: 'munich',
+    muenchen: 'munich',
+    munich: 'munich',
+    koln: 'cologne',
+    koeln: 'cologne',
+    cologne: 'cologne',
+    frankfurtammain: 'frankfurt',
+    frankfurt: 'frankfurt'
+};
+
+function normalizeCityName(value) {
+    const normalized = String(value || '')
+        .trim()
+        .toLowerCase()
+        .replace(/ß/g, 'ss')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-z0-9]+/g, '');
+    return CITY_NAME_ALIASES[normalized] || normalized;
+}
+
+function getSavedLocation() {
+    try {
+        const raw = localStorage.getItem('br_location');
+        if (!raw) return null;
+        const location = JSON.parse(raw);
+        return location && typeof location === 'object' ? location : null;
+    } catch (error) {
+        console.warn('Saved location could not be read.', error);
+        return null;
+    }
+}
+
 function isMultiCityVenue(venue) {
     return getCityTokens(venue).length > 1;
 }
@@ -96,9 +132,9 @@ function formatVenueLocation(venue) {
 }
 
 function venueMatchesCity(venue, cityName) {
-    const target = String(cityName || '').trim().toLowerCase();
+    const target = normalizeCityName(cityName);
     if (!target) return true;
-    return getCityTokens(venue).some(city => city.toLowerCase() === target);
+    return getCityTokens(venue).some(city => normalizeCityName(city) === target);
 }
 
 function hasFixedCoordinates(venue) {
@@ -714,9 +750,6 @@ function handleRouting() {
     } else if (hash === '#results') {
         recordUserInteraction();
         applyFilters();
-    } else if (hash === '#venues') {
-        recordUserInteraction();
-        renderSavedLocationVenuesView();
     } else if (hash === '#venues') {
         recordUserInteraction();
         renderSavedLocationVenuesView();
@@ -1616,6 +1649,99 @@ function applyFilters() {
     renderListings(filteredVenues);
     renderDynamicFilters(filteredVenues);
     updateTravelSidebarHighlight();
+}
+
+
+function sortSavedLocationVenues(list) {
+    return [...(list || [])].sort((a, b) => {
+        const aShop = getVenueTags(a).includes('Shop') ? 1 : 0;
+        const bShop = getVenueTags(b).includes('Shop') ? 1 : 0;
+        if (aShop !== bShop) return aShop - bShop;
+
+        const aPriority = Number.parseInt(normalizeFeaturedLevel(a), 10) || 99;
+        const bPriority = Number.parseInt(normalizeFeaturedLevel(b), 10) || 99;
+        if (aPriority !== bPriority) return aPriority - bPriority;
+
+        const aSize = Number.parseInt(a?.Rating_Size, 10) || 0;
+        const bSize = Number.parseInt(b?.Rating_Size, 10) || 0;
+        if (aSize !== bSize) return bSize - aSize;
+
+        const aPop = Number.parseInt(a?.Rating_Busyness || a?.Rating_Popularity, 10) || 0;
+        const bPop = Number.parseInt(b?.Rating_Busyness || b?.Rating_Popularity, 10) || 0;
+        if (aPop !== bPop) return bPop - aPop;
+
+        return String(a?.Name || '').localeCompare(String(b?.Name || ''));
+    });
+}
+
+function renderSavedLocationEmptyState(titleText, bodyText, showLocationButton = false) {
+    if (!resultsContainer) return;
+    resultsContainer.innerHTML = '';
+
+    const panel = document.createElement('div');
+    panel.style.cssText = 'grid-column:1 / -1; max-width:620px; width:100%; margin:20px auto; padding:28px; text-align:center; background:var(--panel-dark); border:1px solid var(--panel-mid); border-radius:var(--radius-card);';
+
+    const title = document.createElement('h3');
+    title.className = 'display-font';
+    title.style.cssText = 'margin:0 0 10px; color:var(--primary-blue); font-size:1.8rem;';
+    title.textContent = titleText;
+
+    const body = document.createElement('p');
+    body.className = 'body-font';
+    body.style.cssText = 'margin:0; color:var(--text-light);';
+    body.textContent = bodyText;
+
+    panel.append(title, body);
+
+    if (showLocationButton) {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'btn primary-btn pill-btn';
+        button.style.marginTop = '18px';
+        button.textContent = 'Set Location';
+        button.addEventListener('click', () => locModal?.classList.remove('hidden'));
+        panel.appendChild(button);
+    }
+
+    resultsContainer.appendChild(panel);
+}
+
+function renderSavedLocationVenuesView() {
+    document.getElementById('main-filters')?.classList.add('hidden');
+    contextHeader?.classList.remove('hidden');
+    resetBackButton('← Back to Results', 'results');
+    document.getElementById('btn-back-to-results')?.classList.add('result-back-hidden');
+
+    const title = document.getElementById('context-title');
+    const desc = document.getElementById('context-desc');
+    const savedLocation = getSavedLocation();
+    const savedCity = String(savedLocation?.city || '').trim();
+
+    if (!savedCity || savedCity.toLowerCase() === 'my location') {
+        if (title) title.textContent = 'VENUES';
+        if (desc) desc.textContent = 'Set a city to browse all public venue listings there.';
+        renderSavedLocationEmptyState('NO CITY SELECTED', 'Choose a city in Location, then Backroom will show that city’s venues here.', true);
+        return;
+    }
+
+    const matchingVenues = sortSavedLocationVenues(
+        getPublicVenues().filter(venue => venueMatchesCity(venue, savedCity))
+    );
+
+    if (title) title.textContent = `VENUES IN ${savedCity.toUpperCase()}`;
+    if (desc) desc.textContent = matchingVenues.length === 1
+        ? '1 public venue listing found.'
+        : `${matchingVenues.length} public venue listings found.`;
+
+    if (!matchingVenues.length) {
+        renderSavedLocationEmptyState(
+            `NO VENUES YET FOR ${savedCity.toUpperCase()}`,
+            'More coming soon. You can still use Search Results to search every city and every listing.'
+        );
+        return;
+    }
+
+    renderListings(matchingVenues, true);
 }
 
 
@@ -2604,21 +2730,24 @@ async function shareURL(url, title) {
 function saveLocation() {
     recordUserInteraction();
     const cityInp = document.getElementById('loc-city');
-    const loc = { 
-        country: document.getElementById('loc-country')?.value || '', 
-        city: cityInp?.value || '', 
-        postcode: document.getElementById('loc-postcode')?.value || '' 
+    const loc = {
+        country: document.getElementById('loc-country')?.value.trim() || '',
+        city: cityInp?.value.trim() || '',
+        postcode: document.getElementById('loc-postcode')?.value.trim() || ''
     };
-    
-    if(loc.city && loc.city !== 'My Location') {
-        if(searchInput) searchInput.value = loc.city;
-        window.location.hash = '#results';
-        applyFilters();
+
+    if (!loc.city || loc.city.toLowerCase() === 'my location') {
+        showToast('Enter a city before loading venues.');
+        return;
     }
-    
+
     localStorage.setItem('br_location', JSON.stringify(loc));
     updateLocationDisplay(loc);
     locModal?.classList.add('hidden');
+
+    // Location is its own exact city route. Do not overwrite the ordinary Search Results query.
+    if (window.location.hash === '#venues') handleRouting();
+    else window.location.hash = '#venues';
 }
 
 function clearLocation() {
@@ -2636,21 +2765,21 @@ function clearLocation() {
     if(mPlace) mPlace.classList.remove('hidden');
     
     updateLocationDisplay(null);
+    if (window.location.hash === '#venues') handleRouting();
 }
 
 function loadSavedLocation() {
-    const saved = localStorage.getItem('br_location');
-    if(saved) {
-        const loc = JSON.parse(saved);
-        const cInp = document.getElementById('loc-country');
-        const ciInp = document.getElementById('loc-city');
-        const pInp = document.getElementById('loc-postcode');
-        
-        if(cInp) cInp.value = loc.country || ''; 
-        if(ciInp) ciInp.value = loc.city || ''; 
-        if(pInp) pInp.value = loc.postcode || '';
-        updateLocationDisplay(loc);
-    }
+    const loc = getSavedLocation();
+    if (!loc) return;
+
+    const cInp = document.getElementById('loc-country');
+    const ciInp = document.getElementById('loc-city');
+    const pInp = document.getElementById('loc-postcode');
+
+    if(cInp) cInp.value = loc.country || '';
+    if(ciInp) ciInp.value = loc.city || '';
+    if(pInp) pInp.value = loc.postcode || '';
+    updateLocationDisplay(loc);
 }
 
 function updateLocationDisplay(loc) {
