@@ -1,5 +1,5 @@
 // --- Application State ---
-const APP_VERSION = "v0.72";
+const APP_VERSION = "v0.75";
 const APP_DATE = "21 June 2026";
 
 let systemInfo = {}, designTheme = {}, venues = [], events = [];
@@ -2950,9 +2950,45 @@ function loadSavedLocation() {
 
 function updateLocationDisplay(loc) {
     const display = document.getElementById('current-location-display');
-    if(!display) return;
-    if(loc && (loc.city || loc.country)) display.innerText = `Current: ${loc.city ? loc.city : ''} ${loc.country ? loc.country : ''}`; 
-    else display.innerText = 'No location set.';
+    if (!display) return;
+
+    const city = String(loc?.city || '').trim();
+    const country = String(loc?.country || '').trim();
+    display.replaceChildren();
+
+    if (city) {
+        const label = document.createElement('span');
+        label.className = 'location-current-label';
+        label.textContent = 'Current city:';
+
+        const cityName = document.createElement('span');
+        cityName.className = 'location-current-city';
+        cityName.textContent = city;
+
+        display.append(label, cityName);
+
+        if (country) {
+            const countryName = document.createElement('span');
+            countryName.className = 'location-current-country';
+            countryName.textContent = country;
+            display.append(countryName);
+        }
+        return;
+    }
+
+    if (country) {
+        const label = document.createElement('span');
+        label.className = 'location-current-label';
+        label.textContent = 'Current location:';
+
+        const countryName = document.createElement('span');
+        countryName.className = 'location-current-country';
+        countryName.textContent = country;
+        display.append(label, countryName);
+        return;
+    }
+
+    display.textContent = 'No location set.';
 }
 
 
