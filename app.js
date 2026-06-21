@@ -1,5 +1,5 @@
 // --- Application State ---
-const APP_VERSION = "v0.85";
+const APP_VERSION = "v0.86";
 const APP_DATE = "21 June 2026";
 
 let systemInfo = {}, designTheme = {}, venues = [], events = [];
@@ -131,8 +131,24 @@ function isAllCitiesLocation(location) {
         && !String(location.postcode || '').trim();
 }
 
+function getLocationResultsLabel(cityValue) {
+    const city = String(cityValue ?? document.getElementById('loc-city')?.value ?? '').trim();
+    return city && city.toLowerCase() !== 'my location' ? city : 'All Cities';
+}
+
+function updateLocationActionLabel(cityValue) {
+    const button = document.getElementById('btn-save-location');
+    if (!button) return;
+    button.textContent = `Show Results in ${getLocationResultsLabel(cityValue)}`;
+}
+
+function announceLocationChange(location) {
+    window.dispatchEvent(new CustomEvent('backroom:location-changed', { detail: location || { scope: 'all', city: '', country: '', postcode: '' } }));
+}
+
 function openLocationModal() {
     loadSavedLocation();
+    updateLocationActionLabel();
     locModal?.classList.remove('hidden');
 
     // Leaflet needs a size refresh when a previously hidden map is shown again.
@@ -1492,6 +1508,14 @@ function setupEventListeners() {
 
     addEvt('btn-save-location', 'click', saveLocation);
     addEvt('btn-clear-location', 'click', clearLocation);
+
+    const locationCityInput = document.getElementById('loc-city');
+    if (locationCityInput && !locationCityInput.dataset.locationLabelBound) {
+        locationCityInput.dataset.locationLabelBound = 'true';
+        locationCityInput.addEventListener('input', () => updateLocationActionLabel(locationCityInput.value));
+        locationCityInput.addEventListener('change', () => updateLocationActionLabel(locationCityInput.value));
+    }
+    updateLocationActionLabel();
     
     addEvt('btn-gps', 'click', () => {
         showToast('Hold up a few seconds, we are confirming your location.');
@@ -1510,11 +1534,15 @@ function setupEventListeners() {
                             cityInput.value = city;
                             cityInput.dataset.lat = lat;
                             cityInput.dataset.lon = lon;
+                            updateLocationActionLabel(city);
                         }
                         const countryInput = document.getElementById('loc-country');
                         if(countryInput) countryInput.value = data.address.country || '';
                     } catch (e) {
-                        if(cityInput) cityInput.value = `My Location`;
+                        if(cityInput) {
+                            cityInput.value = `My Location`;
+                            updateLocationActionLabel('');
+                        }
                     }
                     initLeafletMap(lat, lon);
                 },
@@ -3097,11 +3125,13 @@ function saveLocation() {
 
     localStorage.setItem('br_location', JSON.stringify(loc));
     updateLocationDisplay(loc);
+    updateLocationActionLabel(loc.city);
+    announceLocationChange(loc);
     locModal?.classList.add('hidden');
 
-    // Location is its own exact city route. Do not overwrite the ordinary Search Results query.
-    if (window.location.hash === '#venues') handleRouting();
-    else window.location.hash = '#venues';
+    // Location sets the shared scope for Results, Venues and Events. It opens Search Results rather than a separate location screen.
+    if (window.location.hash === '#results') handleRouting();
+    else window.location.hash = '#results';
 }
 
 function clearLocation() {
@@ -3119,22 +3149,31 @@ function clearLocation() {
     if(mPlace) mPlace.classList.remove('hidden');
     
     updateLocationDisplay(null);
-    if (window.location.hash === '#venues') handleRouting();
+    updateLocationActionLabel('');
+    announceLocationChange({ scope: 'all', city: '', country: '', postcode: '' });
+    if (window.location.hash === '#results') handleRouting();
 }
 
 function loadSavedLocation() {
     const loc = getSavedLocation();
-    if (!loc) return;
-
     const cInp = document.getElementById('loc-country');
     const ciInp = document.getElementById('loc-city');
     const pInp = document.getElementById('loc-postcode');
-    const isAllCities = isAllCitiesLocation(loc);
 
+    if (!loc) {
+        if(cInp) cInp.value = '';
+        if(ciInp) ciInp.value = '';
+        if(pInp) pInp.value = '';
+        updateLocationActionLabel('');
+        return;
+    }
+
+    const isAllCities = isAllCitiesLocation(loc);
     if(cInp) cInp.value = isAllCities ? '' : (loc.country || '');
     if(ciInp) ciInp.value = isAllCities ? '' : (loc.city || '');
     if(pInp) pInp.value = isAllCities ? '' : (loc.postcode || '');
     updateLocationDisplay(loc);
+    updateLocationActionLabel(isAllCities ? '' : loc.city || '');
 }
 
 function updateLocationDisplay(loc) {
@@ -3181,6 +3220,24 @@ function updateLocationDisplay(loc) {
     display.textContent = 'No location set.';
 }
 
+
+window.setBackroomSharedLocation = function(location) {
+    const city = String(location?.city || '').trim();
+    const nextLocation = city
+        ? {
+            country: String(location?.country || '').trim(),
+            city,
+            postcode: String(location?.postcode || '').trim(),
+            scope: 'city'
+        }
+        : { country: '', city: '', postcode: '', scope: 'all' };
+
+    localStorage.setItem('br_location', JSON.stringify(nextLocation));
+    updateLocationDisplay(nextLocation);
+    updateLocationActionLabel(nextLocation.city);
+    announceLocationChange(nextLocation);
+    return nextLocation;
+};
 
 window.openVenueBrowse = function() {
     window.location.hash = '#venues';

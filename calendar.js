@@ -1,4 +1,4 @@
-// Backroom Events calendar — compact two-row filters, city, date, and vibe filters.
+// Backroom Events calendar — city, date, and vibe filters.
 (function () {
     'use strict';
 
@@ -73,6 +73,55 @@
                 seen.add(tag);
                 return true;
             });
+    }
+
+    function normalizeCity(value) {
+        return String(value || '')
+            .trim()
+            .toLowerCase()
+            .replace(/ß/g, 'ss')
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .replace(/[^a-z0-9]+/g, '');
+    }
+
+    function readSharedLocation() {
+        try {
+            const location = JSON.parse(localStorage.getItem('br_location') || 'null');
+            if (!location || typeof location !== 'object') return { scope: 'all', city: '', country: '', postcode: '' };
+            const city = String(location.city || '').trim();
+            const allCities = String(location.scope || '').trim().toLowerCase() === 'all' || !city;
+            return allCities ? { scope: 'all', city: '', country: '', postcode: '' } : location;
+        } catch {
+            return { scope: 'all', city: '', country: '', postcode: '' };
+        }
+    }
+
+    function availableCityFor(value) {
+        const requested = normalizeCity(value);
+        if (!requested) return 'All';
+        const cities = [...new Set(state.events.map(cityFor).filter(Boolean))];
+        return cities.find(city => normalizeCity(city) === requested) || 'All';
+    }
+
+    function syncCityFromSharedLocation() {
+        const location = readSharedLocation();
+        state.city = availableCityFor(location.city);
+    }
+
+    function setSharedLocationFromCity(city) {
+        const previous = readSharedLocation();
+        const next = city === 'All'
+            ? { scope: 'all', city: '', country: '', postcode: '' }
+            : { scope: 'city', city, country: previous.country || '', postcode: previous.postcode || '' };
+
+        if (typeof window.setBackroomSharedLocation === 'function') {
+            window.setBackroomSharedLocation(next);
+        } else {
+            localStorage.setItem('br_location', JSON.stringify(next));
+            window.dispatchEvent(new CustomEvent('backroom:location-changed', { detail: next }));
+        }
+        state.city = city;
     }
 
     function isWeekly(event) {
@@ -239,7 +288,7 @@
 
     function renderCityPicker() {
         const cities = [...new Set(state.events.map(cityFor).filter(Boolean))].sort();
-        return `<label class="calendar-city-label"><span class="calendar-city-prefix display-font">CITY</span><span class="calendar-city-control"><select id="calendar-city-select" class="calendar-city-select calendar-city-pulse" aria-label="Filter events by city">${['All', ...cities].map(city => `<option value="${escapeHTML(city)}" ${state.city === city ? 'selected' : ''}>${escapeHTML(city === 'All' ? 'ALL CITIES' : city.toUpperCase())}</option>`).join('')}</select></span></label>`;
+        return `<label class="calendar-city-label"><span class="calendar-city-prefix display-font">CITY</span><span class="calendar-city-control"><select id="calendar-city-select" class="calendar-city-select calendar-city-pulse" aria-label="Set the shared city for events and venues">${['All', ...cities].map(city => `<option value="${escapeHTML(city)}" ${state.city === city ? 'selected' : ''}>${escapeHTML(city === 'All' ? 'All cities' : city)}</option>`).join('')}</select></span></label>`;
     }
 
     function filterChip(label, value, extraClass = '') {
@@ -306,7 +355,7 @@
     function render() {
         const container = ensureContainer();
         ensureSelectedDate();
-        container.innerHTML = `<div class="calendar-page"><div class="calendar-title-row"><div class="calendar-title-block"><h1 class="display-font">📅 EVENTS</h1><p>Choose a date to see what is on.</p></div>${renderFilterStrip()}${renderCityPicker()}</div><div class="calendar-layout"><section class="calendar-selector"><div class="calendar-month-row"><button type="button" class="calendar-month-button" id="calendar-prev-month" aria-label="Previous month">‹</button><h2 class="display-font">${monthLabel()}</h2><button type="button" class="calendar-month-button" id="calendar-next-month" aria-label="Next month">›</button></div>${renderGrid()}<p class="calendar-key"><span class="calendar-dot"></span> Events listed on this date</p></section>${renderPanel()}</div></div>`;
+        container.innerHTML = `<div class="calendar-page"><div class="calendar-title-row"><div class="calendar-title-block"><h1 class="display-font">📅 EVENTS</h1>${renderCityPicker()}<p>Choose a date to see what is on.</p></div>${renderFilterStrip()}</div><div class="calendar-layout"><section class="calendar-selector"><div class="calendar-month-row"><button type="button" class="calendar-month-button" id="calendar-prev-month" aria-label="Previous month">‹</button><h2 class="display-font">${monthLabel()}</h2><button type="button" class="calendar-month-button" id="calendar-next-month" aria-label="Next month">›</button></div>${renderGrid()}<p class="calendar-key"><span class="calendar-dot"></span> Events listed on this date</p></section>${renderPanel()}</div></div>`;
         bindControls();
     }
 
@@ -337,7 +386,7 @@
             render();
         });
         document.getElementById('calendar-city-select')?.addEventListener('change', event => {
-            state.city = event.target.value;
+            setSharedLocationFromCity(event.target.value);
             ensureSelectedDate();
             render();
         });
@@ -368,6 +417,7 @@
             if (!eventResponse.ok || !venueResponse.ok) throw new Error('Event data unavailable');
             state.events = await eventResponse.json();
             state.venues = await venueResponse.json();
+            syncCityFromSharedLocation();
             state.loaded = true;
         } catch (error) {
             ensureContainer().innerHTML = '<div class="calendar-page"><h1 class="display-font">📅 EVENTS</h1><p class="calendar-empty">Events could not be loaded.</p></div>';
@@ -400,8 +450,17 @@
         container.classList.remove('hidden');
         container.innerHTML = '<div class="calendar-page"><h1 class="display-font">📅 EVENTS</h1><p class="calendar-loading">Loading events…</p></div>';
         if (!state.loaded) await loadData();
-        if (state.loaded) render();
+        if (state.loaded) {
+            syncCityFromSharedLocation();
+            render();
+        }
     };
+
+    window.addEventListener('backroom:location-changed', () => {
+        if (!state.loaded) return;
+        syncCityFromSharedLocation();
+        if (window.location.hash === '#calendar') render();
+    });
 
     window.addEventListener('hashchange', () => {
         if (window.location.hash !== '#calendar') close(false);
