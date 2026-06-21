@@ -1,6 +1,6 @@
 // --- Application State ---
-const APP_VERSION = "v0.94";
-const APP_DATE = "21 June 2026";
+const APP_VERSION = "v0.98";
+const APP_DATE = "22 June 2026";
 
 let systemInfo = {}, designTheme = {}, venues = [], events = [];
 let activeFilters = []; // v0.66 Multi-select Array
@@ -295,7 +295,6 @@ async function recordCommunityVenueView(venueId) {
 
     const sessionKey = `br_view_counted_${safeVenueId}`;
     if (sessionStorage.getItem(sessionKey)) return;
-    sessionStorage.setItem(sessionKey, '1');
 
     try {
         const existing = await communityRequest(`${COMMUNITY_SUPABASE.viewsTable}?select=venue_id,view_count&venue_id=eq.${encodeURIComponent(safeVenueId)}&limit=1`);
@@ -316,6 +315,10 @@ async function recordCommunityVenueView(venueId) {
                 body: { venue_id: safeVenueId, view_count: 1, last_viewed_at: now }
             });
         }
+
+        // Mark this venue only after Supabase confirms the count was written.
+        // A temporary RLS/network failure must be allowed to retry later in this tab.
+        sessionStorage.setItem(sessionKey, '1');
 
         const previous = getCommunityStats(safeVenueId);
         communityVenueStats.set(safeVenueId, { ...previous, viewCount: nextCount });
