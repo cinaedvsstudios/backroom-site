@@ -1,4 +1,4 @@
-// Backroom Events calendar — city, date, and vibe filters.
+// Backroom Events calendar — compact two-row filters, city, date, and vibe filters.
 (function () {
     'use strict';
 
@@ -239,7 +239,7 @@
 
     function renderCityPicker() {
         const cities = [...new Set(state.events.map(cityFor).filter(Boolean))].sort();
-        return `<label class="calendar-city-label"><span class="calendar-city-prefix display-font">CITY</span><select id="calendar-city-select" class="calendar-city-select calendar-city-pulse" aria-label="Filter events by city">${['All', ...cities].map(city => `<option value="${escapeHTML(city)}" ${state.city === city ? 'selected' : ''}>${escapeHTML(city === 'All' ? 'All cities' : city)}</option>`).join('')}</select></label>`;
+        return `<label class="calendar-city-label"><span class="calendar-city-prefix display-font">CITY</span><span class="calendar-city-control"><select id="calendar-city-select" class="calendar-city-select calendar-city-pulse" aria-label="Filter events by city">${['All', ...cities].map(city => `<option value="${escapeHTML(city)}" ${state.city === city ? 'selected' : ''}>${escapeHTML(city === 'All' ? 'ALL CITIES' : city.toUpperCase())}</option>`).join('')}</select></span></label>`;
     }
 
     function filterChip(label, value, extraClass = '') {
@@ -306,7 +306,7 @@
     function render() {
         const container = ensureContainer();
         ensureSelectedDate();
-        container.innerHTML = `<div class="calendar-page"><div class="calendar-title-row"><div class="calendar-heading-group"><div class="calendar-heading-line"><h1 class="display-font">📅 EVENTS</h1>${renderFilterStrip()}</div><p>Choose a date to see what is on.</p></div>${renderCityPicker()}</div><div class="calendar-layout"><section class="calendar-selector"><div class="calendar-month-row"><button type="button" class="calendar-month-button" id="calendar-prev-month" aria-label="Previous month">‹</button><h2 class="display-font">${monthLabel()}</h2><button type="button" class="calendar-month-button" id="calendar-next-month" aria-label="Next month">›</button></div>${renderGrid()}<p class="calendar-key"><span class="calendar-dot"></span> Events listed on this date</p></section>${renderPanel()}</div></div>`;
+        container.innerHTML = `<div class="calendar-page"><div class="calendar-title-row"><div class="calendar-title-block"><h1 class="display-font">📅 EVENTS</h1><p>Choose a date to see what is on.</p></div>${renderFilterStrip()}${renderCityPicker()}</div><div class="calendar-layout"><section class="calendar-selector"><div class="calendar-month-row"><button type="button" class="calendar-month-button" id="calendar-prev-month" aria-label="Previous month">‹</button><h2 class="display-font">${monthLabel()}</h2><button type="button" class="calendar-month-button" id="calendar-next-month" aria-label="Next month">›</button></div>${renderGrid()}<p class="calendar-key"><span class="calendar-dot"></span> Events listed on this date</p></section>${renderPanel()}</div></div>`;
         bindControls();
     }
 
