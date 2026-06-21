@@ -1,4 +1,4 @@
-/* Backroom Events calendar — v0.81 */
+/* Backroom Events calendar — v0.82 */
 #calendar-container {
     padding: 0 20px 20px;
 }
@@ -108,7 +108,7 @@
 .calendar-filter-shell {
     min-width: 0;
     width: 100%;
-    height: 88px;
+    height: 78px;
     box-sizing: border-box;
     background: var(--near-black);
     border: 1px solid var(--panel-mid);
@@ -129,7 +129,7 @@
 
 .calendar-filter-grid {
     display: grid;
-    grid-template-rows: repeat(2, 32px);
+    grid-template-rows: repeat(2, 26px);
     grid-auto-columns: max-content;
     grid-auto-flow: column;
     gap: 6px;
@@ -138,12 +138,12 @@
 }
 
 .calendar-filter-chip.pill-btn {
-    min-height: 32px;
-    padding: 5px 12px;
+    min-height: 26px;
+    padding: 4px 9px;
     border: 1px solid var(--primary-blue) !important;
     background: var(--panel-dark) !important;
     color: var(--text-light) !important;
-    font-size: .8rem;
+    font-size: .75rem;
     line-height: 1;
     white-space: nowrap;
     cursor: pointer;
@@ -280,7 +280,7 @@
 
 @media (max-width: 1024px) {
     .calendar-title-row { grid-template-columns: max-content minmax(240px, 1fr) max-content; gap: 12px; }
-    .calendar-filter-shell { height: 88px; }
+    .calendar-filter-shell { height: 78px; }
 }
 
 @media (max-width: 768px) {
@@ -289,7 +289,7 @@
     .calendar-title-row { grid-template-columns: 1fr; gap: 10px; margin-bottom: 14px; }
     .calendar-title-block { order: 1; }
     .calendar-city-label { order: 2; justify-content: flex-start; padding: 0; }
-    .calendar-filter-shell { order: 3; height: 88px; }
+    .calendar-filter-shell { order: 3; height: 78px; }
     .calendar-title-row h1 { font-size: 1.8rem; }
     .calendar-city-select { min-width: 160px; }
     .calendar-layout { grid-template-columns: 1fr; gap: 14px; }
