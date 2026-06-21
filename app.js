@@ -1,5 +1,5 @@
 // --- Application State ---
-const APP_VERSION = "v0.86";
+const APP_VERSION = "v0.87";
 const APP_DATE = "21 June 2026";
 
 let systemInfo = {}, designTheme = {}, venues = [], events = [];
@@ -1900,6 +1900,13 @@ function renderSearchNoResults(query, savedCity, isFuzzySearch) {
         fuzzyButton.className = 'btn primary-btn pill-btn search-empty-action';
         fuzzyButton.textContent = 'Click here to do a fuzzy search for similar words';
         fuzzyButton.addEventListener('click', () => {
+            // A failed city search expands to the full directory before checking close spellings.
+            // This deliberately resets the shared location too, so Results, Venues, and Events all use All Cities afterwards.
+            const allCitiesLocation = { country: '', city: '', postcode: '', scope: 'all' };
+            localStorage.setItem('br_location', JSON.stringify(allCitiesLocation));
+            updateLocationDisplay(allCitiesLocation);
+            updateLocationActionLabel('');
+            announceLocationChange(allCitiesLocation);
             searchUsesFuzzyMatching = true;
             applyFilters();
         });
