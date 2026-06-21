@@ -853,36 +853,199 @@ function renderDiscountsView() {
     renderStaticPageView('discounts');
 }
 
+// --- Featured page: city-specific editorial lists ---
+const FEATURED_CITY_ORDER = ['Berlin', 'Hamburg', 'Cologne', 'Frankfurt', 'Munich'];
+let activeFeaturedCity = 'Berlin';
+
+const FEATURED_CITY_CONFIG = {
+    Berlin: {
+        mode: 'priority'
+    },
+    Hamburg: {
+        topPicks: [
+            { label: 'Toms', aliases: ['Toms', "Tom's"] },
+            { label: 'Babylon', aliases: ['Babylon'] },
+            { label: 'WunderBar', aliases: ['WunderBar', 'Wunderbar'] }
+        ],
+        recommended: [
+            { label: 'Dragon Sauna', aliases: ['Dragon Sauna'] }
+        ]
+    },
+    Cologne: {
+        topPicks: [
+            { label: 'Sexy Party', aliases: ['Sexy Party'] },
+            { label: 'Mumu', aliases: ['Mumu'] },
+            { label: 'Exile', aliases: ['Exile'] },
+            { label: 'Phoenix', aliases: ['Phoenix', 'Phoenix Sauna', 'Phoenix Sauna Cologne'] }
+        ],
+        recommended: [
+            { label: 'Guyz', aliases: ['Guyz'] },
+            { label: 'Play', aliases: ['Play'] },
+            { label: 'Babylon Sauna', aliases: ['Babylon Sauna', 'Badehaus Babylon Cologne', 'Badehaus Babylon'] }
+        ]
+    },
+    Frankfurt: {
+        topPicks: [
+            { label: 'Pink', aliases: ['Pink'] },
+            { label: 'Saunawerk', aliases: ['Saunawerk'] }
+        ],
+        recommended: []
+    },
+    Munich: {
+        topPicks: [
+            { label: 'NY Club', aliases: ['NY Club', 'NY.Club'] },
+            { label: 'Sauna Deutsche Eiche', aliases: ['Sauna Deutsche Eiche', 'Deutsche Eiche'] }
+        ],
+        recommended: []
+    }
+};
+
+function normalizeFeaturedLookupText(value) {
+    return String(value || '')
+        .normalize('NFKD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '');
+}
+
+function featuredCityMatches(venue, cityName) {
+    const target = normalizeFeaturedLookupText(cityName);
+    const aliases = {
+        cologne: ['cologne', 'koln'],
+        frankfurt: ['frankfurt', 'frankfurtammain'],
+        munich: ['munich', 'munchen']
+    };
+    const accepted = aliases[target] || [target];
+    return getCityTokens(venue).some(city => accepted.includes(normalizeFeaturedLookupText(city)));
+}
+
+function findConfiguredFeaturedVenue(cityName, entry) {
+    const acceptedNames = (entry.aliases || [entry.label]).map(normalizeFeaturedLookupText);
+    return getPublicVenues().find(venue => {
+        if (!featuredCityMatches(venue, cityName)) return false;
+        return acceptedNames.includes(normalizeFeaturedLookupText(venue?.Name));
+    }) || null;
+}
+
+function buildFeaturedPlaceholder(entry) {
+    const card = document.createElement('article');
+    card.className = 'card featured-missing-card';
+    card.style.cssText = 'min-height:190px; border:1px dashed var(--primary-blue); background:rgba(12,18,34,.74); display:flex; align-items:stretch;';
+    card.innerHTML = `
+        <div class="card-inner-content" style="width:100%; display:flex; flex-direction:column; justify-content:center;">
+            <div class="card-header">
+                <div>
+                    <h3 class="card-title display-font">${entry.label}</h3>
+                    <div class="card-meta">FEATURED LISTING</div>
+                </div>
+                <div class="status-badge all">SOON</div>
+            </div>
+            <div class="card-about">This regular venue or party is queued for its full directory listing.</div>
+        </div>
+    `;
+    return card;
+}
+
+function renderConfiguredFeaturedEntries(cityName, entries, grid) {
+    const foundVenues = [];
+    const missingEntries = [];
+    const usedVenueIds = new Set();
+
+    (entries || []).forEach(entry => {
+        const venue = findConfiguredFeaturedVenue(cityName, entry);
+        if (venue && !usedVenueIds.has(venue.Venue_ID)) {
+            usedVenueIds.add(venue.Venue_ID);
+            foundVenues.push(venue);
+        } else {
+            missingEntries.push(entry);
+        }
+    });
+
+    if (foundVenues.length) renderListings(foundVenues, true, grid);
+    missingEntries.forEach(entry => grid.appendChild(buildFeaturedPlaceholder(entry)));
+}
+
+function setFeaturedCity(cityName) {
+    if (!FEATURED_CITY_CONFIG[cityName]) return;
+    activeFeaturedCity = cityName;
+    renderFeaturedView();
+}
+
 function renderFeaturedView() {
     document.getElementById('main-filters')?.classList.add('hidden');
     if (resultsContainer) resultsContainer.innerHTML = '';
+
     const container = document.getElementById('featured-container');
     if (!container) return;
     container.classList.remove('hidden');
 
-    const featVenues = getPublicVenues().filter(v => ['1','2','3'].includes(normalizeFeaturedLevel(v)));
-    const levelLabels = { '1': 'Top Picks', '2': 'Recommended', '3': 'Also Featured' };
-    const cities = [...new Set(featVenues.flatMap(v => getCityTokens(v)).filter(Boolean))].sort();
+    const cityName = FEATURED_CITY_CONFIG[activeFeaturedCity] ? activeFeaturedCity : 'Berlin';
+    const config = FEATURED_CITY_CONFIG[cityName];
+    const isBerlin = config.mode === 'priority';
+
     let html = `<h2 class="display-font" style="color:var(--primary-blue); margin-bottom:5px;">🏛️ FEATURED VENUES</h2>`;
     html += `<p class="body-font" style="margin-bottom:15px; color:#fff;">${systemInfo.featured_page_intro || 'Below are some of our favourite venues.'}</p>`;
-    if(cities.length) html += `<div class="featured-city-strip" style="display:flex; gap:8px; margin-bottom:20px; overflow-x:auto; flex-wrap:wrap;">${cities.map(c => `<button class="chip pill-btn" onclick="const s=document.getElementById('search-input'); if(s) s.value='${String(c).replace(/'/g, "\\'")}'; updateSearchClearButton(); window.location.hash='#results'; handleRouting();">${c}</button>`).join('')}</div>`;
+    html += `<div class="featured-city-strip" style="display:flex; gap:8px; margin-bottom:22px; overflow-x:auto; flex-wrap:wrap;">`;
+    html += FEATURED_CITY_ORDER.map(city => {
+        const selected = city === cityName;
+        const selectedStyle = selected ? 'background:var(--primary-blue); color:#071018; border-color:var(--primary-blue);' : '';
+        return `<button class="chip pill-btn" style="${selectedStyle}" onclick="setFeaturedCity('${city}')">${city}</button>`;
+    }).join('');
+    html += `</div>`;
 
-    if(!featVenues.length) {
-        html += `<p class="body-font" style="color:var(--text-light);">No featured venues have been added yet.</p>`;
+    html += `<h3 class="display-font" style="margin:0 0 16px; color:#fff;">${cityName}</h3>`;
+
+    if (isBerlin) {
+        const berlinVenues = getPublicVenues().filter(venue => featuredCityMatches(venue, 'Berlin'));
+        const groups = [
+            { level: '1', label: 'Top Picks' },
+            { level: '2', label: 'Recommended' },
+            { level: '3', label: 'Also Featured' }
+        ];
+
+        groups.forEach(group => {
+            const groupVenues = sortFeaturedVenues(berlinVenues.filter(venue => normalizeFeaturedLevel(venue) === group.level));
+            if (groupVenues.length) {
+                html += `<section class="featured-section" style="margin-bottom:28px;"><h3 class="display-font" style="margin:0 0 12px; color:var(--primary-blue);">${group.label}</h3><div id="featured-berlin-${group.level}" class="featured-grid" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(300px, 1fr)); gap:20px;"></div></section>`;
+            }
+        });
+
+        if (!berlinVenues.some(venue => ['1', '2', '3'].includes(normalizeFeaturedLevel(venue)))) {
+            html += `<p class="body-font" style="color:var(--text-light);">More coming soon.</p>`;
+        }
+
         container.innerHTML = html;
+        groups.forEach(group => {
+            const grid = document.getElementById(`featured-berlin-${group.level}`);
+            if (!grid) return;
+            const groupVenues = sortFeaturedVenues(berlinVenues.filter(venue => normalizeFeaturedLevel(venue) === group.level));
+            renderListings(groupVenues, true, grid);
+        });
         return;
     }
 
-    ['1','2','3'].forEach(level => {
-        const levelVenues = sortFeaturedVenues(featVenues.filter(v => normalizeFeaturedLevel(v) === level));
-        if(levelVenues.length) {
-            html += `<section class="featured-section" style="margin-bottom:28px;"><h3 class="display-font" style="margin:0 0 12px; color:var(--primary-blue);">${levelLabels[level]}</h3><div id="featured-level-${level}" class="featured-grid" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(300px, 1fr)); gap:20px;"></div></section>`;
+    const groups = [
+        { key: 'topPicks', label: 'Top Picks' },
+        { key: 'recommended', label: 'Recommended' }
+    ];
+
+    groups.forEach(group => {
+        const entries = config[group.key] || [];
+        html += `<section class="featured-section" style="margin-bottom:28px;"><h3 class="display-font" style="margin:0 0 12px; color:var(--primary-blue);">${group.label}</h3>`;
+        if (entries.length) {
+            html += `<div id="featured-${cityName.toLowerCase()}-${group.key}" class="featured-grid" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(300px, 1fr)); gap:20px;"></div>`;
+        } else {
+            html += `<p class="body-font" style="color:var(--text-light);">More coming soon.</p>`;
         }
+        html += `</section>`;
     });
+
     container.innerHTML = html;
-    ['1','2','3'].forEach(level => {
-        const grid = document.getElementById(`featured-level-${level}`);
-        if(grid) renderListings(sortFeaturedVenues(featVenues.filter(v => normalizeFeaturedLevel(v) === level)), true, grid);
+    groups.forEach(group => {
+        const entries = config[group.key] || [];
+        if (!entries.length) return;
+        const grid = document.getElementById(`featured-${cityName.toLowerCase()}-${group.key}`);
+        if (grid) renderConfiguredFeaturedEntries(cityName, entries, grid);
     });
 }
 
