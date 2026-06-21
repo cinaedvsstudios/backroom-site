@@ -1,5 +1,5 @@
 // --- Application State ---
-const APP_VERSION = "v0.84";
+const APP_VERSION = "v0.85";
 const APP_DATE = "21 June 2026";
 
 let systemInfo = {}, designTheme = {}, venues = [], events = [];
@@ -9,6 +9,7 @@ let venueReturnHash = '#results';
 let currentTargetVenue = null; 
 let currentEventCityFilter = 'All';
 let isTutorialRunning = false; 
+let searchUsesFuzzyMatching = false;
 
 // Profile Data Structure (Save Game Style)
 let userProfile = JSON.parse(localStorage.getItem('br_profile')) || { name: '', avatar: '' };
@@ -198,6 +199,64 @@ function getPublicVenues(source = venues) {
         const status = String(v?.Status || '').trim();
         return status !== 'Hold' && status !== 'Flag';
     });
+}
+
+// Search Results follows the saved city unless Location is set to All Cities.
+function getSavedSearchCity() {
+    const savedLocation = getSavedLocation();
+    if (!savedLocation || isAllCitiesLocation(savedLocation)) return '';
+
+    const city = String(savedLocation.city || '').trim();
+    return city && city.toLowerCase() !== 'my location' ? city : '';
+}
+
+function getSearchScopeVenues() {
+    const savedCity = getSavedSearchCity();
+    const publicVenues = getPublicVenues();
+    return savedCity
+        ? publicVenues.filter(venue => venueMatchesCity(venue, savedCity))
+        : publicVenues;
+}
+
+function isSearchableEvent(event) {
+    const status = String(event?.Status || '').trim().toLowerCase();
+    return !['hold', 'flag', 'closed', 'cancelled', 'canceled'].includes(status);
+}
+
+function getVenueEventSearchText(venueId) {
+    return (events || [])
+        .filter(event => event?.Venue_ID === venueId && isSearchableEvent(event))
+        .map(event => [
+            event?.Event_Name,
+            event?.Event_Description,
+            event?.Dresscode_Info,
+            event?.Vibe_Tags,
+            event?.Price_Info
+        ].filter(Boolean).join(' '))
+        .join(' ');
+}
+
+function getVenueAndEventSearchText(venue) {
+    return `${getVenueSearchText(venue)} ${getVenueEventSearchText(venue?.Venue_ID)}`;
+}
+
+function normalizeSearchText(value) {
+    return String(value || '')
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[̀-ͯ]/g, '')
+        .replace(/ß/g, 'ss');
+}
+
+function directSearchMatch(text, query) {
+    const haystack = normalizeSearchText(text);
+    const requested = normalizeSearchText(query).trim();
+    if (!requested) return true;
+    if (haystack.includes(requested)) return true;
+
+    // Normal search accepts multiple exact words in any order, but does not guess spellings.
+    const requestedWords = requested.split(/[^a-z0-9]+/).filter(Boolean);
+    return requestedWords.length > 0 && requestedWords.every(word => haystack.includes(word));
 }
 
 function getCardStatusLabel(venue) {
@@ -750,6 +809,7 @@ function handleRouting() {
     document.getElementById('profile-wipe-toast')?.classList.add('hidden');
 
     if (hash === '') {
+        searchUsesFuzzyMatching = false;
         if (searchInput) searchInput.value = '';
         updateSearchClearButton();
         activeFilters = [];
@@ -1620,12 +1680,19 @@ function setupEventListeners() {
     }
 
     if(searchInput) {
-        searchInput.addEventListener('input', () => { recordUserInteraction(); updateSearchClearButton(); window.location.hash='#results'; handleRouting(); });
+        searchInput.addEventListener('input', () => {
+            searchUsesFuzzyMatching = false;
+            recordUserInteraction();
+            updateSearchClearButton();
+            window.location.hash = '#results';
+            handleRouting();
+        });
         updateSearchClearButton();
     }
     const searchClear = document.getElementById('search-clear');
     if(searchClear) {
         searchClear.addEventListener('click', () => {
+            searchUsesFuzzyMatching = false;
             if(searchInput) searchInput.value = '';
             updateSearchClearButton();
             recordUserInteraction();
@@ -1774,24 +1841,82 @@ function renderDynamicFilters(filteredData) {
     });
 }
 
+
+function renderSearchNoResults(query, savedCity, isFuzzySearch) {
+    if (!resultsContainer) return;
+    resultsContainer.innerHTML = '';
+
+    const scopeText = savedCity ? ` in ${savedCity}` : ' across all cities';
+    const panel = document.createElement('section');
+    panel.className = 'search-empty-state';
+
+    const title = document.createElement('h3');
+    title.className = 'display-font';
+    title.textContent = isFuzzySearch ? 'NO SIMILAR RESULTS FOUND' : 'WE FOUND NO RESULTS';
+
+    const body = document.createElement('p');
+    body.className = 'body-font';
+    body.textContent = isFuzzySearch
+        ? `No similar venue or event names matched “${query}”${scopeText}.`
+        : `No venue or event names matched “${query}”${scopeText}.`;
+
+    panel.append(title, body);
+
+    if (!isFuzzySearch) {
+        const hint = document.createElement('p');
+        hint.className = 'search-empty-hint body-font';
+        hint.textContent = 'Try a fuzzy search for close spellings or similar words.';
+
+        const fuzzyButton = document.createElement('button');
+        fuzzyButton.type = 'button';
+        fuzzyButton.className = 'btn primary-btn pill-btn search-empty-action';
+        fuzzyButton.textContent = 'Click here to do a fuzzy search for similar words';
+        fuzzyButton.addEventListener('click', () => {
+            searchUsesFuzzyMatching = true;
+            applyFilters();
+        });
+
+        panel.append(hint, fuzzyButton);
+    } else {
+        const exactButton = document.createElement('button');
+        exactButton.type = 'button';
+        exactButton.className = 'btn secondary-btn pill-btn search-empty-action';
+        exactButton.textContent = 'Back to exact search';
+        exactButton.addEventListener('click', () => {
+            searchUsesFuzzyMatching = false;
+            applyFilters();
+        });
+        panel.append(exactButton);
+    }
+
+    resultsContainer.appendChild(panel);
+}
+
 function applyFilters() {
-    const query = searchInput?.value || '';
-    let filteredVenues = getPublicVenues();
+    const query = String(searchInput?.value || '').trim();
+    const savedCity = getSavedSearchCity();
+    let filteredVenues = getSearchScopeVenues();
+    const scopeVenues = [...filteredVenues];
     selectedCardId = null;
 
     if(activeFilters.length > 0) {
-        filteredVenues = filteredVenues.filter(v => {
-            const tags = getVenueTags(v);
-            return activeFilters.every(af => tags.includes(af));
+        filteredVenues = filteredVenues.filter(venue => {
+            const tags = getVenueTags(venue);
+            return activeFilters.every(filterTag => tags.includes(filterTag));
         });
     }
 
-    if(query.trim() !== '') {
-        filteredVenues = filteredVenues.filter(v => fuzzyMatch(getVenueSearchText(v), query));
+    if(query) {
+        filteredVenues = filteredVenues.filter(venue => {
+            const searchableText = getVenueAndEventSearchText(venue);
+            return searchUsesFuzzyMatching
+                ? fuzzyMatch(searchableText, query)
+                : directSearchMatch(searchableText, query);
+        });
     }
 
     filteredVenues.sort((a, b) => {
-        const queryCity = query.trim().toLowerCase();
+        const queryCity = query.toLowerCase();
         if (queryCity) {
             const aCityMatch = venueMatchesCity(a, queryCity);
             const bCityMatch = venueMatchesCity(b, queryCity);
@@ -1804,7 +1929,7 @@ function applyFilters() {
 
         const aHasImg = (a.Image_URL && a.Image_URL.trim() !== '') ? 1 : 0;
         const bHasImg = (b.Image_URL && b.Image_URL.trim() !== '') ? 1 : 0;
-        if (aHasImg !== bHasImg) return bHasImg - aHasImg; 
+        if (aHasImg !== bHasImg) return bHasImg - aHasImg;
 
         const aPriority = parseInt(normalizeFeaturedLevel(a)) || 99;
         const bPriority = parseInt(normalizeFeaturedLevel(b)) || 99;
@@ -1812,28 +1937,40 @@ function applyFilters() {
 
         const aSize = parseInt(a.Rating_Size) || 0;
         const bSize = parseInt(b.Rating_Size) || 0;
-        if (aSize !== bSize) return bSize - aSize; 
+        if (aSize !== bSize) return bSize - aSize;
 
         const aPop = parseInt(a.Rating_Busyness || a.Rating_Popularity) || 0;
         const bPop = parseInt(b.Rating_Busyness || b.Rating_Popularity) || 0;
-        return bPop - aPop; 
+        return bPop - aPop;
     });
 
     if(contextHeader) {
         contextHeader.classList.remove('hidden');
         resetBackButton('← Back to Results', 'results');
         document.getElementById('btn-back-to-results')?.classList.add('result-back-hidden');
+
         const title = document.getElementById('context-title');
         const desc = document.getElementById('context-desc');
-        const parts = [];
-        if(query.trim()) parts.push(`search: ${query.trim()}`);
-        if(activeFilters.length) parts.push(`filters: ${activeFilters.join(', ')}`);
-        if(title) title.innerText = parts.length ? `Showing results for ${parts.join(' + ')}` : 'Results';
-        if(desc) desc.innerText = `${filteredVenues.length} results found`;
+        const locationText = savedCity ? `in ${savedCity}` : 'across all cities';
+        const resultCountText = `${filteredVenues.length} result${filteredVenues.length === 1 ? '' : 's'} found ${locationText}`;
+
+        if(title) title.innerText = savedCity ? `Results in ${savedCity}` : 'Results';
+        if(desc) {
+            const searchText = query ? ` for “${query}”` : '';
+            const fuzzyText = searchUsesFuzzyMatching && query ? ' · Similar words search' : '';
+            desc.innerText = `${resultCountText}${searchText}${fuzzyText}`;
+        }
     }
 
-    renderListings(filteredVenues);
-    renderDynamicFilters(filteredVenues);
+    // The tag availability follows the saved city, not the current text query.
+    renderDynamicFilters(scopeVenues);
+
+    if(query && filteredVenues.length === 0) {
+        renderSearchNoResults(query, savedCity, searchUsesFuzzyMatching);
+    } else {
+        renderListings(filteredVenues);
+    }
+
     updateTravelSidebarHighlight();
 }
 
@@ -1968,12 +2105,12 @@ function getLevenshteinDistance(a, b) {
 
 function fuzzyMatch(text, query) {
     if(!query) return true;
-    const str = (text||'').toLowerCase();
-    const q = query.toLowerCase();
+    const str = normalizeSearchText(text);
+    const q = normalizeSearchText(query);
     if (str.includes(q)) return true;
     
-    const words = str.split(/[\s,.-]+/);
-    const queryWords = q.split(/[\s,.-]+/);
+    const words = str.split(/[^a-z0-9]+/);
+    const queryWords = q.split(/[^a-z0-9]+/);
     
     for(let qw of queryWords) {
         if(!qw) continue;

@@ -149,6 +149,12 @@ select.filter-header-select:focus, select.cell-edit:focus { border-color: var(--
 .status-badge.hold { background-color: var(--label-grey); color: #fff; }
 .status-badge.flag { background-color: var(--bright-red-orange); color: #fff; }
 
+.search-empty-state { grid-column: 1 / -1; max-width: 620px; width: 100%; box-sizing: border-box; margin: 20px auto; padding: 28px; text-align: center; background: var(--panel-dark); border: 1px solid var(--panel-mid); border-radius: var(--radius-card); }
+.search-empty-state h3 { margin: 0 0 10px; color: var(--bright-red-orange); font-size: 1.8rem; }
+.search-empty-state p { margin: 0; color: var(--text-light); }
+.search-empty-hint { margin-top: 12px !important; color: var(--label-grey) !important; }
+.search-empty-action { margin-top: 18px; min-width: 220px; }
+
 #results-container { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; }
 .card { background-color: var(--panel-standard); border-radius: var(--radius-card); overflow: hidden; border: 1px solid var(--panel-mid); cursor: pointer; transition: transform 0.2s, box-shadow: 0.2s; display: flex; flex-direction: column; }
 .card:hover { border-color: var(--label-grey); }
