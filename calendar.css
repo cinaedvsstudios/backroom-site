@@ -1,4 +1,4 @@
-/* Backroom Events calendar — v0.82 */
+/* Backroom Events calendar — v0.83 */
 #calendar-container {
     padding: 0 20px 20px;
 }
@@ -108,7 +108,7 @@
 .calendar-filter-shell {
     min-width: 0;
     width: 100%;
-    height: 78px;
+    height: 92px;
     box-sizing: border-box;
     background: var(--near-black);
     border: 1px solid var(--panel-mid);
@@ -154,13 +154,13 @@
 .calendar-filter-chip.pill-btn.event-filter-blue { border-color: var(--primary-blue) !important; color: var(--text-light) !important; }
 .calendar-filter-chip.pill-btn.event-filter-red { border-color: var(--bright-red-orange) !important; color: #ffb2a5 !important; }
 .calendar-filter-chip.pill-btn.event-filter-yellow { border-color: #e8d900 !important; color: #fff26d !important; }
-.calendar-filter-chip.pill-btn.event-filter-green { border-color: #38bd77 !important; color: #83f3b5 !important; }
+.calendar-filter-chip.pill-btn.event-filter-green { background: #38bd77 !important; border-color: #38bd77 !important; color: #06150d !important; font-weight: 700; box-shadow: 0 0 9px rgba(56, 189, 119, .38); }
 
 .calendar-filter-chip.pill-btn.active.event-filter-all,
 .calendar-filter-chip.pill-btn.active.event-filter-blue { background: var(--primary-blue) !important; color: #fff !important; box-shadow: 0 0 12px rgba(44, 168, 212, .45); }
 .calendar-filter-chip.pill-btn.active.event-filter-red { background: var(--dark-red) !important; color: #fff !important; box-shadow: 0 0 12px rgba(213, 80, 54, .45); }
 .calendar-filter-chip.pill-btn.active.event-filter-yellow { background: #7e7600 !important; color: #fff !important; box-shadow: 0 0 12px rgba(232, 217, 0, .38); }
-.calendar-filter-chip.pill-btn.active.event-filter-green { background: #166a43 !important; color: #fff !important; box-shadow: 0 0 12px rgba(56, 189, 119, .48); }
+.calendar-filter-chip.pill-btn.active.event-filter-green { background: #38bd77 !important; border-color: #7dffc0 !important; color: #06150d !important; box-shadow: 0 0 14px rgba(56, 189, 119, .68); }
 
 .calendar-layout {
     display: grid;
@@ -280,7 +280,7 @@
 
 @media (max-width: 1024px) {
     .calendar-title-row { grid-template-columns: max-content minmax(240px, 1fr) max-content; gap: 12px; }
-    .calendar-filter-shell { height: 78px; }
+    .calendar-filter-shell { height: 92px; }
 }
 
 @media (max-width: 768px) {
