@@ -120,6 +120,14 @@ function getSavedLocation() {
     }
 }
 
+function openLocationModal() {
+    loadSavedLocation();
+    locModal?.classList.remove('hidden');
+
+    // Leaflet needs a size refresh when a previously hidden map is shown again.
+    window.requestAnimationFrame(() => leafletMap?.invalidateSize?.());
+}
+
 function isMultiCityVenue(venue) {
     return getCityTokens(venue).length > 1;
 }
@@ -1336,10 +1344,7 @@ function setupEventListeners() {
     
     addEvt('close-modal', 'click', closeVenueModalToPreviousView);
 
-    addEvt('btn-location', 'click', () => {
-        locModal?.classList.remove('hidden');
-    });
-    addEvt('btn-close-to-me-location', 'click', () => showToast(systemInfo.labels?.coming_soon || 'Coming soon'));
+    addEvt('btn-location', 'click', openLocationModal);
     
     addEvt('btn-settings', 'click', () => settingsModal?.classList.remove('hidden'));
     addEvt('btn-profile-menu', 'click', openProfileMenu);
@@ -1444,20 +1449,6 @@ function setupEventListeners() {
             }
         } catch(e) {
             console.error("OSM Error", e);
-        }
-    });
-
-    addEvt('btn-save-travel', 'click', () => {
-        const cityInp = document.getElementById('loc-city');
-        if(!cityInp) return;
-        const city = cityInp.value.trim();
-        if(city && city !== 'My Location' && !userTravel.includes(city)) {
-            userTravel.push(city);
-            saveCurrentToBundle();
-            showToast(`Saved to Travel 🚄: ${city}`);
-            cityInp.value = '';
-            if(window.location.hash === '#mytravel') renderTravelFullView();
-            else renderTravelDropdown();
         }
     });
 
@@ -1862,7 +1853,7 @@ function renderSavedLocationEmptyState(titleText, bodyText, showLocationButton =
         button.className = 'btn primary-btn pill-btn';
         button.style.marginTop = '18px';
         button.textContent = 'Set Location';
-        button.addEventListener('click', () => locModal?.classList.remove('hidden'));
+        button.addEventListener('click', openLocationModal);
         panel.appendChild(button);
     }
 
@@ -1891,7 +1882,19 @@ function renderSavedLocationVenuesView() {
         getPublicVenues().filter(venue => venueMatchesCity(venue, savedCity))
     );
 
-    if (title) title.textContent = `VENUES IN ${savedCity.toUpperCase()}`;
+    if (title) {
+        title.replaceChildren(document.createTextNode('VENUES IN '));
+
+        const cityPill = document.createElement('button');
+        cityPill.type = 'button';
+        cityPill.className = 'location-city-pill pill-btn';
+        cityPill.textContent = savedCity;
+        cityPill.title = 'Change location';
+        cityPill.setAttribute('aria-label', `Change location from ${savedCity}`);
+        cityPill.addEventListener('click', openLocationModal);
+        title.appendChild(cityPill);
+    }
+
     if (desc) desc.textContent = matchingVenues.length === 1
         ? '1 public venue listing found.'
         : `${matchingVenues.length} public venue listings found.`;
