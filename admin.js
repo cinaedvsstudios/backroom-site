@@ -640,10 +640,15 @@ window.editCell = function(td, rowIndex, col) {
 
     const currentVal = td.innerText.trim();
 
-    if(col === 'Status' || col === 'Priority' || col.startsWith('Rating_')) {
+    if(col === 'Status' || col === 'Priority' || col === 'Category' || col.startsWith('Rating_')) {
         let options = '';
         if(col === 'Status') options = '<option value="Live">Live</option><option value="Closed">Closed</option><option value="Hold">Hold</option><option value="Flag">Flag</option>';
         else if(col === 'Priority') options = '<option value="">Normal / blank</option><option value="1">1 - highest featured priority</option><option value="2">2 - secondary featured priority</option><option value="3">3 - featured page only / lower priority</option>';
+        else if(col === 'Category') {
+            const categoryOptions = ['Bar', 'Club', 'Club / Darkroom', 'Sauna', 'Party', 'Cinema', 'Shop', 'Cruising Area'];
+            if(currentVal && !categoryOptions.includes(currentVal)) categoryOptions.unshift(currentVal);
+            options = categoryOptions.map(option => `<option value="${option}">${option}</option>`).join('');
+        }
         else if(col.startsWith('Rating_')) options = '<option value="0">0</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option>';
 
         td.innerHTML = `<select class="cell-edit" onblur="saveCell(this, ${rowIndex}, '${col}')" onchange="saveCell(this, ${rowIndex}, '${col}')">${options}</select>`;
