@@ -1,5 +1,5 @@
 // --- Application State ---
-const APP_VERSION = "v0.99";
+const APP_VERSION = "v1.00";
 const APP_DATE = "22 June 2026";
 
 let systemInfo = {}, designTheme = {}, venues = [], events = [];
@@ -436,15 +436,23 @@ const CITY_NAME_ALIASES = {
     frankfurt: 'frankfurt'
 };
 
-function normalizeCityName(value) {
-    const normalized = String(value || '')
+function normalizeLocationName(value) {
+    return String(value || '')
         .trim()
         .toLowerCase()
         .replace(/ß/g, 'ss')
         .normalize('NFD')
         .replace(/[\u0300-\u036f]/g, '')
         .replace(/[^a-z0-9]+/g, '');
+}
+
+function normalizeCityName(value) {
+    const normalized = normalizeLocationName(value);
     return CITY_NAME_ALIASES[normalized] || normalized;
+}
+
+function normalizeCountryName(value) {
+    return normalizeLocationName(value);
 }
 
 function getSavedLocation() {
@@ -469,15 +477,26 @@ function isAllCitiesLocation(location) {
         && !String(location.postcode || '').trim();
 }
 
-function getLocationResultsLabel(cityValue) {
+function getLocationResultsLabel(cityValue, countryValue) {
     const city = String(cityValue ?? document.getElementById('loc-city')?.value ?? '').trim();
-    return city && city.toLowerCase() !== 'my location' ? city : 'All Cities';
+    const country = String(countryValue ?? document.getElementById('loc-country')?.value ?? '').trim();
+
+    if (city && city.toLowerCase() !== 'my location') {
+        // A country typed into the City field is accepted when it does not also match
+        // a real city in the current directory. This keeps ordinary city searches precise.
+        const inferredCountry = !country ? getKnownCountryName(city) : '';
+        if (inferredCountry && !hasKnownCityName(city)) return inferredCountry;
+        return city;
+    }
+
+    if (country) return getKnownCountryName(country) || country;
+    return 'All Cities';
 }
 
-function updateLocationActionLabel(cityValue) {
+function updateLocationActionLabel(cityValue, countryValue) {
     const button = document.getElementById('btn-save-location');
     if (!button) return;
-    button.textContent = `Show Results in ${getLocationResultsLabel(cityValue)}`;
+    button.textContent = `Show Results in ${getLocationResultsLabel(cityValue, countryValue)}`;
 }
 
 function announceLocationChange(location) {
@@ -508,6 +527,59 @@ function venueMatchesCity(venue, cityName) {
     const target = normalizeCityName(cityName);
     if (!target) return true;
     return getCityTokens(venue).some(city => normalizeCityName(city) === target);
+}
+
+function venueMatchesCountry(venue, countryName) {
+    const target = normalizeCountryName(countryName);
+    if (!target) return true;
+    return normalizeCountryName(venue?.Country) === target;
+}
+
+function getKnownCountryName(value, source = venues) {
+    const target = normalizeCountryName(value);
+    if (!target) return '';
+
+    const match = (source || []).find(item => normalizeCountryName(item?.Country) === target);
+    return match ? String(match.Country || '').trim() : '';
+}
+
+function hasKnownCityName(value, source = venues) {
+    const target = normalizeCityName(value);
+    if (!target) return false;
+    return (source || []).some(venue => getCityTokens(venue).some(city => normalizeCityName(city) === target));
+}
+
+function getSavedLocationScope(location = getSavedLocation()) {
+    if (!location || isAllCitiesLocation(location)) {
+        return { scope: 'all', city: '', country: '', label: '' };
+    }
+
+    const city = String(location.city || '').trim();
+    const country = String(location.country || '').trim();
+
+    if (city && city.toLowerCase() !== 'my location') {
+        return { scope: 'city', city, country, label: city };
+    }
+
+    if (country) {
+        return { scope: 'country', city: '', country, label: country };
+    }
+
+    return { scope: 'all', city: '', country: '', label: '' };
+}
+
+function venueMatchesSavedLocation(venue, savedScope = getSavedLocationScope()) {
+    if (savedScope.scope === 'country') {
+        return venueMatchesCountry(venue, savedScope.country);
+    }
+
+    if (savedScope.scope === 'city') {
+        const cityMatches = venueMatchesCity(venue, savedScope.city);
+        const countryMatches = !savedScope.country || venueMatchesCountry(venue, savedScope.country);
+        return cityMatches && countryMatches;
+    }
+
+    return true;
 }
 
 function hasFixedCoordinates(venue) {
@@ -555,21 +627,17 @@ function getPublicVenues(source = venues) {
     });
 }
 
-// Search Results follows the saved city unless Location is set to All Cities.
-function getSavedSearchCity() {
-    const savedLocation = getSavedLocation();
-    if (!savedLocation || isAllCitiesLocation(savedLocation)) return '';
-
-    const city = String(savedLocation.city || '').trim();
-    return city && city.toLowerCase() !== 'my location' ? city : '';
+// Search Results follows the saved city or country scope. All Cities remains unfiltered.
+function getSavedSearchScope() {
+    return getSavedLocationScope();
 }
 
 function getSearchScopeVenues() {
-    const savedCity = getSavedSearchCity();
+    const savedScope = getSavedSearchScope();
     const publicVenues = getPublicVenues();
-    return savedCity
-        ? publicVenues.filter(venue => venueMatchesCity(venue, savedCity))
-        : publicVenues;
+    return savedScope.scope === 'all'
+        ? publicVenues
+        : publicVenues.filter(venue => venueMatchesSavedLocation(venue, savedScope));
 }
 
 function getSearchScopeEvents(now = new Date()) {
@@ -2194,12 +2262,19 @@ function setupEventListeners() {
     addEvt('btn-clear-location', 'click', clearLocation);
 
     const locationCityInput = document.getElementById('loc-city');
-    if (locationCityInput && !locationCityInput.dataset.locationLabelBound) {
-        locationCityInput.dataset.locationLabelBound = 'true';
-        locationCityInput.addEventListener('input', () => updateLocationActionLabel(locationCityInput.value));
-        locationCityInput.addEventListener('change', () => updateLocationActionLabel(locationCityInput.value));
-    }
-    updateLocationActionLabel();
+    const locationCountryInput = document.getElementById('loc-country');
+    const refreshLocationActionLabel = () => updateLocationActionLabel(
+        locationCityInput?.value || '',
+        locationCountryInput?.value || ''
+    );
+
+    [locationCityInput, locationCountryInput].forEach(input => {
+        if (!input || input.dataset.locationLabelBound) return;
+        input.dataset.locationLabelBound = 'true';
+        input.addEventListener('input', refreshLocationActionLabel);
+        input.addEventListener('change', refreshLocationActionLabel);
+    });
+    refreshLocationActionLabel();
     
     addEvt('btn-gps', 'click', () => {
         showToast('Hold up a few seconds, we are confirming your location.');
@@ -2218,10 +2293,10 @@ function setupEventListeners() {
                             cityInput.value = city;
                             cityInput.dataset.lat = lat;
                             cityInput.dataset.lon = lon;
-                            updateLocationActionLabel(city);
                         }
                         const countryInput = document.getElementById('loc-country');
                         if(countryInput) countryInput.value = data.address.country || '';
+                        updateLocationActionLabel(city, countryInput?.value || '');
                     } catch (e) {
                         if(cityInput) {
                             cityInput.value = `My Location`;
@@ -2582,11 +2657,13 @@ function renderDynamicFilters(filteredData) {
 }
 
 
-function renderSearchNoResults(query, savedCity, isFuzzySearch) {
+function renderSearchNoResults(query, savedScope, isFuzzySearch) {
     if (!resultsContainer) return;
     resultsContainer.innerHTML = '';
 
-    const scopeText = savedCity ? ` in ${savedCity}` : ' across all cities';
+    const scopeText = savedScope?.scope && savedScope.scope !== 'all'
+        ? ` in ${savedScope.label}`
+        : ' across all cities';
     const panel = document.createElement('section');
     panel.className = 'search-empty-state';
 
@@ -2746,7 +2823,7 @@ function renderMixedSearchResults(venueResults, eventResults) {
 
 function applyFilters() {
     const query = String(searchInput?.value || '').trim();
-    const savedCity = getSavedSearchCity();
+    const savedScope = getSavedSearchScope();
     const scopeVenues = getSearchScopeVenues();
     const scopeEvents = getSearchScopeEvents();
     selectedCardId = null;
@@ -2791,7 +2868,9 @@ function applyFilters() {
 
         const title = document.getElementById('context-title');
         const desc = document.getElementById('context-desc');
-        const locationText = savedCity ? `in ${savedCity}` : 'across all cities';
+        const locationText = savedScope.scope === 'all'
+            ? 'across all cities'
+            : `in ${savedScope.label}`;
         const resultTypeText = searchResultTypeFilter === 'All'
             ? 'results'
             : `${searchResultTypeFilter.toLowerCase()} result${totalResults === 1 ? '' : 's'}`;
@@ -2799,17 +2878,17 @@ function applyFilters() {
         if (title) {
             title.replaceChildren();
 
-            if (savedCity) {
+            if (savedScope.scope !== 'all') {
                 title.appendChild(document.createTextNode('RESULTS IN '));
 
-                const cityPill = document.createElement('button');
-                cityPill.type = 'button';
-                cityPill.className = 'location-city-pill pill-btn';
-                cityPill.textContent = savedCity;
-                cityPill.title = 'Change location';
-                cityPill.setAttribute('aria-label', `Change location from ${savedCity}`);
-                cityPill.addEventListener('click', openLocationModal);
-                title.appendChild(cityPill);
+                const locationPill = document.createElement('button');
+                locationPill.type = 'button';
+                locationPill.className = 'location-city-pill pill-btn';
+                locationPill.textContent = savedScope.label;
+                locationPill.title = 'Change location';
+                locationPill.setAttribute('aria-label', `Change location from ${savedScope.label}`);
+                locationPill.addEventListener('click', openLocationModal);
+                title.appendChild(locationPill);
             } else {
                 title.textContent = 'RESULTS';
             }
@@ -2821,11 +2900,11 @@ function applyFilters() {
         }
     }
 
-    // The tag availability follows the saved city, not the current text query.
+    // The tag availability follows the saved location scope, not the current text query.
     renderDynamicFilters(scopeVenues);
 
     if(query && totalResults === 0) {
-        renderSearchNoResults(query, savedCity, searchUsesFuzzyMatching);
+        renderSearchNoResults(query, savedScope, searchUsesFuzzyMatching);
     } else if (totalResults === 0) {
         resultsContainer.innerHTML = '<p style="text-align:center; color:var(--label-grey); margin-top:20px; width:100%; grid-column:1 / -1;">No matching listings found.</p>';
     } else {
@@ -2834,7 +2913,6 @@ function applyFilters() {
 
     updateTravelSidebarHighlight();
 }
-
 
 function sortSavedLocationVenues(list) {
     return [...(list || [])].sort((a, b) => {
@@ -2891,7 +2969,7 @@ function renderSavedLocationEmptyState(titleText, bodyText, showLocationButton =
 }
 
 function renderSavedLocationVenuesView() {
-    // Venues uses the same filter chips as Search Results, scoped to the saved city.
+    // Venues uses the same filter chips as Search Results, scoped to the saved city or country.
     document.getElementById('main-filters')?.classList.remove('hidden');
     contextHeader?.classList.remove('hidden');
     resetBackButton('← Back to Results', 'results');
@@ -2899,55 +2977,56 @@ function renderSavedLocationVenuesView() {
 
     const title = document.getElementById('context-title');
     const desc = document.getElementById('context-desc');
-    const savedLocation = getSavedLocation();
-    // No saved city is the same as choosing ALL CITIES. The Venues screen must never stop at a setup message.
-    const isAllCities = !savedLocation || isAllCitiesLocation(savedLocation);
-    const savedCity = String(savedLocation?.city || '').trim();
-    const displayCity = isAllCities ? 'ALL CITIES' : savedCity;
+    const savedScope = getSavedSearchScope();
+    const isAllCities = savedScope.scope === 'all';
+    const displayLocation = isAllCities ? 'ALL CITIES' : savedScope.label;
 
-    const cityVenues = isAllCities
+    const scopedVenues = isAllCities
         ? getPublicVenues()
-        : getPublicVenues().filter(venue => venueMatchesCity(venue, savedCity));
+        : getPublicVenues().filter(venue => venueMatchesSavedLocation(venue, savedScope));
 
     // Keep the filter bar available even when a tag produces zero matching cards.
-    renderDynamicFilters(cityVenues);
+    renderDynamicFilters(scopedVenues);
 
     const matchingVenues = sortSavedLocationVenues(
         activeFilters.length > 0
-            ? cityVenues.filter(venue => {
+            ? scopedVenues.filter(venue => {
                 const tags = getVenueTags(venue);
                 return activeFilters.every(filterTag => tags.includes(filterTag));
             })
-            : cityVenues
+            : scopedVenues
     );
 
     if (title) {
         title.replaceChildren(document.createTextNode('VENUES IN '));
 
-        const cityPill = document.createElement('button');
-        cityPill.type = 'button';
-        cityPill.className = 'location-city-pill pill-btn';
-        cityPill.textContent = displayCity;
-        cityPill.title = 'Change location';
-        cityPill.setAttribute('aria-label', `Change location from ${displayCity.toLowerCase()}`);
-        cityPill.addEventListener('click', openLocationModal);
-        title.appendChild(cityPill);
+        const locationPill = document.createElement('button');
+        locationPill.type = 'button';
+        locationPill.className = 'location-city-pill pill-btn';
+        locationPill.textContent = displayLocation;
+        locationPill.title = 'Change location';
+        locationPill.setAttribute('aria-label', `Change location from ${displayLocation.toLowerCase()}`);
+        locationPill.addEventListener('click', openLocationModal);
+        title.appendChild(locationPill);
     }
 
     if (desc) {
-        const locationText = isAllCities ? 'across all cities' : 'found';
+        const scopedPhrase = isAllCities
+            ? 'across all cities'
+            : `in ${savedScope.label}`;
+
         if (activeFilters.length > 0) {
             desc.textContent = matchingVenues.length === 1
-                ? `1 public venue listing matches these tags ${isAllCities ? 'across all cities' : 'in this city'}.`
-                : `${matchingVenues.length} public venue listings match these tags ${isAllCities ? 'across all cities' : 'in this city'}.`;
+                ? `1 public venue listing matches these tags ${scopedPhrase}.`
+                : `${matchingVenues.length} public venue listings match these tags ${scopedPhrase}.`;
         } else if (isAllCities) {
             desc.textContent = matchingVenues.length === 1
                 ? '1 public venue listing across all cities.'
                 : `${matchingVenues.length} public venue listings across all cities.`;
         } else {
             desc.textContent = matchingVenues.length === 1
-                ? '1 public venue listing found.'
-                : `${matchingVenues.length} public venue listings found.`;
+                ? `1 public venue listing in ${savedScope.label}.`
+                : `${matchingVenues.length} public venue listings in ${savedScope.label}.`;
         }
     }
 
@@ -2955,19 +3034,18 @@ function renderSavedLocationVenuesView() {
         renderSavedLocationEmptyState(
             activeFilters.length > 0
                 ? 'NO VENUES MATCH THESE TAGS'
-                : (isAllCities ? 'NO PUBLIC VENUES YET' : `NO VENUES YET FOR ${savedCity.toUpperCase()}`),
+                : (isAllCities ? 'NO PUBLIC VENUES YET' : `NO PUBLIC VENUES YET FOR ${displayLocation.toUpperCase()}`),
             activeFilters.length > 0
                 ? 'Choose another tag or select All to clear the venue filters.'
                 : (isAllCities
                     ? 'More coming soon.'
-                    : 'More coming soon. You can still use Search Results to search every city and every listing.')
+                    : `More listings in ${savedScope.label} will appear here as they are added.`)
         );
         return;
     }
 
     renderListings(matchingVenues, true);
 }
-
 
 
 function getLevenshteinDistance(a, b) {
@@ -3946,31 +4024,41 @@ async function shareURL(url, title) {
 
 function saveLocation() {
     recordUserInteraction();
+
     const cityInp = document.getElementById('loc-city');
+    const countryInp = document.getElementById('loc-country');
+    const postcodeInp = document.getElementById('loc-postcode');
+
     const requestedCity = cityInp?.value.trim() || '';
+    const requestedCountry = countryInp?.value.trim() || '';
+    const postcode = postcodeInp?.value.trim() || '';
 
     if (requestedCity.toLowerCase() === 'my location') {
-        showToast('Choose a city, or leave City blank to browse all cities.');
+        showToast('Choose a city or country, or leave both blank to browse all cities.');
         return;
     }
 
-    const loc = requestedCity
-        ? {
-            country: document.getElementById('loc-country')?.value.trim() || '',
-            city: requestedCity,
-            postcode: document.getElementById('loc-postcode')?.value.trim() || '',
-            scope: 'city'
-        }
-        : {
-            country: '',
-            city: '',
-            postcode: '',
-            scope: 'all'
-        };
+    const canonicalCountry = getKnownCountryName(requestedCountry) || requestedCountry;
+    const inferredCountry = !canonicalCountry ? getKnownCountryName(requestedCity) : '';
+    const cityIsKnown = hasKnownCityName(requestedCity);
+
+    let loc;
+    if (requestedCity && inferredCountry && !cityIsKnown) {
+        // Country names typed into the City box are treated as a country-only browse scope.
+        loc = { country: inferredCountry, city: '', postcode, scope: 'country' };
+    } else if (requestedCity) {
+        // A city with an optional country stays city-specific. When country is supplied,
+        // it prevents a same-named city in another country from matching.
+        loc = { country: canonicalCountry, city: requestedCity, postcode, scope: 'city' };
+    } else if (canonicalCountry) {
+        loc = { country: canonicalCountry, city: '', postcode, scope: 'country' };
+    } else {
+        loc = { country: '', city: '', postcode: '', scope: 'all' };
+    }
 
     localStorage.setItem('br_location', JSON.stringify(loc));
     updateLocationDisplay(loc);
-    updateLocationActionLabel(loc.city);
+    updateLocationActionLabel(loc.city, loc.country);
     announceLocationChange(loc);
     locModal?.classList.add('hidden');
 
@@ -4018,68 +4106,77 @@ function loadSavedLocation() {
     if(ciInp) ciInp.value = isAllCities ? '' : (loc.city || '');
     if(pInp) pInp.value = isAllCities ? '' : (loc.postcode || '');
     updateLocationDisplay(loc);
-    updateLocationActionLabel(isAllCities ? '' : loc.city || '');
+    updateLocationActionLabel(isAllCities ? '' : loc.city || '', isAllCities ? '' : loc.country || '');
 }
 
 function updateLocationDisplay(loc) {
     const display = document.getElementById('current-location-display');
     if (!display) return;
 
-    const city = String(loc?.city || '').trim();
-    const country = String(loc?.country || '').trim();
-    const isAllCities = isAllCitiesLocation(loc);
-    display.replaceChildren();
-
-    if (isAllCities || city) {
-        const label = document.createElement('span');
-        label.className = 'location-current-label';
-        label.textContent = 'Current city:';
-
-        const cityName = document.createElement('span');
-        cityName.className = 'location-current-city';
-        cityName.textContent = isAllCities ? 'All Cities' : city;
-
-        display.append(label, cityName);
-
-        if (!isAllCities && country) {
-            const countryName = document.createElement('span');
-            countryName.className = 'location-current-country';
-            countryName.textContent = country;
-            display.append(countryName);
-        }
+    if (!loc) {
+        display.textContent = 'No location set.';
         return;
     }
 
-    if (country) {
+    const savedScope = getSavedLocationScope(loc);
+    display.replaceChildren();
+
+    if (savedScope.scope === 'all') {
         const label = document.createElement('span');
         label.className = 'location-current-label';
         label.textContent = 'Current location:';
 
+        const allCities = document.createElement('span');
+        allCities.className = 'location-current-city';
+        allCities.textContent = 'All Cities';
+        display.append(label, allCities);
+        return;
+    }
+
+    if (savedScope.scope === 'country') {
+        const label = document.createElement('span');
+        label.className = 'location-current-label';
+        label.textContent = 'Current country:';
+
         const countryName = document.createElement('span');
         countryName.className = 'location-current-country';
-        countryName.textContent = country;
+        countryName.textContent = savedScope.country;
         display.append(label, countryName);
         return;
     }
 
-    display.textContent = 'No location set.';
+    const label = document.createElement('span');
+    label.className = 'location-current-label';
+    label.textContent = 'Current city:';
+
+    const cityName = document.createElement('span');
+    cityName.className = 'location-current-city';
+    cityName.textContent = savedScope.city;
+    display.append(label, cityName);
+
+    if (savedScope.country) {
+        const countryName = document.createElement('span');
+        countryName.className = 'location-current-country';
+        countryName.textContent = savedScope.country;
+        display.append(countryName);
+    }
 }
 
 
 window.setBackroomSharedLocation = function(location) {
     const city = String(location?.city || '').trim();
+    const country = String(location?.country || '').trim();
+    const postcode = String(location?.postcode || '').trim();
+
     const nextLocation = city
-        ? {
-            country: String(location?.country || '').trim(),
-            city,
-            postcode: String(location?.postcode || '').trim(),
-            scope: 'city'
-        }
-        : { country: '', city: '', postcode: '', scope: 'all' };
+        ? { country, city, postcode, scope: 'city' }
+        : country
+            ? { country, city: '', postcode, scope: 'country' }
+            : { country: '', city: '', postcode: '', scope: 'all' };
 
     localStorage.setItem('br_location', JSON.stringify(nextLocation));
     updateLocationDisplay(nextLocation);
-    updateLocationActionLabel(nextLocation.city);
+    updateLocationActionLabel(nextLocation.city, nextLocation.country);
     announceLocationChange(nextLocation);
     return nextLocation;
 };
