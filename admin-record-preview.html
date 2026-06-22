@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Backroom Draft Preview</title>
+    <link href="https://fonts.googleapis.com/css2?family=Antonio:wght@400;700&family=Barlow+Condensed:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #0b0f19;
+            --surface: #151b29;
+            --surface-mid: #202838;
+            --surface-deep: #080c14;
+            --line: #384155;
+            --blue: #2ca8d4;
+            --cyan: #49d2ff;
+            --red: #d55036;
+            --yellow: #f0c94c;
+            --text: #f4f7ff;
+            --muted: #aab4c5;
+            --green: #43d89a;
+        }
+
+        * { box-sizing: border-box; }
+        html, body { min-height: 100%; margin: 0; }
+        body {
+            min-height: 100vh;
+            background:
+                radial-gradient(circle at 55% -20%, rgba(44,168,212,.2), transparent 43rem),
+                linear-gradient(180deg, #0b101a 0%, var(--bg) 100%);
+            color: var(--text);
+            font-family: 'Barlow Condensed', Arial, sans-serif;
+        }
+
+        .preview-bar {
+            position: sticky;
+            top: 0;
+            z-index: 20;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 15px;
+            padding: 13px 20px;
+            background: rgba(12,16,26,.96);
+            border-bottom: 1px solid var(--blue);
+            box-shadow: 0 8px 28px rgba(0,0,0,.34);
+        }
+        .preview-kicker { margin: 0; color: var(--cyan); font-family: 'Antonio', sans-serif; font-size: 1.2rem; letter-spacing: .08em; }
+        .preview-note { margin: 3px 0 0; color: var(--muted); font-size: 1rem; }
+        .close-button { border: 1px solid var(--blue); border-radius: 999px; color: var(--text); background: var(--surface-mid); padding: 9px 15px; font: 600 1rem 'Barlow Condensed', sans-serif; cursor: pointer; white-space: nowrap; }
+        .close-button:hover { background: var(--blue); color: #071018; }
+
+        .page { width: min(1320px, 100%); padding: 28px; margin: 0 auto; }
+        .preview-shell { background: var(--surface); border: 1px solid var(--line); border-radius: 22px; overflow: hidden; box-shadow: 0 22px 70px rgba(0,0,0,.44); }
+        .record-header { display: flex; align-items: center; justify-content: space-between; gap: 18px; padding: 21px 26px; background: #1a2232; border-bottom: 1px solid var(--line); }
+        h1, h2, h3, h4 { font-family: 'Antonio', sans-serif; letter-spacing: .04em; }
+        h1 { margin: 0; font-size: clamp(2rem, 5vw, 3.4rem); text-transform: uppercase; }
+        h2 { margin: 0; color: var(--cyan); font-size: 1.9rem; text-transform: uppercase; }
+        h3 { margin: 0; font-size: 1.55rem; text-transform: uppercase; }
+        .status { display: inline-flex; align-items: center; gap: 7px; border: 1px solid var(--blue); border-radius: 999px; color: var(--cyan); padding: 6px 12px; font-weight: 700; text-transform: uppercase; }
+        .status.closed, .status.flag, .status.hold { border-color: var(--red); color: #ff917f; }
+        .record-content { padding: 24px; }
+
+        .venue-top { display: grid; grid-template-columns: minmax(240px, .78fr) minmax(0, 1.22fr); gap: 22px; }
+        .media-panel, .info-panel, .about-panel, .events-panel, .event-preview-card { background: var(--surface-deep); border: 1px solid var(--line); border-radius: 15px; }
+        .media-panel { overflow: hidden; }
+        .media-panel img { display: block; width: 100%; aspect-ratio: 1.25 / 1; object-fit: cover; background: #192337; }
+        .media-caption { padding: 11px 14px; color: var(--muted); font-size: .95rem; }
+        .info-panel { padding: 20px; }
+        .info-line { display: flex; align-items: flex-start; gap: 8px; margin-bottom: 9px; color: var(--text); font-size: 1.06rem; line-height: 1.3; }
+        .info-line strong { color: #fff; }
+        .update-line { color: var(--yellow); }
+        .social-links { display: flex; flex-wrap: wrap; gap: 9px; margin: 16px 0 18px; }
+        .social-links a, .social-links span { display: inline-flex; min-width: 38px; min-height: 34px; align-items: center; justify-content: center; padding: 6px 10px; background: #1d2738; border: 1px solid #36445e; border-radius: 10px; color: var(--text); font-size: 1.15rem; text-decoration: none; }
+        .social-links a:hover { border-color: var(--blue); color: var(--cyan); }
+        .tag-row { display: flex; flex-wrap: wrap; gap: 8px; }
+        .tag { border: 1px solid var(--blue); color: #bcecff; border-radius: 999px; padding: 4px 11px; font-size: .94rem; line-height: 1; }
+        .tag.adult { border-color: var(--red); color: #ffbaa9; }
+        .tag.social { border-color: var(--yellow); color: #ffec8c; }
+
+        .rating-grid { display: grid; grid-template-columns: 132px repeat(5, minmax(27px, 1fr)); gap: 10px 7px; align-items: center; margin-top: 22px; padding: 16px; background: #060a12; border: 1px solid var(--line); border-radius: 12px; }
+        .rating-label { color: var(--cyan); font-family: 'Antonio', sans-serif; font-size: 1rem; text-transform: uppercase; }
+        .rating-cell { min-height: 30px; display: grid; place-items: center; font-size: 1.27rem; opacity: .24; }
+        .rating-cell.filled { opacity: 1; filter: drop-shadow(0 0 8px rgba(255,255,255,.15)); }
+        .rating-na { grid-column: span 5; color: var(--muted); font-size: .95rem; }
+
+        .about-panel { margin-top: 22px; padding: 21px; }
+        .about-panel h2, .events-panel h2 { margin-bottom: 13px; }
+        .opening { padding-bottom: 16px; margin-bottom: 16px; border-bottom: 1px solid var(--red); font-size: 1.08rem; line-height: 1.45; }
+        .opening em { display: block; margin-top: 7px; color: #d9deea; }
+        .formatted-copy { color: var(--text); line-height: 1.62; font-size: 1.12rem; }
+        .formatted-copy h4 { margin: 15px 0 6px; color: var(--cyan); font-size: 1.22rem; }
+        .formatted-copy hr { border: 0; height: 1px; background: var(--red); margin: 16px 0; }
+        .formatted-copy ul { margin: 6px 0 14px 21px; padding: 0; }
+        .formatted-copy li { margin-bottom: 5px; }
+
+        .events-panel { margin-top: 22px; padding: 21px; }
+        .event-list { display: grid; gap: 12px; }
+        .event-mini { display: grid; grid-template-columns: 68px 1fr; gap: 14px; padding: 14px; background: #141c2b; border: 1px solid var(--line); border-radius: 12px; }
+        .date-badge { display: grid; place-items: center; align-content: center; min-height: 68px; background: #202b40; border: 1px solid var(--blue); border-radius: 10px; text-align: center; }
+        .date-badge strong { font: 1.8rem 'Antonio', sans-serif; line-height: .9; }
+        .date-badge span { color: var(--cyan); font: .82rem 'Antonio', sans-serif; letter-spacing: .06em; }
+        .event-meta { margin: 5px 0 0; color: var(--muted); font-size: 1rem; }
+
+        .event-preview-card { padding: 24px; }
+        .event-main { display: grid; grid-template-columns: 92px minmax(0, 1fr); gap: 18px; }
+        .event-big-date { min-height: 92px; background: #202b40; border: 1px solid var(--blue); border-radius: 14px; display: grid; place-items: center; align-content: center; text-align: center; }
+        .event-big-date strong { font: 2.7rem 'Antonio', sans-serif; line-height: .85; }
+        .event-big-date span { color: var(--cyan); font: 1rem 'Antonio', sans-serif; letter-spacing: .08em; }
+        .event-subtitle { margin: 7px 0 0; color: var(--muted); font-size: 1.1rem; }
+        .event-copy { margin-top: 20px; padding-top: 20px; border-top: 1px solid var(--line); }
+        .ticket-link { display: inline-flex; margin-top: 16px; padding: 9px 13px; color: #071018; background: var(--cyan); border-radius: 999px; text-decoration: none; font-weight: 700; }
+        .ticket-link:hover { background: #8be8ff; }
+        .venue-inline { margin-top: 22px; padding: 15px; background: #121a28; border: 1px solid var(--line); border-radius: 12px; }
+        .venue-inline p { margin: 6px 0 0; color: var(--muted); font-size: 1rem; }
+
+        .empty { padding: 32px; text-align: center; color: var(--muted); }
+        .error { max-width: 760px; margin: 80px auto; padding: 28px; border: 1px solid var(--red); border-radius: 16px; background: #1f1418; color: #fff; }
+        .error h1 { color: #ff9f90; font-size: 2rem; }
+
+        @media (max-width: 780px) {
+            .preview-bar { align-items: flex-start; }
+            .page { padding: 12px; }
+            .record-header { padding: 17px; align-items: flex-start; flex-direction: column; }
+            .record-content { padding: 14px; }
+            .venue-top, .event-main { grid-template-columns: 1fr; }
+            .rating-grid { grid-template-columns: 96px repeat(5, minmax(22px, 1fr)); gap: 8px 4px; }
+            .event-mini { grid-template-columns: 55px 1fr; }
+            .date-badge { min-height: 55px; }
+        }
+    </style>
+</head>
+<body>
+    <header class="preview-bar">
+        <div>
+            <p class="preview-kicker" id="preview-kicker">👁️ DRAFT RECORD PREVIEW</p>
+            <p class="preview-note">This preview uses the saved admin draft, not the published JSON.</p>
+        </div>
+        <button type="button" class="close-button" onclick="window.close()">Close Preview ✕</button>
+    </header>
+
+    <main class="page" id="preview-root"></main>
+
+    <script>
+        (function () {
+            'use strict';
+
+            const root = document.getElementById('preview-root');
+            const token = new URLSearchParams(window.location.search).get('token') || '';
+            let payload = null;
+
+            try {
+                payload = JSON.parse(localStorage.getItem('br_admin_record_preview_payload') || 'null');
+            } catch {
+                payload = null;
+            }
+
+            function escapeHTML(value) {
+                return String(value ?? '')
+                    .replaceAll('&', '&amp;')
+                    .replaceAll('<', '&lt;')
+                    .replaceAll('>', '&gt;')
+                    .replaceAll('"', '&quot;')
+                    .replaceAll("'", '&#39;');
+            }
+
+            function normalise(value) {
+                return String(value || '')
+                    .trim()
+                    .toLowerCase()
+                    .normalize('NFD')
+                    .replace(/[\u0300-\u036f]/g, '')
+                    .replace(/[^a-z0-9]+/g, '');
+            }
+
+            function splitTags(value) {
+                return [...new Set(String(value || '').split(',').map(item => item.trim()).filter(Boolean))];
+            }
+
+            function tagClass(tag) {
+                const adult = ['Cruising', 'Darkroom', 'Men Only', 'Dresscode', 'Naked', 'Underwear', 'Smoking Area', 'Fetish/Gear'];
+                const social = ['Bear', 'Mature', 'Young Crowd', 'Queer', 'Pride', 'Social', 'Drag', 'Karaoke'];
+                if (adult.includes(tag)) return 'adult';
+                if (social.includes(tag)) return 'social';
+                return '';
+            }
+
+            function tagMarkup(value) {
+                const tags = splitTags(value);
+                return tags.length ? `<div class="tag-row">${tags.map(tag => `<span class="tag ${tagClass(tag)}">${escapeHTML(tag)}</span>`).join('')}</div>` : '';
+            }
+
+            function linkify(value) {
+                const escaped = escapeHTML(value);
+                return escaped.replace(/(https?:\/\/[^\s<]+)/gi, candidate => {
+                    const trailing = candidate.match(/[.,;:!?]+$/)?.[0] || '';
+                    const url = candidate.slice(0, candidate.length - trailing.length);
+                    return `<a href="${url}" target="_blank" rel="noopener noreferrer">${url}</a>${trailing}`;
+                });
+            }
+
+            function formatDescription(value) {
+                if (!value) return '<p class="empty">No description has been added yet.</p>';
+                const normalised = String(value)
+                    .replace(/\r\n?/g, '\n')
+                    .replace(/={5,}/g, '\n=====\n')
+                    .replace(/------/g, '\n------\n')
+                    .replace(/(^|[^=])==(?!=)/g, '$1\n');
+                const chunks = [];
+                let inList = false;
+                const closeList = () => {
+                    if (inList) {
+                        chunks.push('</ul>');
+                        inList = false;
+                    }
+                };
+                normalised.split('\n').forEach(raw => {
+                    const line = raw.trim();
+                    if (!line) { closeList(); return; }
+                    if (line === '=====') { closeList(); chunks.push('<hr>'); return; }
+                    if (line === '------') { closeList(); return; }
+                    const heading = line.match(/^(?:\*{5}|\+{5})\s*(.+)$/);
+                    if (heading) { closeList(); chunks.push(`<h4>${linkify(heading[1])}</h4>`); return; }
+                    const bullet = line.match(/^--\s+(.+)$/);
+                    if (bullet) {
+                        if (!inList) { chunks.push('<ul>'); inList = true; }
+                        chunks.push(`<li>${linkify(bullet[1])}</li>`);
+                        return;
+                    }
+                    closeList();
+                    chunks.push(`<div>${linkify(line).replace(/!!([\s\S]*?)!!/g, '<strong>$1</strong>').replace(/\|\|([\s\S]*?)\|\|/g, '<strong>$1</strong>')}</div>`);
+                });
+                closeList();
+                return chunks.join('');
+            }
+
+            function parseDate(value) {
+                const raw = String(value || '').trim();
+                let match = raw.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+                if (match) return new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
+                match = raw.match(/^(\d{1,2})-(\d{1,2})-(\d{4})$/);
+                if (match) return new Date(Number(match[3]), Number(match[2]) - 1, Number(match[1]));
+                const parsed = new Date(raw);
+                return Number.isNaN(parsed.getTime()) ? null : parsed;
+            }
+
+            function formatDate(value, compact = false) {
+                const date = parseDate(value);
+                if (!date) return '';
+                const months = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
+                const day = String(date.getDate()).padStart(2, '0');
+                const month = months[date.getMonth()];
+                return compact ? { day, month, year: String(date.getFullYear()) } : `${day} - ${month} - ${date.getFullYear()}`;
+            }
+
+            function formatTimeRange(event) {
+                return [event.Event_Start_Time, event.Event_End_Time].filter(Boolean).join(' – ');
+            }
+
+            function cityCountry(venue) {
+                return [venue?.City, venue?.Country].filter(Boolean).join(' · ');
+            }
+
+            function socialLinks(venue) {
+                const sites = [
+                    ['Instagram_URL', '📸', 'Instagram'],
+                    ['Facebook_URL', 'ⓕ', 'Facebook'],
+                    ['Website_URL', '🌐', 'Website'],
+                    ['Other_URL', '🔗', 'Other link']
+                ].filter(([key]) => String(venue?.[key] || '').trim());
+                if (!sites.length) return '';
+                return `<div class="social-links">${sites.map(([key, icon, name]) => `<a href="${escapeHTML(String(venue[key]).trim())}" target="_blank" rel="noopener noreferrer" title="Open ${name}">${icon}</a>`).join('')}</div>`;
+            }
+
+            function ratingRows(venue) {
+                const rows = [
+                    ['Overall', 'Rating_General', '🍆'],
+                    ['Age Range', 'Rating_Age_Range', '🧍'],
+                    ['Size', 'Rating_Size', '📏'],
+                    ['Darkroom', 'Rating_Darkroom', '💦'],
+                    ['Cost', 'Rating_Cost', '🪙'],
+                    ['Location', 'Rating_Location', '🍑'],
+                    ['Popularity', 'Rating_Busyness', '🧑‍🤝‍🧑']
+                ];
+                return `<div class="rating-grid">${rows.map(([label, key, icon]) => {
+                    const value = Number(venue?.[key]);
+                    const hasRating = Number.isFinite(value) && value > 0;
+                    return `<div class="rating-label">${label}</div>${hasRating
+                        ? [1, 2, 3, 4, 5].map(index => `<div class="rating-cell ${index <= value ? 'filled' : ''}">${icon}</div>`).join('')
+                        : '<div class="rating-na">not yet rated</div>'}`;
+                }).join('')}</div>`;
+            }
+
+            function eventDateBadge(event, large = false) {
+                const date = formatDate(event?.Event_Date, true) || { day: '–', month: 'TBC', year: '' };
+                const classes = large ? 'event-big-date' : 'date-badge';
+                return `<div class="${classes}"><strong>${escapeHTML(date.day)}</strong><span>${escapeHTML(date.month)}</span>${large ? `<span>${escapeHTML(date.year)}</span>` : ''}</div>`;
+            }
+
+            function activeEvent(event) {
+                const status = String(event?.Status || '').trim().toLowerCase();
+                return !['hold', 'flag', 'closed', 'cancelled', 'canceled'].includes(status);
+            }
+
+            function renderVenue(venue, events) {
+                const status = String(venue?.Status || 'Live').trim() || 'Live';
+                const image = String(venue?.Image_URL || '').trim() || `Venue_images/${venue?.Venue_ID || ''}-01.jpg`;
+                const relatedEvents = (events || []).filter(event => String(event?.Venue_ID || '') === String(venue?.Venue_ID || '') && activeEvent(event));
+                const lastUpdated = formatDate(venue?.Last_Updated);
+                const opening = venue?.Opening_Days || venue?.Opening_Open_Time || venue?.Opening_Close_Time || venue?.Opening_Notes;
+
+                document.title = `${venue?.Name || 'Venue'} — Backroom Draft Preview`;
+                document.getElementById('preview-kicker').textContent = '👁️ DRAFT VENUE PREVIEW';
+
+                return `<section class="preview-shell">
+                    <header class="record-header">
+                        <h1>${escapeHTML(venue?.Name || 'Unnamed Venue')}</h1>
+                        <span class="status ${normalise(status)}">${escapeHTML(status)}</span>
+                    </header>
+                    <div class="record-content">
+                        <div class="venue-top">
+                            <section class="media-panel">
+                                <img src="${escapeHTML(image)}" alt="${escapeHTML(venue?.Name || 'Venue')}" onerror="this.onerror=null;this.src='placeholder_venue.jpg';">
+                                <div class="media-caption">${escapeHTML(cityCountry(venue) || 'Location not listed')}</div>
+                            </section>
+                            <section class="info-panel">
+                                <div class="info-line"><strong>🗺️ Directions</strong><span>${escapeHTML(venue?.Address || 'Address not listed')}</span></div>
+                                ${venue?.Nearest_Station ? `<div class="info-line"><strong>🚄 Station:</strong><span>${escapeHTML(venue.Nearest_Station)}</span></div>` : ''}
+                                ${lastUpdated ? `<div class="info-line update-line"><strong>⌛ Last updated:</strong><span>${escapeHTML(lastUpdated)}</span></div>` : ''}
+                                ${socialLinks(venue)}
+                                ${tagMarkup(venue?.Vibe_Tags)}
+                                ${ratingRows(venue)}
+                            </section>
+                        </div>
+                        <section class="about-panel">
+                            <h2>About</h2>
+                            ${opening ? `<div class="opening"><strong>Hours:</strong> ${escapeHTML([venue?.Opening_Days, venue?.Opening_Open_Time, venue?.Opening_Close_Time].filter(Boolean).join(' '))}${venue?.Opening_Notes ? `<em>${escapeHTML(venue.Opening_Notes)}</em>` : ''}</div>` : ''}
+                            <div class="formatted-copy">${formatDescription(venue?.Description)}</div>
+                        </section>
+                        ${relatedEvents.length ? `<section class="events-panel"><h2>📅 Upcoming Events</h2><div class="event-list">${relatedEvents.map(event => `<article class="event-mini">${eventDateBadge(event)}<div><h3>${escapeHTML(event?.Event_Name || 'Event')}</h3><p class="event-meta">${escapeHTML([formatTimeRange(event), event?.Recurrence_Type === 'Weekly' && event?.Recurrence_Day ? `Every ${event.Recurrence_Day}` : ''].filter(Boolean).join(' · '))}</p></div></article>`).join('')}</div></section>` : ''}
+                    </div>
+                </section>`;
+            }
+
+            function renderEvent(event, venues) {
+                const venue = (venues || []).find(item => String(item?.Venue_ID || '') === String(event?.Venue_ID || '')) || null;
+                const date = formatDate(event?.Event_Date, true) || { day: '–', month: 'TBC', year: '' };
+                const venueName = venue?.Name || 'Venue not listed';
+                const eventTags = [...new Set([...splitTags(event?.Vibe_Tags), ...splitTags(venue?.Vibe_Tags)])];
+                const status = String(event?.Status || 'Live').trim() || 'Live';
+
+                document.title = `${event?.Event_Name || 'Event'} — Backroom Draft Preview`;
+                document.getElementById('preview-kicker').textContent = '👁️ DRAFT EVENT PREVIEW';
+
+                return `<section class="preview-shell">
+                    <header class="record-header">
+                        <h1>${escapeHTML(event?.Event_Name || 'Unnamed Event')}</h1>
+                        <span class="status ${normalise(status)}">${escapeHTML(status)}</span>
+                    </header>
+                    <div class="record-content">
+                        <article class="event-preview-card">
+                            <div class="event-main">
+                                <div class="event-big-date"><strong>${escapeHTML(date.day)}</strong><span>${escapeHTML(date.month)}</span><span>${escapeHTML(date.year)}</span></div>
+                                <div>
+                                    <h2>${escapeHTML(event?.Event_Name || 'Event')}</h2>
+                                    <p class="event-subtitle">🏛️ ${escapeHTML(venueName)}${venue ? ` · ${escapeHTML(cityCountry(venue))}` : ''}</p>
+                                    ${formatTimeRange(event) ? `<p class="event-subtitle">🕒 ${escapeHTML(formatTimeRange(event))}</p>` : ''}
+                                    ${event?.Recurrence_Type ? `<p class="event-subtitle">🔁 ${escapeHTML(event.Recurrence_Type === 'Weekly' && event?.Recurrence_Day ? `Every ${event.Recurrence_Day}` : event.Recurrence_Type)}</p>` : ''}
+                                    ${event?.Dresscode_Info ? `<p class="event-subtitle">👕 ${escapeHTML(event.Dresscode_Info)}</p>` : ''}
+                                </div>
+                            </div>
+                            <div class="event-copy">
+                                <div class="formatted-copy">${formatDescription(event?.Event_Description)}</div>
+                                ${eventTags.length ? `<div style="margin-top:18px;">${tagMarkup(eventTags.join(','))}</div>` : ''}
+                                ${event?.Ticket_URL ? `<a class="ticket-link" href="${escapeHTML(event.Ticket_URL)}" target="_blank" rel="noopener noreferrer">🎟️ Tickets</a>` : ''}
+                            </div>
+                            ${venue ? `<div class="venue-inline"><h3>${escapeHTML(venue.Name)}</h3><p>${escapeHTML([venue.Address, cityCountry(venue)].filter(Boolean).join(' · '))}</p></div>` : ''}
+                        </article>
+                    </div>
+                </section>`;
+            }
+
+            if (!payload || !token || payload.token !== token || !payload.record || !payload.mode) {
+                root.innerHTML = `<section class="error"><h1>Preview unavailable</h1><p>Return to Backroom Admin, click inside a venue or event row, then choose <strong>View Record</strong>.</p></section>`;
+                return;
+            }
+
+            root.innerHTML = payload.mode === 'venues'
+                ? renderVenue(payload.record, payload.events)
+                : renderEvent(payload.record, payload.venues);
+        }());
+    </script>
+</body>
+</html>

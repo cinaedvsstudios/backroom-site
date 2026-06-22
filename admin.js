@@ -8,13 +8,119 @@ let showHiddenFields = false;
 
 let avatarAdminData = [];
 let tempMergeData = []; 
-let auditResults = null;
-let dismissedAuditKeys = new Set();
 
 let editorHistory = [];
 let historyIndex = -1;
 
 let currentAdminTextSize = 0.95;
+let selectedAdminRecordId = '';
+let selectedAdminRecordMode = '';
+
+function getSelectedAdminRecord() {
+    if (!selectedAdminRecordId || selectedAdminRecordMode !== currentMode) return null;
+    const idField = getAdminIdField();
+    return draftData.find(row => String(row?.[idField] ?? '') === String(selectedAdminRecordId)) || null;
+}
+
+function updateViewRecordButton() {
+    const button = document.getElementById('btn-view-record');
+    if (!button) return;
+
+    const record = getSelectedAdminRecord();
+    button.disabled = !record;
+    button.title = record
+        ? `Preview ${currentMode === 'venues' ? 'venue' : 'event'}: ${record.Name || record.Event_Name || selectedAdminRecordId}`
+        : 'Click inside a venue or event row first';
+    button.textContent = record ? '👁️ View Record' : '👁️ View Record';
+}
+
+function refreshAdminRecordSelection() {
+    const table = document.getElementById('admin-table-container');
+    if (!table) return;
+    table.querySelectorAll('tr.record-preview-selected').forEach(row => row.classList.remove('record-preview-selected'));
+
+    const record = getSelectedAdminRecord();
+    if (record) {
+        const row = Array.from(table.querySelectorAll('tbody tr[data-id]')).find(item => String(item.dataset.id) === String(selectedAdminRecordId));
+        row?.classList.add('record-preview-selected');
+    }
+    updateViewRecordButton();
+}
+
+window.selectAdminRecord = function(id) {
+    if (!id || (currentMode !== 'venues' && currentMode !== 'events')) return;
+    selectedAdminRecordId = String(id);
+    selectedAdminRecordMode = currentMode;
+    refreshAdminRecordSelection();
+};
+
+function getStoredDraft(mode) {
+    const key = mode === 'venues' ? 'br_admin_venues_draft' : 'br_admin_events_draft';
+    try {
+        const parsed = JSON.parse(localStorage.getItem(key) || '[]');
+        return Array.isArray(parsed) ? parsed : [];
+    } catch {
+        return [];
+    }
+}
+
+async function getPreviewCollection(mode) {
+    if (currentMode === mode && Array.isArray(draftData) && draftData.length) {
+        return JSON.parse(JSON.stringify(draftData));
+    }
+
+    const stored = getStoredDraft(mode);
+    if (stored.length) return stored;
+
+    const filename = mode === 'venues' ? 'listings.json' : 'events.json';
+    try {
+        const response = await fetch(`${filename}?v=${Date.now()}`);
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const parsed = await response.json();
+        return Array.isArray(parsed) ? parsed : [];
+    } catch {
+        return [];
+    }
+}
+
+window.openAdminRecordPreview = async function() {
+    const record = getSelectedAdminRecord();
+    if (!record) {
+        showToast('Click inside a venue or event row first.');
+        return;
+    }
+
+    const popup = window.open('', 'backroom-record-preview', 'popup=yes,width=1280,height=900,resizable=yes,scrollbars=yes');
+    if (!popup) {
+        showToast('Your browser blocked the preview window. Allow popups for Backroom Admin.');
+        return;
+    }
+
+    popup.document.title = 'Preparing Backroom Preview…';
+    popup.document.body.innerHTML = '<div style="margin:0; min-height:100vh; display:grid; place-items:center; background:#0b0f19; color:#fff; font:20px Arial,sans-serif;">Preparing draft preview…</div>';
+
+    const [venueRecords, eventRecords] = await Promise.all([
+        getPreviewCollection('venues'),
+        getPreviewCollection('events')
+    ]);
+
+    const idField = getAdminIdField();
+    const selectedRecord = (currentMode === 'venues' ? venueRecords : eventRecords)
+        .find(item => String(item?.[idField] ?? '') === String(record[idField] ?? '')) || record;
+
+    const token = `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+    const payload = {
+        token,
+        mode: currentMode,
+        record: selectedRecord,
+        venues: venueRecords,
+        events: eventRecords,
+        generatedAt: new Date().toISOString()
+    };
+
+    localStorage.setItem('br_admin_record_preview_payload', JSON.stringify(payload));
+    popup.location.replace(`admin-record-preview.html?token=${encodeURIComponent(token)}`);
+};
 
 function showToast(message) {
     const container = document.getElementById('toast-container');
@@ -30,71 +136,6 @@ function showToast(message) {
         toast.classList.remove('show');
         setTimeout(() => toast.remove(), 300);
     }, 2500);
-}
-
-const EXPORT_FILE_NAMES = {
-    venues: 'listings.json',
-    events: 'events.json'
-};
-
-function legacyDownloadText(content, filename, mimeType) {
-    const blob = new Blob([content], { type: mimeType });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    setTimeout(() => URL.revokeObjectURL(url), 1500);
-}
-
-/**
- * Saves through the operating-system file picker when the browser supports the
- * File System Access API. Choosing an existing file lets the user overwrite
- * their repository copy after the OS confirmation. Browsers without support
- * keep the existing download fallback.
- */
-async function exportTextToLocalFile(content, options) {
-    const {
-        suggestedName,
-        mimeType,
-        description,
-        extensions,
-        pickerId
-    } = options;
-
-    const canUseSavePicker = typeof window.showSaveFilePicker === 'function' && window.isSecureContext;
-    if (!canUseSavePicker) {
-        legacyDownloadText(content, suggestedName, mimeType);
-        showToast(`Downloaded ${suggestedName}. This browser cannot open the overwrite picker.`);
-        return;
-    }
-
-    try {
-        const handle = await window.showSaveFilePicker({
-            id: pickerId,
-            suggestedName,
-            types: [{
-                description,
-                accept: { [mimeType]: extensions }
-            }]
-        });
-
-        const writable = await handle.createWritable();
-        await writable.write(new Blob([content], { type: mimeType }));
-        await writable.close();
-        showToast(`Saved ${handle.name || suggestedName}. GitHub Desktop can now sync it.`);
-    } catch (error) {
-        if (error?.name === 'AbortError') {
-            showToast('Export cancelled.');
-            return;
-        }
-
-        console.warn('File picker export failed; using download fallback.', error);
-        legacyDownloadText(content, suggestedName, mimeType);
-        showToast(`Downloaded ${suggestedName}. The file picker was unavailable.`);
-    }
 }
 
 let lastJsonErrorText = "";
@@ -153,6 +194,9 @@ window.checkPin = function() {
 
 window.switchView = function(view) {
     currentMode = view;
+    selectedAdminRecordId = '';
+    selectedAdminRecordMode = '';
+    updateViewRecordButton();
     const views = {
         'tables': document.getElementById('view-tables'),
         'editor': document.getElementById('view-editor'),
@@ -169,17 +213,20 @@ window.switchView = function(view) {
     if(view === 'editor') {
         views['editor'].style.display = 'flex';
         views['editor'].classList.remove('hidden');
+        document.getElementById('btn-formatting-guide')?.classList.add('hidden');
         loadEditorPage();
         saveEditorState(); 
     } else if (view === 'avatars') {
         views['avatars'].style.display = 'flex';
         views['avatars'].classList.remove('hidden');
+        document.getElementById('btn-formatting-guide')?.classList.add('hidden');
         loadAdminAvatars();
     } else {
         views['tables'].style.display = 'flex';
         views['tables'].classList.remove('hidden');
         const title = document.getElementById('summary-title');
         if(title) title.innerText = view === 'venues' ? 'VENUE DATA' : 'EVENT DATA';
+        document.getElementById('btn-formatting-guide')?.classList.remove('hidden');
         activeTableFilters = {};
         currentReviewFilter = 'all';
         loadDraftsFromLocal();
@@ -322,7 +369,7 @@ window.toggleMagentaCol = function(btn, idx) {
 
 const headerMapping = {
     "Event_Start_Time": "Start Time", "Event_End_Time": "End Time", "Venue_ID": "ID", "Event_ID": "ID",
-    "Description": "Desc", "Event_Description": "Desc", "Recurrence_Type": "Repeat", "Recurrence_Day": "Weekly Day", "Recurrence_Until": "Repeat Until", "Rating_General": "Gen", "Rating_Darkroom": "Dark", "Priority": "Priority", "Priority": "Priority"
+    "Description": "Desc", "Event_Description": "Desc", "Rating_General": "Gen", "Rating_Darkroom": "Dark", "Priority": "Priority", "Priority": "Priority"
 };
 
 function renderFilters() {
@@ -337,7 +384,7 @@ function renderFilters() {
 function generatePreviewTableHTML(dataObj) {
     if (!dataObj || dataObj.length === 0) return "<p style='padding:20px;'>No data available.</p>";
 
-    const columns = getAdminColumns(dataObj);
+    const columns = Object.keys(dataObj[0] || {});
     let html = `<table><thead id="preview-thead"><tr>`;
     html += `<th style="min-width:40px;">🗑️</th>`; 
     
@@ -432,7 +479,7 @@ function generateTableHTML(dataObj, isMainTable) {
         let isNew = false;
         if(liveData.length > 0) isNew = !liveData.some(l => l[idField] === id);
 
-        html += `<tr data-id="${id}" class="${isNew ? 'new-entry-row' : ''}">`;
+        html += `<tr data-id="${id}" class="${isNew ? 'new-entry-row' : ''}" onmousedown="selectAdminRecord(this.dataset.id)">`;
 
         const needsReview = (!row.Share_URL || String(row.Share_URL).toLowerCase() === 'false' || String(row.Share_URL) === 'PENDING' || String(row.Status || '') === 'Draft');
         html += `<td style="text-align:center;">
@@ -476,10 +523,7 @@ function getAdminIdField() {
 
 function getAdminColumns(dataObj) {
     const source = (dataObj && dataObj.length) ? dataObj : (draftData && draftData.length ? draftData : liveData);
-    const columns = [];
-    (source || []).forEach(row => Object.keys(row || {}).forEach(key => { if(!columns.includes(key)) columns.push(key); }));
-    if(currentMode === 'events') ['Recurrence_Type', 'Recurrence_Day', 'Recurrence_Until'].forEach(key => { if(!columns.includes(key)) columns.push(key); });
-    return columns;
+    return Object.keys(source?.[0] || {});
 }
 
 function applyDefaultHiddenColumns() {
@@ -577,6 +621,16 @@ function renderTable() {
     });
 
     applyDefaultHiddenColumns();
+
+    if (!tableContainer.dataset.recordSelectionBound) {
+        tableContainer.dataset.recordSelectionBound = 'true';
+        tableContainer.addEventListener('focusin', (event) => {
+            const row = event.target.closest('tbody tr[data-id]');
+            if (row) window.selectAdminRecord(row.dataset.id);
+        });
+    }
+
+    refreshAdminRecordSelection();
     updateMismatchCount();
 }
 
@@ -586,12 +640,10 @@ window.editCell = function(td, rowIndex, col) {
 
     const currentVal = td.innerText.trim();
 
-    if(col === 'Status' || col === 'Priority' || col.startsWith('Rating_') || col === 'Recurrence_Type' || col === 'Recurrence_Day') {
+    if(col === 'Status' || col === 'Priority' || col.startsWith('Rating_')) {
         let options = '';
         if(col === 'Status') options = '<option value="Live">Live</option><option value="Closed">Closed</option><option value="Hold">Hold</option><option value="Flag">Flag</option>';
         else if(col === 'Priority') options = '<option value="">Normal / blank</option><option value="1">1 - highest featured priority</option><option value="2">2 - secondary featured priority</option><option value="3">3 - featured page only / lower priority</option>';
-        else if(col === 'Recurrence_Type') options = '<option value="">One-off / dated</option><option value="Weekly">Weekly</option>';
-        else if(col === 'Recurrence_Day') options = '<option value="">Not recurring</option><option value="Monday">Monday</option><option value="Tuesday">Tuesday</option><option value="Wednesday">Wednesday</option><option value="Thursday">Thursday</option><option value="Friday">Friday</option><option value="Saturday">Saturday</option><option value="Sunday">Sunday</option>';
         else if(col.startsWith('Rating_')) options = '<option value="0">0</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option>';
 
         td.innerHTML = `<select class="cell-edit" onblur="saveCell(this, ${rowIndex}, '${col}')" onchange="saveCell(this, ${rowIndex}, '${col}')">${options}</select>`;
@@ -897,7 +949,7 @@ wysiwygContent?.addEventListener('input', () => {
     window.editorSaveTimer = setTimeout(saveEditorState, 500);
 });
 
-// v0.66 Page Selector Updated
+// V0.58 Page Selector Updated
 document.getElementById('editor-page-select')?.addEventListener('change', (e) => {
     if(e.target.value === 'new') {
         const defaultText = `<h1>New Page</h1><p>Start typing... dont forget to have this page added to the menu it wont appear automatically</p>`;
@@ -1023,212 +1075,6 @@ window.downloadEditorHTML = function() {
     a.click();
 }
 
-
-function normaliseAuditValue(value) {
-    return String(value ?? '').trim();
-}
-
-function isBlankAuditValue(value) {
-    return normaliseAuditValue(value) === '';
-}
-
-function isLikelyExternalUrl(url) {
-    return /^https?:\/\//i.test(normaliseAuditValue(url));
-}
-
-function isValidUrlFormat(url) {
-    const raw = normaliseAuditValue(url);
-    if(!raw) return true;
-    try {
-        const parsed = new URL(raw);
-        return parsed.protocol === 'http:' || parsed.protocol === 'https:' || parsed.protocol === 'mailto:';
-    } catch(e) {
-        return false;
-    }
-}
-
-function splitUrlList(value) {
-    const raw = normaliseAuditValue(value);
-    if(!raw) return [];
-    return raw.split(/[\n,]+/).map(v => v.trim()).filter(Boolean);
-}
-
-function addAuditIssue(results, section, row, field, problem) {
-    const id = row.Venue_ID || row.Event_ID || 'NO_ID';
-    const name = row.Name || row.Event_Name || '';
-    const key = `${section}|${id}|${field}|${problem}`;
-    if(dismissedAuditKeys.has(key)) return;
-    results[section].push({ key, id, name, field, problem });
-}
-
-function isLocalImageReference(value) {
-    const raw = normaliseAuditValue(value);
-    return raw && !isLikelyExternalUrl(raw) && /\.(png|jpe?g|webp|gif)$/i.test(raw);
-}
-
-function checkImageExists(src) {
-    return new Promise(resolve => {
-        if(!src) return resolve(false);
-        const img = new Image();
-        const done = (ok) => {
-            img.onload = null;
-            img.onerror = null;
-            resolve(ok);
-        };
-        const timer = setTimeout(() => done(false), 3500);
-        img.onload = () => { clearTimeout(timer); done(true); };
-        img.onerror = () => { clearTimeout(timer); done(false); };
-        img.src = src + (src.includes('?') ? '&' : '?') + 'audit=' + Date.now();
-    });
-}
-
-async function runVenueFieldAudit() {
-    const results = { Images: [], URLs: [], Ratings: [], Address: [] };
-    const rows = Array.isArray(draftData) ? draftData : [];
-    const ratingFields = ['Rating_General','Rating_Darkroom','Rating_Age_Range','Rating_Cost','Rating_Size','Rating_Location','Rating_Busyness'];
-    const publicUrlFields = ['Website_URL','Instagram_URL','Facebook_URL','Other_URL','Source_URLs'];
-    const allUrlFields = ['Google_Maps_URL','Apple_Maps_URL','Website_URL','Instagram_URL','Facebook_URL','Other_URL','Source_URLs'];
-
-    for(const row of rows) {
-        const imageUrl = normaliseAuditValue(row.Image_URL);
-        if(!imageUrl) {
-            addAuditIssue(results, 'Images', row, 'Image_URL', 'Image_URL is blank.');
-        } else if(isLocalImageReference(imageUrl)) {
-            const exists = await checkImageExists(imageUrl);
-            if(!exists) addAuditIssue(results, 'Images', row, 'Image_URL', `Local image reference did not load: ${imageUrl}`);
-        }
-
-        const hasAnyPublicUrl = publicUrlFields.some(field => !isBlankAuditValue(row[field]));
-        if(!hasAnyPublicUrl) {
-            addAuditIssue(results, 'URLs', row, 'URL fields', 'No Website, Instagram, Facebook, Other, or Source URL is provided.');
-        }
-
-        for(const field of allUrlFields) {
-            const values = field === 'Source_URLs' ? splitUrlList(row[field]) : [normaliseAuditValue(row[field])].filter(Boolean);
-            for(const url of values) {
-                if(!isValidUrlFormat(url)) addAuditIssue(results, 'URLs', row, field, `Malformed URL format: ${url}`);
-            }
-        }
-
-        const hasAnyRating = ratingFields.some(field => {
-            const value = row[field];
-            if(value === 0 || value === '0') return true;
-            return !isBlankAuditValue(value);
-        });
-        if(!hasAnyRating) {
-            addAuditIssue(results, 'Ratings', row, 'Rating_*', 'All seven rating fields are blank.');
-        }
-
-        if(isBlankAuditValue(row.Address)) {
-            addAuditIssue(results, 'Address', row, 'Address', 'Address is blank.');
-        }
-    }
-
-    return results;
-}
-
-function auditIssueCount(results) {
-    if(!results) return 0;
-    return Object.values(results).reduce((sum, list) => sum + list.length, 0);
-}
-
-function renderAuditResults() {
-    const container = document.getElementById('audit-field-results');
-    if(!container) return;
-
-    if(currentMode !== 'venues') {
-        container.innerHTML = `<p class="audit-note"><strong>Event audit is coming later.</strong><br>v0.66 only runs the Venue Data audit because event listings need different validation logic.</p>`;
-        return;
-    }
-
-    if(!auditResults) {
-        container.innerHTML = `<p class="audit-note">Run an audit to check venue data. v0.66 checks blank/malformed fields and local image paths where the browser can verify them. It does not reliably check whether external websites are live.</p>`;
-        return;
-    }
-
-    const total = auditIssueCount(auditResults);
-    let html = `<p class="audit-note"><strong>${total} issue${total === 1 ? '' : 's'} found.</strong><br>URL live-status is not checked in v0.66; only blanks and malformed URL formats are checked.</p>`;
-
-    Object.entries(auditResults).forEach(([section, rows]) => {
-        const safeSection = section.replace(/[^a-z0-9]/gi, '-').toLowerCase();
-        html += `<div class="audit-section" data-section="${safeSection}">
-            <div class="audit-section-header" onclick="this.parentElement.classList.toggle('collapsed')">
-                <span>▾ ${section}</span><span>${rows.length}</span>
-            </div>
-            <div class="audit-section-body">`;
-        if(rows.length === 0) {
-            html += `<div class="audit-note">No ${section.toLowerCase()} issues found.</div>`;
-        } else {
-            rows.forEach(issue => {
-                html += `<div class="audit-row" data-audit-key="${escapeHtml(issue.key)}">
-                    <input type="checkbox" title="Dismiss this item" onchange="dismissAuditIssue('${escapeJs(issue.key)}')">
-                    <span class="audit-row-id" onclick="jumpToAuditRow('${escapeJs(issue.id)}')">${escapeHtml(issue.id)}</span>
-                    <span class="audit-row-problem"><strong>${escapeHtml(issue.name || '')}</strong><br>${escapeHtml(issue.field)}: ${escapeHtml(issue.problem)}</span>
-                </div>`;
-            });
-        }
-        html += `</div></div>`;
-    });
-    container.innerHTML = html;
-}
-
-function escapeHtml(value) {
-    return String(value ?? '').replace(/[&<>"]/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[ch]));
-}
-
-function escapeJs(value) {
-    return String(value ?? '').replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/\n/g, '\\n').replace(/\r/g, '');
-}
-
-window.dismissAuditIssue = function(key) {
-    dismissedAuditKeys.add(key);
-    if(auditResults) {
-        Object.keys(auditResults).forEach(section => {
-            auditResults[section] = auditResults[section].filter(issue => issue.key !== key);
-        });
-    }
-    renderAuditResults();
-};
-
-window.jumpToAuditRow = function(id) {
-    jumpToRow(id);
-};
-
-async function openAuditFieldWindow() {
-    const win = document.getElementById('audit-field-float');
-    if(win) win.classList.remove('hidden');
-    if(currentMode !== 'venues') {
-        renderAuditResults();
-        showToast('Event audit coming later.');
-        return;
-    }
-    if(!draftData || draftData.length === 0) {
-        const container = document.getElementById('audit-field-results');
-        if(container) container.innerHTML = `<p class="audit-note">No Venue Data loaded. Load live data or upload JSON first.</p>`;
-        return;
-    }
-    if(!auditResults) await refreshAuditFieldWindow();
-    else renderAuditResults();
-}
-
-async function refreshAuditFieldWindow() {
-    const container = document.getElementById('audit-field-results');
-    if(currentMode !== 'venues') {
-        auditResults = null;
-        renderAuditResults();
-        return;
-    }
-    if(container) container.innerHTML = `<p class="audit-note">Running Venue Data audit…</p>`;
-    auditResults = await runVenueFieldAudit();
-    renderAuditResults();
-}
-
-function clearAuditFieldWindow() {
-    auditResults = null;
-    dismissedAuditKeys = new Set();
-    renderAuditResults();
-}
-
 document.addEventListener('DOMContentLoaded', () => {
 
     document.querySelectorAll('.age-pill').forEach(pill => {
@@ -1281,6 +1127,11 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('nav-events')?.addEventListener('click', () => switchView('events'));
     document.getElementById('nav-editor')?.addEventListener('click', () => switchView('editor'));
     document.getElementById('nav-avatars')?.addEventListener('click', () => switchView('avatars'));
+    document.getElementById('nav-voting-admin')?.addEventListener('click', () => {
+        window.location.href = 'ratings-admin.html';
+    });
+    document.getElementById('btn-view-record')?.addEventListener('click', () => window.openAdminRecordPreview());
+    updateViewRecordButton();
 
     document.getElementById('btn-sidebar-pending')?.addEventListener('click', () => {
         currentReviewFilter = currentReviewFilter === 'pending' ? 'all' : 'pending';
@@ -1306,32 +1157,8 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     
     document.getElementById('btn-formatting-guide')?.addEventListener('click', () => {
-        document.getElementById('formatting-guide-float')?.classList.remove('hidden');
+        document.getElementById('formatting-guide-modal').classList.remove('hidden');
     });
-
-    document.querySelectorAll('.format-pill').forEach(pill => {
-        pill.addEventListener('click', async () => {
-            const text = pill.dataset.copy || pill.textContent.trim();
-            try {
-                await navigator.clipboard.writeText(text);
-                showToast(`Copied: ${text}`);
-            } catch (err) {
-                const tmp = document.createElement('textarea');
-                tmp.value = text;
-                tmp.style.position = 'fixed';
-                tmp.style.left = '-9999px';
-                document.body.appendChild(tmp);
-                tmp.focus();
-                tmp.select();
-                try { document.execCommand('copy'); showToast(`Copied: ${text}`); }
-                catch (e) { showToast('Copy failed. Select the pill text manually.'); }
-                tmp.remove();
-            }
-        });
-    });
-    document.getElementById('btn-audit-field')?.addEventListener('click', () => openAuditFieldWindow());
-    document.getElementById('btn-audit-refresh')?.addEventListener('click', () => refreshAuditFieldWindow());
-    document.getElementById('btn-audit-clear')?.addEventListener('click', () => clearAuditFieldWindow());
 
     document.getElementById('btn-load-editor-page')?.addEventListener('click', () => loadEditorPage());
     document.getElementById('editor-page-select')?.addEventListener('change', () => loadEditorPage());
@@ -1356,8 +1183,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     makeDraggable('clipboard-header', 'clipboard-float');
     makeDraggable('preview-import-header', 'preview-import-modal');
-    makeDraggable('formatting-guide-header', 'formatting-guide-float');
-    makeDraggable('audit-field-header', 'audit-field-float');
 
     const clipboard = document.getElementById('clipboard-text');
     if(clipboard) {
@@ -1432,21 +1257,6 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('btn-apply-merge')?.addEventListener('click', () => {
         const validMergeData = tempMergeData.filter(d => d !== null);
         const idField = currentMode === 'venues' ? 'Venue_ID' : 'Event_ID';
-        if(currentMode === 'events') {
-            const weekdays = ['monday','tuesday','wednesday','thursday','friday','saturday','sunday'];
-            const errors = [];
-            validMergeData.forEach((row, index) => {
-                const recurrence = String(row.Recurrence_Type || '').trim();
-                if(recurrence && recurrence.toLowerCase() !== 'weekly') errors.push(`Row ${index + 1}: Recurrence_Type must be Weekly or blank.`);
-                if(recurrence.toLowerCase() === 'weekly') {
-                    if(!weekdays.includes(String(row.Recurrence_Day || '').trim().toLowerCase())) errors.push(`Row ${index + 1}: weekly events need Recurrence_Day as Monday to Sunday.`);
-                    if(!/^\d{4}-\d{2}-\d{2}$/.test(String(row.Event_Date || '').trim())) errors.push(`Row ${index + 1}: weekly events need Event_Date as the first known occurrence (YYYY-MM-DD).`);
-                    const until = String(row.Recurrence_Until || '').trim();
-                    if(until && !/^\d{4}-\d{2}-\d{2}$/.test(until)) errors.push(`Row ${index + 1}: Recurrence_Until must use YYYY-MM-DD or stay blank.`);
-                }
-            });
-            if(errors.length) { alert(`Cannot merge event data:\n\n${errors.join('\n')}`); return; }
-        }
         let mCount = 0, aCount = 0;
         
         validMergeData.forEach(newRow => {
@@ -1462,32 +1272,23 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     document.getElementById('btn-copy-error')?.addEventListener('click', () => { navigator.clipboard.writeText(lastJsonErrorText); showToast("Copied"); });
-    document.getElementById('btn-export-csv')?.addEventListener('click', async () => {
+    document.getElementById('btn-export-csv')?.addEventListener('click', () => {
         if(!draftData || !draftData.length) return showToast('No data to export');
         const cols = Object.keys(draftData[0]);
         const esc = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`;
         const csv = [cols.map(esc).join(','), ...draftData.map(row => cols.map(c => esc(row[c])).join(','))].join('\n');
-        const baseName = currentMode === 'venues' ? 'listings.csv' : 'events.csv';
-        await exportTextToLocalFile(csv, {
-            suggestedName: baseName,
-            mimeType: 'text/csv',
-            description: 'CSV file',
-            extensions: ['.csv'],
-            pickerId: `backroom-${currentMode}-csv`
-        });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(new Blob([csv], {type: 'text/csv;charset=utf-8'}));
+        a.download = `backroom_${currentMode}_${new Date().toISOString().split('T')[0]}.csv`;
+        a.click();
     });
 
-    document.getElementById('btn-export-json')?.addEventListener('click', async () => {
-        if(!draftData || !draftData.length) return showToast('No data to export');
-        const dataStr = JSON.stringify(draftData, null, 2) + '\n';
-        const fileName = EXPORT_FILE_NAMES[currentMode] || `backroom_${currentMode}.json`;
-        await exportTextToLocalFile(dataStr, {
-            suggestedName: fileName,
-            mimeType: 'application/json',
-            description: 'JSON data file',
-            extensions: ['.json'],
-            pickerId: `backroom-${currentMode}-json`
-        });
+    document.getElementById('btn-export-json')?.addEventListener('click', () => {
+        const dataStr = JSON.stringify(draftData, null, 2);
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(new Blob([dataStr], {type: 'application/json'}));
+        a.download = `backroom_${currentMode}_${new Date().toISOString().split('T')[0]}.json`;
+        a.click();
     });
     
     document.getElementById('btn-download-all')?.addEventListener('click', () => {
