@@ -477,53 +477,26 @@ function isAllCitiesLocation(location) {
         && !String(location.postcode || '').trim();
 }
 
-function getLocationInputValue() {
-    return String(document.getElementById('loc-query')?.value || '').trim();
-}
+function getLocationResultsLabel(cityValue, countryValue) {
+    const city = String(cityValue ?? document.getElementById('loc-city')?.value ?? '').trim();
+    const country = String(countryValue ?? document.getElementById('loc-country')?.value ?? '').trim();
 
-function formatLocationInputFromScope(location) {
-    const scope = getSavedLocationScope(location);
-    if (scope.scope === 'city') {
-        return scope.country ? `${scope.city}, ${scope.country}` : scope.city;
-    }
-    if (scope.scope === 'country') return scope.country;
-    return '';
-}
-
-// One public Location field accepts a city, country, or city + country.
-// Country names win when a single value is both a country and a city: use
-// “City, Country” whenever the city itself needs to be explicit.
-function parseLocationQuery(value) {
-    const raw = String(value || '').trim();
-    if (!raw) return { scope: 'all', city: '', country: '', postcode: '', label: '' };
-
-    const parts = raw.split(',').map(part => part.trim()).filter(Boolean);
-    const requestedCity = parts[0] || '';
-    const requestedCountry = parts.length > 1 ? parts.slice(1).join(', ') : '';
-
-    if (requestedCountry) {
-        const country = getKnownCountryName(requestedCountry) || requestedCountry;
-        return requestedCity
-            ? { scope: 'city', city: requestedCity, country, postcode: '', label: requestedCity }
-            : { scope: 'country', city: '', country, postcode: '', label: country };
+    if (city && city.toLowerCase() !== 'my location') {
+        // A country typed into the City field is accepted when it does not also match
+        // a real city in the current directory. This keeps ordinary city searches precise.
+        const inferredCountry = !country ? getKnownCountryName(city) : '';
+        if (inferredCountry && !hasKnownCityName(city)) return inferredCountry;
+        return city;
     }
 
-    const exactCountry = getKnownCountryName(requestedCity);
-    if (exactCountry) {
-        return { scope: 'country', city: '', country: exactCountry, postcode: '', label: exactCountry };
-    }
-
-    return { scope: 'city', city: requestedCity, country: '', postcode: '', label: requestedCity };
+    if (country) return getKnownCountryName(country) || country;
+    return 'All Cities';
 }
 
-function getLocationResultsLabel(queryValue) {
-    return parseLocationQuery(queryValue ?? getLocationInputValue()).label || 'All Cities';
-}
-
-function updateLocationActionLabel(queryValue) {
+function updateLocationActionLabel(cityValue, countryValue) {
     const button = document.getElementById('btn-save-location');
     if (!button) return;
-    button.textContent = `Show Results in ${getLocationResultsLabel(queryValue)}`;
+    button.textContent = `Show Results in ${getLocationResultsLabel(cityValue, countryValue)}`;
 }
 
 function announceLocationChange(location) {
@@ -2288,14 +2261,19 @@ function setupEventListeners() {
     addEvt('btn-save-location', 'click', saveLocation);
     addEvt('btn-clear-location', 'click', clearLocation);
 
-    const locationQueryInput = document.getElementById('loc-query');
-    const refreshLocationActionLabel = () => updateLocationActionLabel(locationQueryInput?.value || '');
+    const locationCityInput = document.getElementById('loc-city');
+    const locationCountryInput = document.getElementById('loc-country');
+    const refreshLocationActionLabel = () => updateLocationActionLabel(
+        locationCityInput?.value || '',
+        locationCountryInput?.value || ''
+    );
 
-    if (locationQueryInput && !locationQueryInput.dataset.locationLabelBound) {
-        locationQueryInput.dataset.locationLabelBound = 'true';
-        locationQueryInput.addEventListener('input', refreshLocationActionLabel);
-        locationQueryInput.addEventListener('change', refreshLocationActionLabel);
-    }
+    [locationCityInput, locationCountryInput].forEach(input => {
+        if (!input || input.dataset.locationLabelBound) return;
+        input.dataset.locationLabelBound = 'true';
+        input.addEventListener('input', refreshLocationActionLabel);
+        input.addEventListener('change', refreshLocationActionLabel);
+    });
     refreshLocationActionLabel();
     
     addEvt('btn-gps', 'click', () => {
@@ -2305,22 +2283,23 @@ function setupEventListeners() {
                 async (pos) => { 
                     const lat = pos.coords.latitude;
                     const lon = pos.coords.longitude;
-                    const locationInput = document.getElementById('loc-query');
-
+                    const cityInput = document.getElementById('loc-city');
+                    
                     try {
                         const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`);
                         const data = await res.json();
                         const city = data.address.city || data.address.town || data.address.village || 'My Location';
-                        const country = String(data.address.country || '').trim();
-                        if(locationInput) {
-                            locationInput.value = city === 'My Location' ? city : (country ? `${city}, ${country}` : city);
-                            locationInput.dataset.lat = lat;
-                            locationInput.dataset.lon = lon;
+                        if(cityInput) {
+                            cityInput.value = city;
+                            cityInput.dataset.lat = lat;
+                            cityInput.dataset.lon = lon;
                         }
-                        updateLocationActionLabel(locationInput?.value || '');
+                        const countryInput = document.getElementById('loc-country');
+                        if(countryInput) countryInput.value = data.address.country || '';
+                        updateLocationActionLabel(city, countryInput?.value || '');
                     } catch (e) {
-                        if(locationInput) {
-                            locationInput.value = 'My Location';
+                        if(cityInput) {
+                            cityInput.value = `My Location`;
                             updateLocationActionLabel('');
                         }
                     }
@@ -2332,7 +2311,11 @@ function setupEventListeners() {
     });
 
     addEvt('btn-search-map', 'click', async () => {
-        const query = getLocationInputValue();
+        const country = document.getElementById('loc-country')?.value.trim() || '';
+        const city = document.getElementById('loc-city')?.value.trim() || '';
+        const pc = document.getElementById('loc-postcode')?.value.trim() || '';
+        const query = `${pc} ${city}, ${country}`.trim();
+        
         if(!query) return;
         
         try {
@@ -3692,13 +3675,6 @@ function handleImageCarousel(imgElement) {
     });
 }
 
-function getVenueCardVariant(venue) {
-    const category = normalizeLocationName(venue?.Category);
-    if (category === normalizeLocationName('Cruising Area')) return 'cruising-area-card';
-    if (getVenueTags(venue).includes('Men Only')) return 'men-only-card';
-    return '';
-}
-
 function renderListings(data, isContextView = false, targetContainer = resultsContainer) {
     const container = targetContainer || resultsContainer;
     if(container) container.innerHTML = '';
@@ -3707,9 +3683,9 @@ function renderListings(data, isContextView = false, targetContainer = resultsCo
     if(!data || data.length === 0) {
         let emptyHtml = `<p style="text-align:center; color:var(--label-grey); margin-top:20px; width: 100%; grid-column: 1 / -1;">No venues found.</p>`;
 
-        const locationInput = document.getElementById('loc-query');
-        const userLat = parseFloat(locationInput?.dataset.lat || 'NaN');
-        const userLon = parseFloat(locationInput?.dataset.lon || 'NaN');
+        const cityInput = document.getElementById('loc-city');
+        const userLat = parseFloat(cityInput?.dataset.lat || 'NaN');
+        const userLon = parseFloat(cityInput?.dataset.lon || 'NaN');
 
         if (!isNaN(userLat) && !isNaN(userLon) && venues.length > 0) {
             let nearest = null;
@@ -3748,8 +3724,7 @@ function renderListings(data, isContextView = false, targetContainer = resultsCo
         const shortDescSource = venue.Description || '';
         const shortDesc = shortDescSource.length > 90 ? shortDescSource.substring(0, 90) + '...' : shortDescSource;
         const card = document.createElement('div');
-        const cardVariant = getVenueCardVariant(venue);
-        card.className = `card${cardVariant ? ` ${cardVariant}` : ''}`;
+        card.className = 'card';
 
         const baseImageSrc = (venue.Image_URL && venue.Image_URL.trim()) ? venue.Image_URL.trim() : `Venue_images/${venue.Venue_ID}-01.jpg`;
         const badgeLabel = getCardStatusLabel(venue);
@@ -4085,36 +4060,62 @@ async function shareURL(url, title) {
 function saveLocation() {
     recordUserInteraction();
 
-    const locationInput = document.getElementById('loc-query');
-    const requestedLocation = String(locationInput?.value || '').trim();
+    const cityInp = document.getElementById('loc-city');
+    const countryInp = document.getElementById('loc-country');
+    const postcodeInp = document.getElementById('loc-postcode');
 
-    if (requestedLocation.toLowerCase() === 'my location') {
-        showToast('Choose a city or country, or leave Location blank to browse all cities.');
+    const requestedCity = cityInp?.value.trim() || '';
+    const requestedCountry = countryInp?.value.trim() || '';
+    const postcode = postcodeInp?.value.trim() || '';
+
+    if (requestedCity.toLowerCase() === 'my location') {
+        showToast('Choose a city or country, or leave both blank to browse all cities.');
         return;
     }
 
-    const loc = parseLocationQuery(requestedLocation);
+    const canonicalCountry = getKnownCountryName(requestedCountry) || requestedCountry;
+    const inferredCountry = !canonicalCountry ? getKnownCountryName(requestedCity) : '';
+    const cityIsKnown = hasKnownCityName(requestedCity);
+
+    let loc;
+    if (requestedCity && inferredCountry && !cityIsKnown) {
+        // Country names typed into the City box are treated as a country-only browse scope.
+        loc = { country: inferredCountry, city: '', postcode, scope: 'country' };
+    } else if (requestedCity) {
+        // A city with an optional country stays city-specific. When country is supplied,
+        // it prevents a same-named city in another country from matching.
+        loc = { country: canonicalCountry, city: requestedCity, postcode, scope: 'city' };
+    } else if (canonicalCountry) {
+        loc = { country: canonicalCountry, city: '', postcode, scope: 'country' };
+    } else {
+        loc = { country: '', city: '', postcode: '', scope: 'all' };
+    }
+
     localStorage.setItem('br_location', JSON.stringify(loc));
     updateLocationDisplay(loc);
-    updateLocationActionLabel(requestedLocation);
+    updateLocationActionLabel(loc.city, loc.country);
     announceLocationChange(loc);
     locModal?.classList.add('hidden');
 
-    // Location sets the shared scope for Results, Venues and Events.
+    // Location sets the shared scope for Results, Venues and Events. It opens Search Results rather than a separate location screen.
     if (window.location.hash === '#results') handleRouting();
     else window.location.hash = '#results';
 }
 
 function clearLocation() {
     localStorage.removeItem('br_location');
-    const locationInput = document.getElementById('loc-query');
+    const cInp = document.getElementById('loc-country');
+    const ciInp = document.getElementById('loc-city');
+    const pInp = document.getElementById('loc-postcode');
     const lMap = document.getElementById('loc-map');
     const mPlace = document.getElementById('map-preview-placeholder');
 
-    if(locationInput) { locationInput.value = ''; locationInput.dataset.lat = ''; locationInput.dataset.lon = ''; }
+    if(cInp) cInp.value = ''; 
+    if(ciInp) { ciInp.value = ''; ciInp.dataset.lat = ''; ciInp.dataset.lon = ''; }
+    if(pInp) pInp.value = '';
     if(lMap) lMap.style.display = 'none';
     if(mPlace) mPlace.classList.remove('hidden');
-
+    
     updateLocationDisplay(null);
     updateLocationActionLabel('');
     announceLocationChange({ scope: 'all', city: '', country: '', postcode: '' });
@@ -4123,19 +4124,24 @@ function clearLocation() {
 
 function loadSavedLocation() {
     const loc = getSavedLocation();
-    const locationInput = document.getElementById('loc-query');
+    const cInp = document.getElementById('loc-country');
+    const ciInp = document.getElementById('loc-city');
+    const pInp = document.getElementById('loc-postcode');
 
     if (!loc) {
-        if(locationInput) locationInput.value = '';
+        if(cInp) cInp.value = '';
+        if(ciInp) ciInp.value = '';
+        if(pInp) pInp.value = '';
         updateLocationActionLabel('');
         return;
     }
 
     const isAllCities = isAllCitiesLocation(loc);
-    const savedInput = isAllCities ? '' : formatLocationInputFromScope(loc);
-    if(locationInput) locationInput.value = savedInput;
+    if(cInp) cInp.value = isAllCities ? '' : (loc.country || '');
+    if(ciInp) ciInp.value = isAllCities ? '' : (loc.city || '');
+    if(pInp) pInp.value = isAllCities ? '' : (loc.postcode || '');
     updateLocationDisplay(loc);
-    updateLocationActionLabel(savedInput);
+    updateLocationActionLabel(isAllCities ? '' : loc.city || '', isAllCities ? '' : loc.country || '');
 }
 
 function updateLocationDisplay(loc) {
@@ -4205,7 +4211,7 @@ window.setBackroomSharedLocation = function(location) {
 
     localStorage.setItem('br_location', JSON.stringify(nextLocation));
     updateLocationDisplay(nextLocation);
-    updateLocationActionLabel(formatLocationInputFromScope(nextLocation));
+    updateLocationActionLabel(nextLocation.city, nextLocation.country);
     announceLocationChange(nextLocation);
     return nextLocation;
 };
