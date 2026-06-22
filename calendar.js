@@ -22,9 +22,7 @@
     const state = {
         month: new Date(new Date().getFullYear(), new Date().getMonth(), 1),
         selectedDate: dateKey(new Date()),
-        city: 'All',
-        country: '',
-        locationScope: 'all',
+        location: { scope: 'all', city: '', country: '' },
         dateFilter: 'all',
         vibeFilter: '',
         events: [],
@@ -143,7 +141,7 @@
             });
     }
 
-    function normalizeCity(value) {
+    function normalizeLocation(value) {
         return String(value || '')
             .trim()
             .toLowerCase()
@@ -153,65 +151,113 @@
             .replace(/[^a-z0-9]+/g, '');
     }
 
-    function normalizeCountry(value) {
-        return normalizeCity(value);
+    function uniqueLocationValues(values) {
+        const byKey = new Map();
+        (values || []).forEach(value => {
+            const clean = String(value || '').trim();
+            const key = normalizeLocation(clean);
+            if (clean && key && !byKey.has(key)) byKey.set(key, clean);
+        });
+        return [...byKey.values()].sort((a, b) => a.localeCompare(b));
     }
 
-    function countryFor(event) {
-        const venue = venueFor(event);
-        return String(venue?.Country || event?.Country || '').trim();
+    function cityOptions() {
+        const venueCities = state.venues.flatMap(venue => String(venue?.City || '').split(',').map(city => city.trim()));
+        const eventCities = state.events.map(event => String(event?.City || '').trim());
+        return uniqueLocationValues([...venueCities, ...eventCities]);
     }
 
-    function availableCountryFor(value) {
-        const requested = normalizeCountry(value);
+    function countryOptions() {
+        const venueCountries = state.venues.map(venue => String(venue?.Country || '').trim());
+        const eventCountries = state.events.map(event => String(event?.Country || '').trim());
+        return uniqueLocationValues([...venueCountries, ...eventCountries]);
+    }
+
+    function findDisplayLocation(value, options) {
+        const requested = normalizeLocation(value);
         if (!requested) return '';
-        const countries = [...new Set(state.events.map(countryFor).filter(Boolean))];
-        return countries.find(country => normalizeCountry(country) === requested) || '';
+        return (options || []).find(option => normalizeLocation(option) === requested) || '';
     }
 
     function readSharedLocation() {
         try {
             const location = JSON.parse(localStorage.getItem('br_location') || 'null');
             if (!location || typeof location !== 'object') return { scope: 'all', city: '', country: '', postcode: '' };
+
             const city = String(location.city || '').trim();
             const country = String(location.country || '').trim();
             const scope = String(location.scope || '').trim().toLowerCase();
-            if (scope === 'all' || (!city && !country)) return { scope: 'all', city: '', country: '', postcode: '' };
-            if (city) return { scope: 'city', city, country, postcode: String(location.postcode || '').trim() };
+
+            if (scope === 'all' || (!city && !country)) {
+                return { scope: 'all', city: '', country: '', postcode: '' };
+            }
+
+            if (city) {
+                return { scope: 'city', city, country, postcode: String(location.postcode || '').trim() };
+            }
+
             return { scope: 'country', city: '', country, postcode: String(location.postcode || '').trim() };
         } catch {
             return { scope: 'all', city: '', country: '', postcode: '' };
         }
     }
 
-    function availableCityFor(value) {
-        const requested = normalizeCity(value);
-        if (!requested) return 'All';
-        const cities = [...new Set(state.events.map(cityFor).filter(Boolean))];
-        return cities.find(city => normalizeCity(city) === requested) || 'All';
-    }
-
     function syncLocationFromSharedLocation() {
-        const location = readSharedLocation();
-        state.locationScope = location.scope;
-        state.city = location.scope === 'city' ? availableCityFor(location.city) : 'All';
-        state.country = availableCountryFor(location.country) || location.country || '';
+        const shared = readSharedLocation();
+
+        if (shared.scope === 'city') {
+            state.location = {
+                scope: 'city',
+                city: findDisplayLocation(shared.city, cityOptions()) || shared.city,
+                country: findDisplayLocation(shared.country, countryOptions()) || shared.country
+            };
+            return;
+        }
+
+        if (shared.scope === 'country') {
+            state.location = {
+                scope: 'country',
+                city: '',
+                country: findDisplayLocation(shared.country, countryOptions()) || shared.country
+            };
+            return;
+        }
+
+        state.location = { scope: 'all', city: '', country: '' };
     }
 
-    function locationLabel() {
-        if (state.locationScope === 'country' && state.country) return state.country;
-        if (state.locationScope === 'city' && state.city !== 'All') return state.city;
+    function getLocationLabel(location = state.location) {
+        if (location?.scope === 'city') return String(location.city || '').trim();
+        if (location?.scope === 'country') return String(location.country || '').trim();
         return '';
     }
 
-    function setSharedLocationFromPicker(value) {
-        const previous = readSharedLocation();
-        let next = { scope: 'all', city: '', country: '', postcode: previous.postcode || '' };
-        if (value.startsWith('country:')) {
-            next = { scope: 'country', city: '', country: value.slice(8), postcode: previous.postcode || '' };
-        } else if (value.startsWith('city:')) {
-            const [, city, country] = value.split(':');
-            next = { scope: 'city', city: city || '', country: country || '', postcode: previous.postcode || '' };
+    function setSharedLocationFromSelection(value) {
+        const selected = String(value || '');
+        let next;
+
+        if (selected === 'all') {
+            next = { scope: 'all', city: '', country: '', postcode: '' };
+        } else if (selected.startsWith('country::')) {
+            next = {
+                scope: 'country',
+                city: '',
+                country: selected.slice('country::'.length),
+                postcode: ''
+            };
+        } else if (selected.startsWith('city::')) {
+            const city = selected.slice('city::'.length);
+            const linkedVenue = state.venues.find(venue =>
+                String(venue?.City || '').split(',').some(part => normalizeLocation(part) === normalizeLocation(city))
+            );
+            next = {
+                scope: 'city',
+                city,
+                country: String(linkedVenue?.Country || '').trim(),
+                postcode: ''
+            };
+        } else {
+            next = { scope: 'all', city: '', country: '', postcode: '' };
         }
 
         if (typeof window.setBackroomSharedLocation === 'function') {
@@ -220,9 +266,8 @@
             localStorage.setItem('br_location', JSON.stringify(next));
             window.dispatchEvent(new CustomEvent('backroom:location-changed', { detail: next }));
         }
-        state.locationScope = next.scope;
-        state.city = next.scope === 'city' ? availableCityFor(next.city) : 'All';
-        state.country = next.country || '';
+
+        syncLocationFromSharedLocation();
     }
 
     function isWeekly(event) {
@@ -243,9 +288,36 @@
         return state.venues.find(venue => venue.Venue_ID === event.Venue_ID) || null;
     }
 
-    function cityFor(event) {
+    function cityTokensFor(event) {
         const venue = venueFor(event);
-        return String(venue?.City || event.City || '').split(',')[0].trim();
+        const cityText = String(venue?.City || event?.City || '');
+        return cityText.split(',').map(city => city.trim()).filter(Boolean);
+    }
+
+    function cityFor(event) {
+        return cityTokensFor(event)[0] || '';
+    }
+
+    function countryFor(event) {
+        const venue = venueFor(event);
+        return String(venue?.Country || event?.Country || '').trim();
+    }
+
+    function eventMatchesSharedLocation(event) {
+        const location = state.location || { scope: 'all', city: '', country: '' };
+
+        if (location.scope === 'country') {
+            return normalizeLocation(countryFor(event)) === normalizeLocation(location.country);
+        }
+
+        if (location.scope === 'city') {
+            const cityMatches = cityTokensFor(event).some(city => normalizeLocation(city) === normalizeLocation(location.city));
+            const countryMatches = !location.country
+                || normalizeLocation(countryFor(event)) === normalizeLocation(location.country);
+            return cityMatches && countryMatches;
+        }
+
+        return true;
     }
 
     function tagsFor(event) {
@@ -258,9 +330,7 @@
         const status = String(event?.Status || '').trim();
         if (['Hold', 'Flag', 'Closed', 'Cancelled'].includes(status)) return false;
         if (!event?.Event_Date) return false;
-        if (state.locationScope === 'country' && state.country && normalizeCountry(countryFor(event)) !== normalizeCountry(state.country)) return false;
-        if (state.locationScope === 'city' && state.city !== 'All' && normalizeCity(cityFor(event)) !== normalizeCity(state.city)) return false;
-        if (state.locationScope === 'city' && state.country && normalizeCountry(countryFor(event)) !== normalizeCountry(state.country)) return false;
+        if (!eventMatchesSharedLocation(event)) return false;
         if (state.vibeFilter && !tagsFor(event).includes(state.vibeFilter)) return false;
         return true;
     }
@@ -389,27 +459,24 @@
         }
     }
 
-    function renderLocationPicker() {
-        const countries = [...new Set(state.events.map(countryFor).filter(Boolean))].sort((a, b) => a.localeCompare(b));
-        const cityRows = [];
-        const seen = new Set();
-        state.events.forEach(event => {
-            const city = cityFor(event);
-            const country = countryFor(event);
-            const key = `${normalizeCity(city)}|${normalizeCountry(country)}`;
-            if (!city || seen.has(key)) return;
-            seen.add(key);
-            cityRows.push({ city, country });
-        });
-        cityRows.sort((a, b) => `${a.city}, ${a.country}`.localeCompare(`${b.city}, ${b.country}`));
+    function renderCityPicker() {
+        const countries = countryOptions();
+        const cities = cityOptions();
+        const selectedValue = state.location.scope === 'country'
+            ? `country::${state.location.country}`
+            : state.location.scope === 'city'
+                ? `city::${state.location.city}`
+                : 'all';
 
-        const selectedAll = state.locationScope === 'all';
-        const options = [
-            `<option value="all" ${selectedAll ? 'selected' : ''}>All locations</option>`,
-            ...countries.map(country => `<option value="country:${escapeHTML(country)}" ${state.locationScope === 'country' && normalizeCountry(state.country) === normalizeCountry(country) ? 'selected' : ''}>${escapeHTML(country)}</option>`),
-            ...cityRows.map(row => `<option value="city:${escapeHTML(row.city)}:${escapeHTML(row.country)}" ${state.locationScope === 'city' && normalizeCity(state.city) === normalizeCity(row.city) && (!state.country || normalizeCountry(state.country) === normalizeCountry(row.country)) ? 'selected' : ''}>${escapeHTML(row.city)}${row.country ? `, ${escapeHTML(row.country)}` : ''}</option>`)
-        ].join('');
-        return `<label class="calendar-city-label"><span class="calendar-city-prefix display-font">LOCATION</span><span class="calendar-city-control"><select id="calendar-location-select" class="calendar-city-select calendar-city-pulse" aria-label="Set the shared location for events and venues">${options}</select></span></label>`;
+        const countryOptionsHtml = countries.length
+            ? `<optgroup label="Countries">${countries.map(country => `<option value="country::${escapeHTML(country)}" ${selectedValue === `country::${country}` ? 'selected' : ''}>All ${escapeHTML(country)}</option>`).join('')}</optgroup>`
+            : '';
+
+        const cityOptionsHtml = cities.length
+            ? `<optgroup label="Cities">${cities.map(city => `<option value="city::${escapeHTML(city)}" ${selectedValue === `city::${city}` ? 'selected' : ''}>${escapeHTML(city)}</option>`).join('')}</optgroup>`
+            : '';
+
+        return `<label class="calendar-city-label"><span class="calendar-city-prefix display-font">LOCATION</span><span class="calendar-city-control"><select id="calendar-location-select" class="calendar-city-select calendar-city-pulse" aria-label="Set the shared location for events and venues"><option value="all" ${selectedValue === 'all' ? 'selected' : ''}>All cities</option>${countryOptionsHtml}${cityOptionsHtml}</select></span></label>`;
     }
 
     function filterChip(label, value, extraClass = '') {
@@ -458,10 +525,7 @@
         const location = [venue?.City, venue?.Country].filter(Boolean).join(' · ');
         const times = [event.Event_Start_Time, event.Event_End_Time].filter(Boolean).join(' – ');
         const saved = savedEventIds().includes(event.Event_ID);
-        const isPrideEvent = tagsFor(event).includes('Pride');
-        const image = String(event?.Event_Image_URL || '').trim()
-            || (isPrideEvent ? 'placeholder_venue11.jpg' : String(venue?.Image_URL || '').trim())
-            || 'placeholder_venue.jpg';
+        const image = String(event?.Event_Image_URL || venue?.Image_URL || '').trim() || 'placeholder_venue.jpg';
         const dateText = includeDate && event.Display_Date
             ? new Date(`${event.Display_Date}T12:00:00`).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' }).toUpperCase()
             : '';
@@ -479,7 +543,9 @@
     function render() {
         const container = ensureContainer();
         ensureSelectedDate();
-        container.innerHTML = `<div class="calendar-page"><div class="calendar-title-row"><div class="calendar-title-block"><h1 class="display-font">📅 EVENTS${locationLabel() ? ` IN ${escapeHTML(locationLabel()).toUpperCase()}` : ''}</h1>${renderLocationPicker()}<p>Choose a date to see what is on.</p></div>${renderFilterStrip()}</div><div class="calendar-layout"><section class="calendar-selector"><div class="calendar-month-row"><button type="button" class="calendar-month-button" id="calendar-prev-month" aria-label="Previous month">‹</button><h2 class="display-font">${monthLabel()}</h2><button type="button" class="calendar-month-button" id="calendar-next-month" aria-label="Next month">›</button></div>${renderGrid()}<p class="calendar-key"><span class="calendar-dot"></span> Events listed on this date</p></section>${renderPanel()}</div></div>`;
+        const locationLabel = getLocationLabel();
+        const title = locationLabel ? `📅 EVENTS IN ${escapeHTML(locationLabel.toUpperCase())}` : '📅 EVENTS';
+        container.innerHTML = `<div class="calendar-page"><div class="calendar-title-row"><div class="calendar-title-block"><h1 class="display-font">${title}</h1>${renderCityPicker()}<p>Choose a date to see what is on.</p></div>${renderFilterStrip()}</div><div class="calendar-layout"><section class="calendar-selector"><div class="calendar-month-row"><button type="button" class="calendar-month-button" id="calendar-prev-month" aria-label="Previous month">‹</button><h2 class="display-font">${monthLabel()}</h2><button type="button" class="calendar-month-button" id="calendar-next-month" aria-label="Next month">›</button></div>${renderGrid()}<p class="calendar-key"><span class="calendar-dot"></span> Events listed on this date</p></section>${renderPanel()}</div></div>`;
         bindControls();
     }
 
@@ -510,7 +576,7 @@
             render();
         });
         document.getElementById('calendar-location-select')?.addEventListener('change', event => {
-            setSharedLocationFromPicker(event.target.value);
+            setSharedLocationFromSelection(event.target.value);
             ensureSelectedDate();
             render();
         });
