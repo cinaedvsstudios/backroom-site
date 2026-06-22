@@ -1,0 +1,346 @@
+BACKROOM — ZONE 8 CRUISING AREAS
+PRIVATE RESEARCH AND CITY WORKLIST
+
+Purpose
+Zone 8 contains only public-space cruising areas such as parks, gardens, woods, beaches, public toilets, promenades, lakesides, car parks, rest areas and comparable outdoor/public meeting areas.
+Do not add fixed businesses, saunas, sex clubs, adult cinemas, shops, parties, private homes or hotel rooms to this zone.
+
+Live JSON rules
+Each published listing must use the normal Backroom venue schema with:
+  Category: Cruising Area
+  Feature_Cruise_Focused: true
+  Vibe_Tags: Cruising
+Use Category to trigger the special cruising-area display. Show Last_Public_Confirmation and Map_Points only where the relevant information is present and reviewed.
+
+Publication rules
+- Only publish a candidate after current public evidence supports that the area is still relevant.
+- Display broad place or entry-level map references only; do not publish secluded micro-locations, hidden paths or detailed routes to discreet spots.
+- Last_Public_Confirmation must be the newest dated source that actually supports cruising activity, not the date the Backroom file was checked.
+- Use Last_Checked for the Backroom review time and never substitute it for Last_Public_Confirmation.
+- Use Hold or Flag when the newest activity evidence is older than 12 months, conflicts materially, or cannot be dated.
+- Keep descriptions neutral and practical: broad area, access context, seasonality if supported, and a concise consent/discretion/legal note.
+
+Source registry
+1. gay-szene.net
+   URL: https://gay-szene.net/gay-index/stadt.html
+   Use: German, Austrian and Swiss discovery route; use its city index and cruising category to find candidates, never as the only current-activity proof.
+2. Gays-Cruising
+   URL: https://www.gays-cruising.com/
+   Use: Primary international candidate-discovery map for public-space categories including parks, woods, beaches, toilets and rest areas. User-generated entries require corroboration.
+3. CruisingGays
+   URL: https://www.cruisinggays.com/
+   Use: Secondary international candidate-discovery map. Capture visible last-updated signals and treat them as one evidence point, not automatic proof.
+4. The Gay Passport
+   URL: https://thegaypassport.com/
+   Use: Dated city guides and community articles; useful for corroborating well-known public areas and extracting seasonality or broad access context.
+5. GayCities
+   URL: https://www.gaycities.com/places
+   Use: City-coverage and travel-guide corroboration. Use only a city-specific page that supports the actual area; do not infer cruising from a generic city profile.
+6. Official city, park, beach or transport authority
+   Use: Use only to confirm public access, entrances, closures, seasonal restrictions, facilities and transport. It cannot independently prove cruising activity.
+
+City research worklist
+Total cities: 239
+Capital cities: 50
+Secondary cities: 189
+
+- [Tier 2] Albania — Tirana (Capital City)
+- [Tier 3] Andorra — Andorra la Vella (Capital City)
+- [Tier 2] Armenia — Yerevan (Capital City) — Included in the wider European/transcontinental coverage scope.
+- [Tier 1] Austria — Vienna (Capital City)
+- [Tier 2] Azerbaijan — Baku (Capital City) — Included in the wider European/transcontinental coverage scope.
+- [Tier 2] Belarus — Minsk (Capital City)
+- [Tier 1] Belgium — Brussels (Capital City)
+- [Tier 2] Bosnia and Herzegovina — Sarajevo (Capital City)
+- [Tier 2] Bulgaria — Sofia (Capital City)
+- [Tier 2] Croatia — Zagreb (Capital City)
+- [Tier 2] Cyprus — Nicosia (Capital City)
+- [Tier 1] Czechia — Prague (Capital City)
+- [Tier 1] Denmark — Copenhagen (Capital City)
+- [Tier 2] Estonia — Tallinn (Capital City)
+- [Tier 1] Finland — Helsinki (Capital City)
+- [Tier 1] France — Paris (Capital City)
+- [Tier 2] Georgia — Tbilisi (Capital City) — Included in the wider European/transcontinental coverage scope.
+- [Tier 1] Germany — Berlin (Capital City)
+- [Tier 1] Greece — Athens (Capital City)
+- [Tier 1] Hungary — Budapest (Capital City)
+- [Tier 2] Iceland — Reykjavík (Capital City)
+- [Tier 1] Ireland — Dublin (Capital City)
+- [Tier 1] Italy — Rome (Capital City)
+- [Tier 2] Kosovo — Pristina (Capital City) — Included as a capital-city scope entry.
+- [Tier 2] Latvia — Riga (Capital City)
+- [Tier 3] Liechtenstein — Vaduz (Capital City)
+- [Tier 2] Lithuania — Vilnius (Capital City)
+- [Tier 3] Luxembourg — Luxembourg City (Capital City)
+- [Tier 3] Malta — Valletta (Capital City)
+- [Tier 2] Moldova — Chișinău (Capital City)
+- [Tier 3] Monaco — Monaco (Capital City)
+- [Tier 2] Montenegro — Podgorica (Capital City)
+- [Tier 1] Netherlands — Amsterdam (Capital City)
+- [Tier 2] North Macedonia — Skopje (Capital City)
+- [Tier 1] Norway — Oslo (Capital City)
+- [Tier 1] Poland — Warsaw (Capital City)
+- [Tier 1] Portugal — Lisbon (Capital City)
+- [Tier 2] Romania — Bucharest (Capital City)
+- [Tier 2] Russia — Moscow (Capital City)
+- [Tier 3] San Marino — San Marino (Capital City)
+- [Tier 2] Serbia — Belgrade (Capital City)
+- [Tier 2] Slovakia — Bratislava (Capital City)
+- [Tier 2] Slovenia — Ljubljana (Capital City)
+- [Tier 1] Spain — Madrid (Capital City)
+- [Tier 1] Sweden — Stockholm (Capital City)
+- [Tier 2] Switzerland — Bern (Capital City) — Federal city / seat of government; included as the capital-city scope entry.
+- [Tier 2] Turkey — Ankara (Capital City) — Included in the wider European/transcontinental coverage scope.
+- [Tier 2] Ukraine — Kyiv (Capital City)
+- [Tier 1] United Kingdom — London (Capital City)
+- [Tier 3] Vatican City — Vatican City (Capital City)
+- [Tier 2] Albania — Durrës (Secondary Major City)
+- [Tier 2] Armenia — Gyumri (Secondary Major City)
+- [Tier 2] Austria — Graz (Secondary Major City)
+- [Tier 2] Austria — Salzburg (Travel-Destination Secondary City)
+- [Tier 2] Austria — Linz (Secondary Major City)
+- [Tier 2] Austria — Innsbruck (Travel-Destination Secondary City)
+- [Tier 2] Azerbaijan — Ganja (Secondary Major City)
+- [Tier 2] Belarus — Brest (Secondary Major City)
+- [Tier 2] Belarus — Grodno (Secondary Major City)
+- [Tier 2] Belgium — Antwerp (Secondary Major City)
+- [Tier 2] Belgium — Ghent (Secondary Major City)
+- [Tier 2] Belgium — Liège (Secondary Major City)
+- [Tier 2] Belgium — Bruges (Travel-Destination Secondary City)
+- [Tier 2] Bosnia and Herzegovina — Banja Luka (Secondary Major City)
+- [Tier 2] Bosnia and Herzegovina — Mostar (Travel-Destination Secondary City)
+- [Tier 2] Bulgaria — Plovdiv (Secondary Major City)
+- [Tier 2] Bulgaria — Varna (Secondary Major City)
+- [Tier 2] Bulgaria — Burgas (Travel-Destination Secondary City)
+- [Tier 2] Croatia — Split (Travel-Destination Secondary City)
+- [Tier 2] Croatia — Dubrovnik (Travel-Destination Secondary City)
+- [Tier 2] Croatia — Rijeka (Secondary Major City)
+- [Tier 2] Croatia — Hvar (Travel-Destination Secondary City)
+- [Tier 2] Cyprus — Limassol (Secondary Major City)
+- [Tier 2] Cyprus — Larnaca (Travel-Destination Secondary City)
+- [Tier 2] Cyprus — Paphos (Travel-Destination Secondary City)
+- [Tier 2] Czechia — Brno (Secondary Major City)
+- [Tier 2] Czechia — Ostrava (Secondary Major City)
+- [Tier 2] Czechia — Plzeň (Secondary Major City)
+- [Tier 2] Denmark — Aarhus (Secondary Major City)
+- [Tier 2] Denmark — Odense (Secondary Major City)
+- [Tier 2] Denmark — Aalborg (Secondary Major City)
+- [Tier 2] Estonia — Tartu (Secondary Major City)
+- [Tier 2] Estonia — Pärnu (Travel-Destination Secondary City)
+- [Tier 2] Finland — Tampere (Secondary Major City)
+- [Tier 2] Finland — Turku (Secondary Major City)
+- [Tier 2] Finland — Oulu (Secondary Major City)
+- [Tier 2] France — Lyon (Secondary Major City)
+- [Tier 2] France — Marseille (Secondary Major City)
+- [Tier 2] France — Toulouse (Secondary Major City)
+- [Tier 2] France — Bordeaux (Secondary Major City)
+- [Tier 2] France — Montpellier (Secondary Major City)
+- [Tier 2] France — Nice (Travel-Destination Secondary City)
+- [Tier 2] France — Lille (Secondary Major City)
+- [Tier 2] France — Strasbourg (Secondary Major City)
+- [Tier 2] France — Nantes (Secondary Major City)
+- [Tier 2] France — Biarritz (Travel-Destination Secondary City)
+- [Tier 2] Georgia — Batumi (Travel-Destination Secondary City)
+- [Tier 2] Georgia — Kutaisi (Secondary Major City)
+- [Tier 1] Germany — Hamburg (Secondary Major City)
+- [Tier 1] Germany — Cologne (Secondary Major City)
+- [Tier 1] Germany — Munich (Secondary Major City)
+- [Tier 1] Germany — Frankfurt am Main (Secondary Major City)
+- [Tier 1] Germany — Stuttgart (Secondary Major City)
+- [Tier 1] Germany — Düsseldorf (Secondary Major City)
+- [Tier 1] Germany — Leipzig (Secondary Major City)
+- [Tier 2] Germany — Dresden (Secondary Major City)
+- [Tier 2] Germany — Hannover (Secondary Major City)
+- [Tier 2] Germany — Nuremberg (Secondary Major City)
+- [Tier 2] Germany — Mannheim (Secondary Major City)
+- [Tier 2] Germany — Karlsruhe (Secondary Major City)
+- [Tier 2] Germany — Saarbrücken (Secondary Major City)
+- [Tier 2] Germany — Münster (Secondary Major City)
+- [Tier 2] Germany — Dortmund (Secondary Major City)
+- [Tier 2] Germany — Essen (Secondary Major City)
+- [Tier 2] Germany — Bonn (Secondary Major City)
+- [Tier 2] Germany — Freiburg im Breisgau (Secondary Major City)
+- [Tier 2] Germany — Bremen (Secondary Major City)
+- [Tier 2] Germany — Aachen (Secondary Major City)
+- [Tier 2] Greece — Thessaloniki (Secondary Major City)
+- [Tier 1] Greece — Mykonos (Travel-Destination Secondary City)
+- [Tier 2] Greece — Santorini (Travel-Destination Secondary City)
+- [Tier 2] Greece — Patras (Secondary Major City)
+- [Tier 2] Greece — Heraklion (Travel-Destination Secondary City)
+- [Tier 2] Greece — Rhodes (Travel-Destination Secondary City)
+- [Tier 2] Hungary — Debrecen (Secondary Major City)
+- [Tier 2] Hungary — Szeged (Secondary Major City)
+- [Tier 2] Hungary — Pécs (Secondary Major City)
+- [Tier 2] Iceland — Akureyri (Secondary Major City)
+- [Tier 2] Ireland — Cork (Secondary Major City)
+- [Tier 2] Ireland — Galway (Secondary Major City)
+- [Tier 2] Ireland — Limerick (Secondary Major City)
+- [Tier 1] Italy — Milan (Secondary Major City)
+- [Tier 2] Italy — Naples (Secondary Major City)
+- [Tier 2] Italy — Bologna (Secondary Major City)
+- [Tier 2] Italy — Florence (Travel-Destination Secondary City)
+- [Tier 2] Italy — Turin (Secondary Major City)
+- [Tier 2] Italy — Venice (Travel-Destination Secondary City)
+- [Tier 2] Italy — Palermo (Secondary Major City)
+- [Tier 2] Italy — Catania (Secondary Major City)
+- [Tier 2] Italy — Bari (Secondary Major City)
+- [Tier 2] Italy — Verona (Travel-Destination Secondary City)
+- [Tier 2] Kosovo — Prizren (Secondary Major City)
+- [Tier 2] Latvia — Jūrmala (Travel-Destination Secondary City)
+- [Tier 2] Latvia — Liepāja (Secondary Major City)
+- [Tier 2] Latvia — Daugavpils (Secondary Major City)
+- [Tier 2] Lithuania — Kaunas (Secondary Major City)
+- [Tier 2] Lithuania — Klaipėda (Secondary Major City)
+- [Tier 2] Malta — St Julian's (Travel-Destination Secondary City)
+- [Tier 2] Malta — Sliema (Travel-Destination Secondary City)
+- [Tier 2] Malta — St Paul's Bay (Travel-Destination Secondary City)
+- [Tier 2] Moldova — Bălți (Secondary Major City)
+- [Tier 2] Montenegro — Budva (Travel-Destination Secondary City)
+- [Tier 2] Montenegro — Kotor (Travel-Destination Secondary City)
+- [Tier 2] Montenegro — Bar (Secondary Major City)
+- [Tier 2] Netherlands — Rotterdam (Secondary Major City)
+- [Tier 2] Netherlands — The Hague (Secondary Major City)
+- [Tier 2] Netherlands — Utrecht (Secondary Major City)
+- [Tier 2] Netherlands — Eindhoven (Secondary Major City)
+- [Tier 2] Netherlands — Maastricht (Travel-Destination Secondary City)
+- [Tier 2] North Macedonia — Ohrid (Travel-Destination Secondary City)
+- [Tier 2] North Macedonia — Bitola (Secondary Major City)
+- [Tier 2] Norway — Bergen (Secondary Major City)
+- [Tier 2] Norway — Trondheim (Secondary Major City)
+- [Tier 2] Norway — Stavanger (Secondary Major City)
+- [Tier 1] Poland — Kraków (Secondary Major City)
+- [Tier 1] Poland — Poznań (Secondary Major City)
+- [Tier 1] Poland — Wrocław (Secondary Major City)
+- [Tier 1] Poland — Gdańsk (Secondary Major City)
+- [Tier 2] Poland — Łódź (Secondary Major City)
+- [Tier 2] Poland — Katowice (Secondary Major City)
+- [Tier 2] Poland — Szczecin (Secondary Major City)
+- [Tier 2] Poland — Lublin (Secondary Major City)
+- [Tier 2] Poland — Toruń (Secondary Major City)
+- [Tier 2] Poland — Bydgoszcz (Secondary Major City)
+- [Tier 2] Portugal — Porto (Secondary Major City)
+- [Tier 2] Portugal — Faro (Travel-Destination Secondary City)
+- [Tier 2] Portugal — Funchal (Travel-Destination Secondary City)
+- [Tier 2] Portugal — Albufeira (Travel-Destination Secondary City)
+- [Tier 2] Portugal — Coimbra (Secondary Major City)
+- [Tier 2] Romania — Cluj-Napoca (Secondary Major City)
+- [Tier 2] Romania — Timișoara (Secondary Major City)
+- [Tier 2] Romania — Iași (Secondary Major City)
+- [Tier 2] Romania — Constanța (Secondary Major City)
+- [Tier 2] Romania — Brașov (Travel-Destination Secondary City)
+- [Tier 2] Romania — Sibiu (Travel-Destination Secondary City)
+- [Tier 2] Russia — Saint Petersburg (Secondary Major City)
+- [Tier 2] Russia — Kazan (Secondary Major City)
+- [Tier 2] Russia — Sochi (Travel-Destination Secondary City)
+- [Tier 2] Russia — Yekaterinburg (Secondary Major City)
+- [Tier 2] Serbia — Novi Sad (Secondary Major City)
+- [Tier 2] Serbia — Niš (Secondary Major City)
+- [Tier 2] Serbia — Kragujevac (Secondary Major City)
+- [Tier 2] Slovakia — Košice (Secondary Major City)
+- [Tier 2] Slovakia — Banská Bystrica (Secondary Major City)
+- [Tier 2] Slovenia — Maribor (Secondary Major City)
+- [Tier 2] Slovenia — Koper (Travel-Destination Secondary City)
+- [Tier 1] Spain — Barcelona (Secondary Major City)
+- [Tier 1] Spain — Valencia (Secondary Major City)
+- [Tier 1] Spain — Seville (Secondary Major City)
+- [Tier 1] Spain — Málaga (Secondary Major City)
+- [Tier 1] Spain — Torremolinos (Travel-Destination Secondary City)
+- [Tier 1] Spain — Sitges (Travel-Destination Secondary City)
+- [Tier 2] Spain — Bilbao (Secondary Major City)
+- [Tier 2] Spain — Alicante (Secondary Major City)
+- [Tier 2] Spain — Palma (Travel-Destination Secondary City)
+- [Tier 1] Spain — Ibiza Town (Travel-Destination Secondary City)
+- [Tier 1] Spain — Maspalomas / Playa del Inglés (Travel-Destination Secondary City)
+- [Tier 2] Spain — Benidorm (Travel-Destination Secondary City)
+- [Tier 2] Sweden — Gothenburg (Secondary Major City)
+- [Tier 2] Sweden — Malmö (Secondary Major City)
+- [Tier 2] Sweden — Uppsala (Secondary Major City)
+- [Tier 1] Switzerland — Zürich (Secondary Major City)
+- [Tier 1] Switzerland — Geneva (Secondary Major City)
+- [Tier 2] Switzerland — Basel (Secondary Major City)
+- [Tier 2] Switzerland — Lausanne (Secondary Major City)
+- [Tier 2] Switzerland — Lucerne (Travel-Destination Secondary City)
+- [Tier 1] Turkey — Istanbul (Secondary Major City)
+- [Tier 2] Turkey — İzmir (Secondary Major City)
+- [Tier 2] Turkey — Antalya (Travel-Destination Secondary City)
+- [Tier 2] Turkey — Bodrum (Travel-Destination Secondary City)
+- [Tier 2] Turkey — Marmaris (Travel-Destination Secondary City)
+- [Tier 2] Ukraine — Lviv (Secondary Major City)
+- [Tier 2] Ukraine — Odesa (Secondary Major City)
+- [Tier 2] Ukraine — Kharkiv (Secondary Major City)
+- [Tier 2] Ukraine — Dnipro (Secondary Major City)
+- [Tier 1] United Kingdom — Manchester (Secondary Major City)
+- [Tier 1] United Kingdom — Brighton (Travel-Destination Secondary City)
+- [Tier 2] United Kingdom — Birmingham (Secondary Major City)
+- [Tier 2] United Kingdom — Liverpool (Secondary Major City)
+- [Tier 1] United Kingdom — Glasgow (Secondary Major City)
+- [Tier 1] United Kingdom — Edinburgh (Secondary Major City)
+- [Tier 2] United Kingdom — Bristol (Secondary Major City)
+- [Tier 2] United Kingdom — Leeds (Secondary Major City)
+- [Tier 2] United Kingdom — Cardiff (Secondary Major City)
+- [Tier 2] United Kingdom — Belfast (Secondary Major City)
+- [Tier 2] United Kingdom — Blackpool (Travel-Destination Secondary City)
+- [Tier 2] United Kingdom — Newcastle upon Tyne (Secondary Major City)
+- [Tier 2] United Kingdom — Bournemouth (Travel-Destination Secondary City)
+- [Tier 2] United Kingdom — Cambridge (Secondary Major City)
+
+Area audit records
+
+CRU-BER-TIE-01 — Tiergarten (Berlin, Germany)
+Status: Hold
+Area type: Park
+Last public confirmation: Not yet verified
+Last checked: 2026-06-22T17:36:00Z
+Activity evidence: Candidate public-area record created from user-supplied map references. No public activity claim has been made or dated in this audit record yet.
+Access notes: Several candidate map references have been supplied. Verify public access, labels and current relevance before approving a public listing.
+Safety/legal: Public park. Respect consent, privacy and local rules. A map point is a general orientation reference, not a guarantee of activity.
+Admin notes: The first and third supplied Google Maps URLs resolve to the same destination coordinates (52.513786, 13.345613). The second resolves to a separate destination coordinate (52.5157235, 13.3456958). Labels and public-display approval remain pending.
+Map points:
+  - CRU-BER-TIE-01-A | Tiergarten map point A — label pending review
+    Coordinates: 52.513786, 13.345613
+    Google Maps: https://www.google.com/maps/place/52%C2%B030'49.6%22N+13%C2%B020'44.2%22E/@52.5142465,13.3433298,17z/data=!4m4!3m3!8m2!3d52.513786!4d13.345613?entry=ttu&g_ep=EgoyMDI2MDYxNi4wIKXMDSoASAFQAw%3D%3D
+    Native map query: 52.513786, 13.345613
+    Notes: Specific public map reference supplied for the Tiergarten candidate record. Confirm the user-facing label and current relevance before publication.
+    Last public confirmation: Not yet verified
+    Confidence: Low
+    Public display approved: False
+  - CRU-BER-TIE-01-B | Tiergarten map point B — label pending review
+    Coordinates: 52.5157235, 13.3456958
+    Google Maps: https://www.google.com/maps/place/Berliner+Innenstadt,+10557+Berlin/@52.5143538,13.3420798,15.96z/data=!4m9!1m2!10m1!1e2!3m5!1s0x47a851a85c277fb5:0x16fca6e9be9ebb11!8m2!3d52.5157235!4d13.3456958!16s%2Fg%2F11dzp_v111?entry=ttu&g_ep=EgoyMDI2MDYxNi4wIKXMDSoASAFQAw%3D%3D
+    Native map query: 52.5157235, 13.3456958
+    Notes: Specific public map reference supplied for the Tiergarten candidate record. Confirm the user-facing label and current relevance before publication.
+    Last public confirmation: Not yet verified
+    Confidence: Low
+    Public display approved: False
+
+Future area audit template
+For each candidate, keep the following headings in this text file:
+- Venue_ID:
+- Name:
+- City:
+- Country:
+- Area_Type:
+- Status:
+- Last_Public_Confirmation:
+- Last_Checked:
+- Primary_Source_URL:
+- Supporting_Source_URLs:
+- Evidence_Dates:
+- Activity_Evidence_Summary:
+- Access_Confirmation_URL:
+- Access_Notes:
+- Seasonality:
+- Public_Map_Display_Level:
+- Safety_Legal_Notes:
+- Confidence:
+- Fields_Updated:
+- Suggested_Image_Source_URL:
+- Additional_Public_Notes:
+- Map Points: use one block per separately confirmed broad public map reference, including label, coordinates, Google Maps URL, map query, source/date, confidence and public-display approval.
+- Last Public Confirmation: the newest dated source that actually supports current activity. Never substitute the date this worklist was checked.
+
+Update protocol
+1. Research a city from the worklist using the listed source registry.
+2. Add candidates here first with source URLs, source dates, access notes and broad map points.
+3. Add or change a public JSON listing only when evidence meets the publication rules.
+4. Keep uncertain records as Hold or Flag; never imply current activity without a dated confirmation.
