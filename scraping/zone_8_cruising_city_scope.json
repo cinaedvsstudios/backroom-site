@@ -1,0 +1,1990 @@
+{
+  "Zone_ID": "Zone 8",
+  "Zone_Name": "Cruising Areas",
+  "Purpose": "Research and list publicly accessible outdoor or public-space cruising areas only. This zone excludes businesses, saunas, sex clubs, adult cinemas, shops, parties, private homes and hotel rooms.",
+  "Generated_At": "2026-06-22T17:36:00Z",
+  "City_Count": 239,
+  "Capital_City_Count": 50,
+  "Secondary_City_Count": 189,
+  "Public_Area_Types": [
+    "Park",
+    "Garden",
+    "Forest/Woodland",
+    "Beach/Dunes",
+    "Public Toilets",
+    "Riverside/Promenade",
+    "Lake/Reservoir",
+    "Car Park",
+    "Rest Area",
+    "Public Outdoor Meeting Area"
+  ],
+  "Publication_Rules": [
+    "Only publish a candidate after current public evidence supports that the area is still relevant.",
+    "Display broad place or entry-level map references only; do not publish secluded micro-locations, hidden paths or detailed routes to discreet spots.",
+    "Last_Public_Confirmation must be the newest dated source that actually supports cruising activity, not the date the Backroom file was checked.",
+    "Use Last_Checked for the Backroom review time and never substitute it for Last_Public_Confirmation.",
+    "Use Hold or Flag when the newest activity evidence is older than 12 months, conflicts materially, or cannot be dated.",
+    "Keep descriptions neutral and practical: broad area, access context, seasonality if supported, and a concise consent/discretion/legal note."
+  ],
+  "Source_Registry": [
+    {
+      "Source_Name": "gay-szene.net",
+      "URL": "https://gay-szene.net/gay-index/stadt.html",
+      "Use": "German, Austrian and Swiss discovery route; use its city index and cruising category to find candidates, never as the only current-activity proof.",
+      "Priority": 1
+    },
+    {
+      "Source_Name": "Gays-Cruising",
+      "URL": "https://www.gays-cruising.com/",
+      "Use": "Primary international candidate-discovery map for public-space categories including parks, woods, beaches, toilets and rest areas. User-generated entries require corroboration.",
+      "Priority": 2
+    },
+    {
+      "Source_Name": "CruisingGays",
+      "URL": "https://www.cruisinggays.com/",
+      "Use": "Secondary international candidate-discovery map. Capture visible last-updated signals and treat them as one evidence point, not automatic proof.",
+      "Priority": 3
+    },
+    {
+      "Source_Name": "The Gay Passport",
+      "URL": "https://thegaypassport.com/",
+      "Use": "Dated city guides and community articles; useful for corroborating well-known public areas and extracting seasonality or broad access context.",
+      "Priority": 4
+    },
+    {
+      "Source_Name": "GayCities",
+      "URL": "https://www.gaycities.com/places",
+      "Use": "City-coverage and travel-guide corroboration. Use only a city-specific page that supports the actual area; do not infer cruising from a generic city profile.",
+      "Priority": 5
+    },
+    {
+      "Source_Name": "Official city, park, beach or transport authority",
+      "URL": "",
+      "Use": "Use only to confirm public access, entrances, closures, seasonal restrictions, facilities and transport. It cannot independently prove cruising activity.",
+      "Priority": 6
+    }
+  ],
+  "Cities": [
+    {
+      "City_ID": "CRU-ALB-TIRANA",
+      "Country": "Albania",
+      "City": "Tirana",
+      "Scope_Type": "Capital City",
+      "Research_Priority": "Tier 2",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-AND-ANDORRA-",
+      "Country": "Andorra",
+      "City": "Andorra la Vella",
+      "Scope_Type": "Capital City",
+      "Research_Priority": "Tier 3",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-ARM-YEREVAN",
+      "Country": "Armenia",
+      "City": "Yerevan",
+      "Scope_Type": "Capital City",
+      "Research_Priority": "Tier 2",
+      "Scope_Notes": "Included in the wider European/transcontinental coverage scope."
+    },
+    {
+      "City_ID": "CRU-AUS-VIENNA",
+      "Country": "Austria",
+      "City": "Vienna",
+      "Scope_Type": "Capital City",
+      "Research_Priority": "Tier 1",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-AZE-BAKU",
+      "Country": "Azerbaijan",
+      "City": "Baku",
+      "Scope_Type": "Capital City",
+      "Research_Priority": "Tier 2",
+      "Scope_Notes": "Included in the wider European/transcontinental coverage scope."
+    },
+    {
+      "City_ID": "CRU-BEL-MINSK",
+      "Country": "Belarus",
+      "City": "Minsk",
+      "Scope_Type": "Capital City",
+      "Research_Priority": "Tier 2",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-BEL-BRUSSELS",
+      "Country": "Belgium",
+      "City": "Brussels",
+      "Scope_Type": "Capital City",
+      "Research_Priority": "Tier 1",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-BOS-SARAJEVO",
+      "Country": "Bosnia and Herzegovina",
+      "City": "Sarajevo",
+      "Scope_Type": "Capital City",
+      "Research_Priority": "Tier 2",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-BUL-SOFIA",
+      "Country": "Bulgaria",
+      "City": "Sofia",
+      "Scope_Type": "Capital City",
+      "Research_Priority": "Tier 2",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-CRO-ZAGREB",
+      "Country": "Croatia",
+      "City": "Zagreb",
+      "Scope_Type": "Capital City",
+      "Research_Priority": "Tier 2",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-CYP-NICOSIA",
+      "Country": "Cyprus",
+      "City": "Nicosia",
+      "Scope_Type": "Capital City",
+      "Research_Priority": "Tier 2",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-CZE-PRAGUE",
+      "Country": "Czechia",
+      "City": "Prague",
+      "Scope_Type": "Capital City",
+      "Research_Priority": "Tier 1",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-DEN-COPENHAG",
+      "Country": "Denmark",
+      "City": "Copenhagen",
+      "Scope_Type": "Capital City",
+      "Research_Priority": "Tier 1",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-EST-TALLINN",
+      "Country": "Estonia",
+      "City": "Tallinn",
+      "Scope_Type": "Capital City",
+      "Research_Priority": "Tier 2",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-FIN-HELSINKI",
+      "Country": "Finland",
+      "City": "Helsinki",
+      "Scope_Type": "Capital City",
+      "Research_Priority": "Tier 1",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-FRA-PARIS",
+      "Country": "France",
+      "City": "Paris",
+      "Scope_Type": "Capital City",
+      "Research_Priority": "Tier 1",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-GEO-TBILISI",
+      "Country": "Georgia",
+      "City": "Tbilisi",
+      "Scope_Type": "Capital City",
+      "Research_Priority": "Tier 2",
+      "Scope_Notes": "Included in the wider European/transcontinental coverage scope."
+    },
+    {
+      "City_ID": "CRU-GER-BERLIN",
+      "Country": "Germany",
+      "City": "Berlin",
+      "Scope_Type": "Capital City",
+      "Research_Priority": "Tier 1",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-GRE-ATHENS",
+      "Country": "Greece",
+      "City": "Athens",
+      "Scope_Type": "Capital City",
+      "Research_Priority": "Tier 1",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-HUN-BUDAPEST",
+      "Country": "Hungary",
+      "City": "Budapest",
+      "Scope_Type": "Capital City",
+      "Research_Priority": "Tier 1",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-ICE-REYKJAVI",
+      "Country": "Iceland",
+      "City": "Reykjavík",
+      "Scope_Type": "Capital City",
+      "Research_Priority": "Tier 2",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-IRE-DUBLIN",
+      "Country": "Ireland",
+      "City": "Dublin",
+      "Scope_Type": "Capital City",
+      "Research_Priority": "Tier 1",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-ITA-ROME",
+      "Country": "Italy",
+      "City": "Rome",
+      "Scope_Type": "Capital City",
+      "Research_Priority": "Tier 1",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-KOS-PRISTINA",
+      "Country": "Kosovo",
+      "City": "Pristina",
+      "Scope_Type": "Capital City",
+      "Research_Priority": "Tier 2",
+      "Scope_Notes": "Included as a capital-city scope entry."
+    },
+    {
+      "City_ID": "CRU-LAT-RIGA",
+      "Country": "Latvia",
+      "City": "Riga",
+      "Scope_Type": "Capital City",
+      "Research_Priority": "Tier 2",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-LIE-VADUZ",
+      "Country": "Liechtenstein",
+      "City": "Vaduz",
+      "Scope_Type": "Capital City",
+      "Research_Priority": "Tier 3",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-LIT-VILNIUS",
+      "Country": "Lithuania",
+      "City": "Vilnius",
+      "Scope_Type": "Capital City",
+      "Research_Priority": "Tier 2",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-LUX-LUXEMBOU",
+      "Country": "Luxembourg",
+      "City": "Luxembourg City",
+      "Scope_Type": "Capital City",
+      "Research_Priority": "Tier 3",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-MAL-VALLETTA",
+      "Country": "Malta",
+      "City": "Valletta",
+      "Scope_Type": "Capital City",
+      "Research_Priority": "Tier 3",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-MOL-CHISINAU",
+      "Country": "Moldova",
+      "City": "Chișinău",
+      "Scope_Type": "Capital City",
+      "Research_Priority": "Tier 2",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-MON-MONACO",
+      "Country": "Monaco",
+      "City": "Monaco",
+      "Scope_Type": "Capital City",
+      "Research_Priority": "Tier 3",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-MON-PODGORIC",
+      "Country": "Montenegro",
+      "City": "Podgorica",
+      "Scope_Type": "Capital City",
+      "Research_Priority": "Tier 2",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-NET-AMSTERDA",
+      "Country": "Netherlands",
+      "City": "Amsterdam",
+      "Scope_Type": "Capital City",
+      "Research_Priority": "Tier 1",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-NOR-SKOPJE",
+      "Country": "North Macedonia",
+      "City": "Skopje",
+      "Scope_Type": "Capital City",
+      "Research_Priority": "Tier 2",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-NOR-OSLO",
+      "Country": "Norway",
+      "City": "Oslo",
+      "Scope_Type": "Capital City",
+      "Research_Priority": "Tier 1",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-POL-WARSAW",
+      "Country": "Poland",
+      "City": "Warsaw",
+      "Scope_Type": "Capital City",
+      "Research_Priority": "Tier 1",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-POR-LISBON",
+      "Country": "Portugal",
+      "City": "Lisbon",
+      "Scope_Type": "Capital City",
+      "Research_Priority": "Tier 1",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-ROM-BUCHARES",
+      "Country": "Romania",
+      "City": "Bucharest",
+      "Scope_Type": "Capital City",
+      "Research_Priority": "Tier 2",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-RUS-MOSCOW",
+      "Country": "Russia",
+      "City": "Moscow",
+      "Scope_Type": "Capital City",
+      "Research_Priority": "Tier 2",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-SAN-SAN-MARI",
+      "Country": "San Marino",
+      "City": "San Marino",
+      "Scope_Type": "Capital City",
+      "Research_Priority": "Tier 3",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-SER-BELGRADE",
+      "Country": "Serbia",
+      "City": "Belgrade",
+      "Scope_Type": "Capital City",
+      "Research_Priority": "Tier 2",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-SLO-BRATISLA",
+      "Country": "Slovakia",
+      "City": "Bratislava",
+      "Scope_Type": "Capital City",
+      "Research_Priority": "Tier 2",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-SLO-LJUBLJAN",
+      "Country": "Slovenia",
+      "City": "Ljubljana",
+      "Scope_Type": "Capital City",
+      "Research_Priority": "Tier 2",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-SPA-MADRID",
+      "Country": "Spain",
+      "City": "Madrid",
+      "Scope_Type": "Capital City",
+      "Research_Priority": "Tier 1",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-SWE-STOCKHOL",
+      "Country": "Sweden",
+      "City": "Stockholm",
+      "Scope_Type": "Capital City",
+      "Research_Priority": "Tier 1",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-SWI-BERN",
+      "Country": "Switzerland",
+      "City": "Bern",
+      "Scope_Type": "Capital City",
+      "Research_Priority": "Tier 2",
+      "Scope_Notes": "Federal city / seat of government; included as the capital-city scope entry."
+    },
+    {
+      "City_ID": "CRU-TUR-ANKARA",
+      "Country": "Turkey",
+      "City": "Ankara",
+      "Scope_Type": "Capital City",
+      "Research_Priority": "Tier 2",
+      "Scope_Notes": "Included in the wider European/transcontinental coverage scope."
+    },
+    {
+      "City_ID": "CRU-UKR-KYIV",
+      "Country": "Ukraine",
+      "City": "Kyiv",
+      "Scope_Type": "Capital City",
+      "Research_Priority": "Tier 2",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-UNI-LONDON",
+      "Country": "United Kingdom",
+      "City": "London",
+      "Scope_Type": "Capital City",
+      "Research_Priority": "Tier 1",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-VAT-VATICAN-",
+      "Country": "Vatican City",
+      "City": "Vatican City",
+      "Scope_Type": "Capital City",
+      "Research_Priority": "Tier 3",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-ALB-DURRES",
+      "Country": "Albania",
+      "City": "Durrës",
+      "Scope_Type": "Secondary Major City",
+      "Research_Priority": "Tier 2",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-ARM-GYUMRI",
+      "Country": "Armenia",
+      "City": "Gyumri",
+      "Scope_Type": "Secondary Major City",
+      "Research_Priority": "Tier 2",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-AUS-GRAZ",
+      "Country": "Austria",
+      "City": "Graz",
+      "Scope_Type": "Secondary Major City",
+      "Research_Priority": "Tier 2",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-AUS-SALZBURG",
+      "Country": "Austria",
+      "City": "Salzburg",
+      "Scope_Type": "Travel-Destination Secondary City",
+      "Research_Priority": "Tier 2",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-AUS-LINZ",
+      "Country": "Austria",
+      "City": "Linz",
+      "Scope_Type": "Secondary Major City",
+      "Research_Priority": "Tier 2",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-AUS-INNSBRUC",
+      "Country": "Austria",
+      "City": "Innsbruck",
+      "Scope_Type": "Travel-Destination Secondary City",
+      "Research_Priority": "Tier 2",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-AZE-GANJA",
+      "Country": "Azerbaijan",
+      "City": "Ganja",
+      "Scope_Type": "Secondary Major City",
+      "Research_Priority": "Tier 2",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-BEL-BREST",
+      "Country": "Belarus",
+      "City": "Brest",
+      "Scope_Type": "Secondary Major City",
+      "Research_Priority": "Tier 2",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-BEL-GRODNO",
+      "Country": "Belarus",
+      "City": "Grodno",
+      "Scope_Type": "Secondary Major City",
+      "Research_Priority": "Tier 2",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-BEL-ANTWERP",
+      "Country": "Belgium",
+      "City": "Antwerp",
+      "Scope_Type": "Secondary Major City",
+      "Research_Priority": "Tier 2",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-BEL-GHENT",
+      "Country": "Belgium",
+      "City": "Ghent",
+      "Scope_Type": "Secondary Major City",
+      "Research_Priority": "Tier 2",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-BEL-LIEGE",
+      "Country": "Belgium",
+      "City": "Liège",
+      "Scope_Type": "Secondary Major City",
+      "Research_Priority": "Tier 2",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-BEL-BRUGES",
+      "Country": "Belgium",
+      "City": "Bruges",
+      "Scope_Type": "Travel-Destination Secondary City",
+      "Research_Priority": "Tier 2",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-BOS-BANJA-LU",
+      "Country": "Bosnia and Herzegovina",
+      "City": "Banja Luka",
+      "Scope_Type": "Secondary Major City",
+      "Research_Priority": "Tier 2",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-BOS-MOSTAR",
+      "Country": "Bosnia and Herzegovina",
+      "City": "Mostar",
+      "Scope_Type": "Travel-Destination Secondary City",
+      "Research_Priority": "Tier 2",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-BUL-PLOVDIV",
+      "Country": "Bulgaria",
+      "City": "Plovdiv",
+      "Scope_Type": "Secondary Major City",
+      "Research_Priority": "Tier 2",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-BUL-VARNA",
+      "Country": "Bulgaria",
+      "City": "Varna",
+      "Scope_Type": "Secondary Major City",
+      "Research_Priority": "Tier 2",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-BUL-BURGAS",
+      "Country": "Bulgaria",
+      "City": "Burgas",
+      "Scope_Type": "Travel-Destination Secondary City",
+      "Research_Priority": "Tier 2",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-CRO-SPLIT",
+      "Country": "Croatia",
+      "City": "Split",
+      "Scope_Type": "Travel-Destination Secondary City",
+      "Research_Priority": "Tier 2",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-CRO-DUBROVNI",
+      "Country": "Croatia",
+      "City": "Dubrovnik",
+      "Scope_Type": "Travel-Destination Secondary City",
+      "Research_Priority": "Tier 2",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-CRO-RIJEKA",
+      "Country": "Croatia",
+      "City": "Rijeka",
+      "Scope_Type": "Secondary Major City",
+      "Research_Priority": "Tier 2",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-CRO-HVAR",
+      "Country": "Croatia",
+      "City": "Hvar",
+      "Scope_Type": "Travel-Destination Secondary City",
+      "Research_Priority": "Tier 2",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-CYP-LIMASSOL",
+      "Country": "Cyprus",
+      "City": "Limassol",
+      "Scope_Type": "Secondary Major City",
+      "Research_Priority": "Tier 2",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-CYP-LARNACA",
+      "Country": "Cyprus",
+      "City": "Larnaca",
+      "Scope_Type": "Travel-Destination Secondary City",
+      "Research_Priority": "Tier 2",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-CYP-PAPHOS",
+      "Country": "Cyprus",
+      "City": "Paphos",
+      "Scope_Type": "Travel-Destination Secondary City",
+      "Research_Priority": "Tier 2",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-CZE-BRNO",
+      "Country": "Czechia",
+      "City": "Brno",
+      "Scope_Type": "Secondary Major City",
+      "Research_Priority": "Tier 2",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-CZE-OSTRAVA",
+      "Country": "Czechia",
+      "City": "Ostrava",
+      "Scope_Type": "Secondary Major City",
+      "Research_Priority": "Tier 2",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-CZE-PLZEN",
+      "Country": "Czechia",
+      "City": "Plzeň",
+      "Scope_Type": "Secondary Major City",
+      "Research_Priority": "Tier 2",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-DEN-AARHUS",
+      "Country": "Denmark",
+      "City": "Aarhus",
+      "Scope_Type": "Secondary Major City",
+      "Research_Priority": "Tier 2",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-DEN-ODENSE",
+      "Country": "Denmark",
+      "City": "Odense",
+      "Scope_Type": "Secondary Major City",
+      "Research_Priority": "Tier 2",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-DEN-AALBORG",
+      "Country": "Denmark",
+      "City": "Aalborg",
+      "Scope_Type": "Secondary Major City",
+      "Research_Priority": "Tier 2",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-EST-TARTU",
+      "Country": "Estonia",
+      "City": "Tartu",
+      "Scope_Type": "Secondary Major City",
+      "Research_Priority": "Tier 2",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-EST-PARNU",
+      "Country": "Estonia",
+      "City": "Pärnu",
+      "Scope_Type": "Travel-Destination Secondary City",
+      "Research_Priority": "Tier 2",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-FIN-TAMPERE",
+      "Country": "Finland",
+      "City": "Tampere",
+      "Scope_Type": "Secondary Major City",
+      "Research_Priority": "Tier 2",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-FIN-TURKU",
+      "Country": "Finland",
+      "City": "Turku",
+      "Scope_Type": "Secondary Major City",
+      "Research_Priority": "Tier 2",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-FIN-OULU",
+      "Country": "Finland",
+      "City": "Oulu",
+      "Scope_Type": "Secondary Major City",
+      "Research_Priority": "Tier 2",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-FRA-LYON",
+      "Country": "France",
+      "City": "Lyon",
+      "Scope_Type": "Secondary Major City",
+      "Research_Priority": "Tier 2",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-FRA-MARSEILL",
+      "Country": "France",
+      "City": "Marseille",
+      "Scope_Type": "Secondary Major City",
+      "Research_Priority": "Tier 2",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-FRA-TOULOUSE",
+      "Country": "France",
+      "City": "Toulouse",
+      "Scope_Type": "Secondary Major City",
+      "Research_Priority": "Tier 2",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-FRA-BORDEAUX",
+      "Country": "France",
+      "City": "Bordeaux",
+      "Scope_Type": "Secondary Major City",
+      "Research_Priority": "Tier 2",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-FRA-MONTPELL",
+      "Country": "France",
+      "City": "Montpellier",
+      "Scope_Type": "Secondary Major City",
+      "Research_Priority": "Tier 2",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-FRA-NICE",
+      "Country": "France",
+      "City": "Nice",
+      "Scope_Type": "Travel-Destination Secondary City",
+      "Research_Priority": "Tier 2",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-FRA-LILLE",
+      "Country": "France",
+      "City": "Lille",
+      "Scope_Type": "Secondary Major City",
+      "Research_Priority": "Tier 2",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-FRA-STRASBOU",
+      "Country": "France",
+      "City": "Strasbourg",
+      "Scope_Type": "Secondary Major City",
+      "Research_Priority": "Tier 2",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-FRA-NANTES",
+      "Country": "France",
+      "City": "Nantes",
+      "Scope_Type": "Secondary Major City",
+      "Research_Priority": "Tier 2",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-FRA-BIARRITZ",
+      "Country": "France",
+      "City": "Biarritz",
+      "Scope_Type": "Travel-Destination Secondary City",
+      "Research_Priority": "Tier 2",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-GEO-BATUMI",
+      "Country": "Georgia",
+      "City": "Batumi",
+      "Scope_Type": "Travel-Destination Secondary City",
+      "Research_Priority": "Tier 2",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-GEO-KUTAISI",
+      "Country": "Georgia",
+      "City": "Kutaisi",
+      "Scope_Type": "Secondary Major City",
+      "Research_Priority": "Tier 2",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-GER-HAMBURG",
+      "Country": "Germany",
+      "City": "Hamburg",
+      "Scope_Type": "Secondary Major City",
+      "Research_Priority": "Tier 1",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-GER-COLOGNE",
+      "Country": "Germany",
+      "City": "Cologne",
+      "Scope_Type": "Secondary Major City",
+      "Research_Priority": "Tier 1",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-GER-MUNICH",
+      "Country": "Germany",
+      "City": "Munich",
+      "Scope_Type": "Secondary Major City",
+      "Research_Priority": "Tier 1",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-GER-FRANKFUR",
+      "Country": "Germany",
+      "City": "Frankfurt am Main",
+      "Scope_Type": "Secondary Major City",
+      "Research_Priority": "Tier 1",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-GER-STUTTGAR",
+      "Country": "Germany",
+      "City": "Stuttgart",
+      "Scope_Type": "Secondary Major City",
+      "Research_Priority": "Tier 1",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-GER-DUSSELDO",
+      "Country": "Germany",
+      "City": "Düsseldorf",
+      "Scope_Type": "Secondary Major City",
+      "Research_Priority": "Tier 1",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-GER-LEIPZIG",
+      "Country": "Germany",
+      "City": "Leipzig",
+      "Scope_Type": "Secondary Major City",
+      "Research_Priority": "Tier 1",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-GER-DRESDEN",
+      "Country": "Germany",
+      "City": "Dresden",
+      "Scope_Type": "Secondary Major City",
+      "Research_Priority": "Tier 2",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-GER-HANNOVER",
+      "Country": "Germany",
+      "City": "Hannover",
+      "Scope_Type": "Secondary Major City",
+      "Research_Priority": "Tier 2",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-GER-NUREMBER",
+      "Country": "Germany",
+      "City": "Nuremberg",
+      "Scope_Type": "Secondary Major City",
+      "Research_Priority": "Tier 2",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-GER-MANNHEIM",
+      "Country": "Germany",
+      "City": "Mannheim",
+      "Scope_Type": "Secondary Major City",
+      "Research_Priority": "Tier 2",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-GER-KARLSRUH",
+      "Country": "Germany",
+      "City": "Karlsruhe",
+      "Scope_Type": "Secondary Major City",
+      "Research_Priority": "Tier 2",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-GER-SAARBRUC",
+      "Country": "Germany",
+      "City": "Saarbrücken",
+      "Scope_Type": "Secondary Major City",
+      "Research_Priority": "Tier 2",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-GER-MUNSTER",
+      "Country": "Germany",
+      "City": "Münster",
+      "Scope_Type": "Secondary Major City",
+      "Research_Priority": "Tier 2",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-GER-DORTMUND",
+      "Country": "Germany",
+      "City": "Dortmund",
+      "Scope_Type": "Secondary Major City",
+      "Research_Priority": "Tier 2",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-GER-ESSEN",
+      "Country": "Germany",
+      "City": "Essen",
+      "Scope_Type": "Secondary Major City",
+      "Research_Priority": "Tier 2",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-GER-BONN",
+      "Country": "Germany",
+      "City": "Bonn",
+      "Scope_Type": "Secondary Major City",
+      "Research_Priority": "Tier 2",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-GER-FREIBURG",
+      "Country": "Germany",
+      "City": "Freiburg im Breisgau",
+      "Scope_Type": "Secondary Major City",
+      "Research_Priority": "Tier 2",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-GER-BREMEN",
+      "Country": "Germany",
+      "City": "Bremen",
+      "Scope_Type": "Secondary Major City",
+      "Research_Priority": "Tier 2",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-GER-AACHEN",
+      "Country": "Germany",
+      "City": "Aachen",
+      "Scope_Type": "Secondary Major City",
+      "Research_Priority": "Tier 2",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-GRE-THESSALO",
+      "Country": "Greece",
+      "City": "Thessaloniki",
+      "Scope_Type": "Secondary Major City",
+      "Research_Priority": "Tier 2",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-GRE-MYKONOS",
+      "Country": "Greece",
+      "City": "Mykonos",
+      "Scope_Type": "Travel-Destination Secondary City",
+      "Research_Priority": "Tier 1",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-GRE-SANTORIN",
+      "Country": "Greece",
+      "City": "Santorini",
+      "Scope_Type": "Travel-Destination Secondary City",
+      "Research_Priority": "Tier 2",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-GRE-PATRAS",
+      "Country": "Greece",
+      "City": "Patras",
+      "Scope_Type": "Secondary Major City",
+      "Research_Priority": "Tier 2",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-GRE-HERAKLIO",
+      "Country": "Greece",
+      "City": "Heraklion",
+      "Scope_Type": "Travel-Destination Secondary City",
+      "Research_Priority": "Tier 2",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-GRE-RHODES",
+      "Country": "Greece",
+      "City": "Rhodes",
+      "Scope_Type": "Travel-Destination Secondary City",
+      "Research_Priority": "Tier 2",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-HUN-DEBRECEN",
+      "Country": "Hungary",
+      "City": "Debrecen",
+      "Scope_Type": "Secondary Major City",
+      "Research_Priority": "Tier 2",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-HUN-SZEGED",
+      "Country": "Hungary",
+      "City": "Szeged",
+      "Scope_Type": "Secondary Major City",
+      "Research_Priority": "Tier 2",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-HUN-PECS",
+      "Country": "Hungary",
+      "City": "Pécs",
+      "Scope_Type": "Secondary Major City",
+      "Research_Priority": "Tier 2",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-ICE-AKUREYRI",
+      "Country": "Iceland",
+      "City": "Akureyri",
+      "Scope_Type": "Secondary Major City",
+      "Research_Priority": "Tier 2",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-IRE-CORK",
+      "Country": "Ireland",
+      "City": "Cork",
+      "Scope_Type": "Secondary Major City",
+      "Research_Priority": "Tier 2",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-IRE-GALWAY",
+      "Country": "Ireland",
+      "City": "Galway",
+      "Scope_Type": "Secondary Major City",
+      "Research_Priority": "Tier 2",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-IRE-LIMERICK",
+      "Country": "Ireland",
+      "City": "Limerick",
+      "Scope_Type": "Secondary Major City",
+      "Research_Priority": "Tier 2",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-ITA-MILAN",
+      "Country": "Italy",
+      "City": "Milan",
+      "Scope_Type": "Secondary Major City",
+      "Research_Priority": "Tier 1",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-ITA-NAPLES",
+      "Country": "Italy",
+      "City": "Naples",
+      "Scope_Type": "Secondary Major City",
+      "Research_Priority": "Tier 2",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-ITA-BOLOGNA",
+      "Country": "Italy",
+      "City": "Bologna",
+      "Scope_Type": "Secondary Major City",
+      "Research_Priority": "Tier 2",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-ITA-FLORENCE",
+      "Country": "Italy",
+      "City": "Florence",
+      "Scope_Type": "Travel-Destination Secondary City",
+      "Research_Priority": "Tier 2",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-ITA-TURIN",
+      "Country": "Italy",
+      "City": "Turin",
+      "Scope_Type": "Secondary Major City",
+      "Research_Priority": "Tier 2",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-ITA-VENICE",
+      "Country": "Italy",
+      "City": "Venice",
+      "Scope_Type": "Travel-Destination Secondary City",
+      "Research_Priority": "Tier 2",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-ITA-PALERMO",
+      "Country": "Italy",
+      "City": "Palermo",
+      "Scope_Type": "Secondary Major City",
+      "Research_Priority": "Tier 2",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-ITA-CATANIA",
+      "Country": "Italy",
+      "City": "Catania",
+      "Scope_Type": "Secondary Major City",
+      "Research_Priority": "Tier 2",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-ITA-BARI",
+      "Country": "Italy",
+      "City": "Bari",
+      "Scope_Type": "Secondary Major City",
+      "Research_Priority": "Tier 2",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-ITA-VERONA",
+      "Country": "Italy",
+      "City": "Verona",
+      "Scope_Type": "Travel-Destination Secondary City",
+      "Research_Priority": "Tier 2",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-KOS-PRIZREN",
+      "Country": "Kosovo",
+      "City": "Prizren",
+      "Scope_Type": "Secondary Major City",
+      "Research_Priority": "Tier 2",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-LAT-JURMALA",
+      "Country": "Latvia",
+      "City": "Jūrmala",
+      "Scope_Type": "Travel-Destination Secondary City",
+      "Research_Priority": "Tier 2",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-LAT-LIEPAJA",
+      "Country": "Latvia",
+      "City": "Liepāja",
+      "Scope_Type": "Secondary Major City",
+      "Research_Priority": "Tier 2",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-LAT-DAUGAVPI",
+      "Country": "Latvia",
+      "City": "Daugavpils",
+      "Scope_Type": "Secondary Major City",
+      "Research_Priority": "Tier 2",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-LIT-KAUNAS",
+      "Country": "Lithuania",
+      "City": "Kaunas",
+      "Scope_Type": "Secondary Major City",
+      "Research_Priority": "Tier 2",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-LIT-KLAIPEDA",
+      "Country": "Lithuania",
+      "City": "Klaipėda",
+      "Scope_Type": "Secondary Major City",
+      "Research_Priority": "Tier 2",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-MAL-ST-JULIA",
+      "Country": "Malta",
+      "City": "St Julian's",
+      "Scope_Type": "Travel-Destination Secondary City",
+      "Research_Priority": "Tier 2",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-MAL-SLIEMA",
+      "Country": "Malta",
+      "City": "Sliema",
+      "Scope_Type": "Travel-Destination Secondary City",
+      "Research_Priority": "Tier 2",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-MAL-ST-PAUL-",
+      "Country": "Malta",
+      "City": "St Paul's Bay",
+      "Scope_Type": "Travel-Destination Secondary City",
+      "Research_Priority": "Tier 2",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-MOL-BALTI",
+      "Country": "Moldova",
+      "City": "Bălți",
+      "Scope_Type": "Secondary Major City",
+      "Research_Priority": "Tier 2",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-MON-BUDVA",
+      "Country": "Montenegro",
+      "City": "Budva",
+      "Scope_Type": "Travel-Destination Secondary City",
+      "Research_Priority": "Tier 2",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-MON-KOTOR",
+      "Country": "Montenegro",
+      "City": "Kotor",
+      "Scope_Type": "Travel-Destination Secondary City",
+      "Research_Priority": "Tier 2",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-MON-BAR",
+      "Country": "Montenegro",
+      "City": "Bar",
+      "Scope_Type": "Secondary Major City",
+      "Research_Priority": "Tier 2",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-NET-ROTTERDA",
+      "Country": "Netherlands",
+      "City": "Rotterdam",
+      "Scope_Type": "Secondary Major City",
+      "Research_Priority": "Tier 2",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-NET-THE-HAGU",
+      "Country": "Netherlands",
+      "City": "The Hague",
+      "Scope_Type": "Secondary Major City",
+      "Research_Priority": "Tier 2",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-NET-UTRECHT",
+      "Country": "Netherlands",
+      "City": "Utrecht",
+      "Scope_Type": "Secondary Major City",
+      "Research_Priority": "Tier 2",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-NET-EINDHOVE",
+      "Country": "Netherlands",
+      "City": "Eindhoven",
+      "Scope_Type": "Secondary Major City",
+      "Research_Priority": "Tier 2",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-NET-MAASTRIC",
+      "Country": "Netherlands",
+      "City": "Maastricht",
+      "Scope_Type": "Travel-Destination Secondary City",
+      "Research_Priority": "Tier 2",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-NOR-OHRID",
+      "Country": "North Macedonia",
+      "City": "Ohrid",
+      "Scope_Type": "Travel-Destination Secondary City",
+      "Research_Priority": "Tier 2",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-NOR-BITOLA",
+      "Country": "North Macedonia",
+      "City": "Bitola",
+      "Scope_Type": "Secondary Major City",
+      "Research_Priority": "Tier 2",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-NOR-BERGEN",
+      "Country": "Norway",
+      "City": "Bergen",
+      "Scope_Type": "Secondary Major City",
+      "Research_Priority": "Tier 2",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-NOR-TRONDHEI",
+      "Country": "Norway",
+      "City": "Trondheim",
+      "Scope_Type": "Secondary Major City",
+      "Research_Priority": "Tier 2",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-NOR-STAVANGE",
+      "Country": "Norway",
+      "City": "Stavanger",
+      "Scope_Type": "Secondary Major City",
+      "Research_Priority": "Tier 2",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-POL-KRAKOW",
+      "Country": "Poland",
+      "City": "Kraków",
+      "Scope_Type": "Secondary Major City",
+      "Research_Priority": "Tier 1",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-POL-POZNAN",
+      "Country": "Poland",
+      "City": "Poznań",
+      "Scope_Type": "Secondary Major City",
+      "Research_Priority": "Tier 1",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-POL-WROCAW",
+      "Country": "Poland",
+      "City": "Wrocław",
+      "Scope_Type": "Secondary Major City",
+      "Research_Priority": "Tier 1",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-POL-GDANSK",
+      "Country": "Poland",
+      "City": "Gdańsk",
+      "Scope_Type": "Secondary Major City",
+      "Research_Priority": "Tier 1",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-POL-ODZ",
+      "Country": "Poland",
+      "City": "Łódź",
+      "Scope_Type": "Secondary Major City",
+      "Research_Priority": "Tier 2",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-POL-KATOWICE",
+      "Country": "Poland",
+      "City": "Katowice",
+      "Scope_Type": "Secondary Major City",
+      "Research_Priority": "Tier 2",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-POL-SZCZECIN",
+      "Country": "Poland",
+      "City": "Szczecin",
+      "Scope_Type": "Secondary Major City",
+      "Research_Priority": "Tier 2",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-POL-LUBLIN",
+      "Country": "Poland",
+      "City": "Lublin",
+      "Scope_Type": "Secondary Major City",
+      "Research_Priority": "Tier 2",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-POL-TORUN",
+      "Country": "Poland",
+      "City": "Toruń",
+      "Scope_Type": "Secondary Major City",
+      "Research_Priority": "Tier 2",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-POL-BYDGOSZC",
+      "Country": "Poland",
+      "City": "Bydgoszcz",
+      "Scope_Type": "Secondary Major City",
+      "Research_Priority": "Tier 2",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-POR-PORTO",
+      "Country": "Portugal",
+      "City": "Porto",
+      "Scope_Type": "Secondary Major City",
+      "Research_Priority": "Tier 2",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-POR-FARO",
+      "Country": "Portugal",
+      "City": "Faro",
+      "Scope_Type": "Travel-Destination Secondary City",
+      "Research_Priority": "Tier 2",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-POR-FUNCHAL",
+      "Country": "Portugal",
+      "City": "Funchal",
+      "Scope_Type": "Travel-Destination Secondary City",
+      "Research_Priority": "Tier 2",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-POR-ALBUFEIR",
+      "Country": "Portugal",
+      "City": "Albufeira",
+      "Scope_Type": "Travel-Destination Secondary City",
+      "Research_Priority": "Tier 2",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-POR-COIMBRA",
+      "Country": "Portugal",
+      "City": "Coimbra",
+      "Scope_Type": "Secondary Major City",
+      "Research_Priority": "Tier 2",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-ROM-CLUJ-NAP",
+      "Country": "Romania",
+      "City": "Cluj-Napoca",
+      "Scope_Type": "Secondary Major City",
+      "Research_Priority": "Tier 2",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-ROM-TIMISOAR",
+      "Country": "Romania",
+      "City": "Timișoara",
+      "Scope_Type": "Secondary Major City",
+      "Research_Priority": "Tier 2",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-ROM-IASI",
+      "Country": "Romania",
+      "City": "Iași",
+      "Scope_Type": "Secondary Major City",
+      "Research_Priority": "Tier 2",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-ROM-CONSTANT",
+      "Country": "Romania",
+      "City": "Constanța",
+      "Scope_Type": "Secondary Major City",
+      "Research_Priority": "Tier 2",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-ROM-BRASOV",
+      "Country": "Romania",
+      "City": "Brașov",
+      "Scope_Type": "Travel-Destination Secondary City",
+      "Research_Priority": "Tier 2",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-ROM-SIBIU",
+      "Country": "Romania",
+      "City": "Sibiu",
+      "Scope_Type": "Travel-Destination Secondary City",
+      "Research_Priority": "Tier 2",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-RUS-SAINT-PE",
+      "Country": "Russia",
+      "City": "Saint Petersburg",
+      "Scope_Type": "Secondary Major City",
+      "Research_Priority": "Tier 2",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-RUS-KAZAN",
+      "Country": "Russia",
+      "City": "Kazan",
+      "Scope_Type": "Secondary Major City",
+      "Research_Priority": "Tier 2",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-RUS-SOCHI",
+      "Country": "Russia",
+      "City": "Sochi",
+      "Scope_Type": "Travel-Destination Secondary City",
+      "Research_Priority": "Tier 2",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-RUS-YEKATERI",
+      "Country": "Russia",
+      "City": "Yekaterinburg",
+      "Scope_Type": "Secondary Major City",
+      "Research_Priority": "Tier 2",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-SER-NOVI-SAD",
+      "Country": "Serbia",
+      "City": "Novi Sad",
+      "Scope_Type": "Secondary Major City",
+      "Research_Priority": "Tier 2",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-SER-NIS",
+      "Country": "Serbia",
+      "City": "Niš",
+      "Scope_Type": "Secondary Major City",
+      "Research_Priority": "Tier 2",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-SER-KRAGUJEV",
+      "Country": "Serbia",
+      "City": "Kragujevac",
+      "Scope_Type": "Secondary Major City",
+      "Research_Priority": "Tier 2",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-SLO-KOSICE",
+      "Country": "Slovakia",
+      "City": "Košice",
+      "Scope_Type": "Secondary Major City",
+      "Research_Priority": "Tier 2",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-SLO-BANSKA-B",
+      "Country": "Slovakia",
+      "City": "Banská Bystrica",
+      "Scope_Type": "Secondary Major City",
+      "Research_Priority": "Tier 2",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-SLO-MARIBOR",
+      "Country": "Slovenia",
+      "City": "Maribor",
+      "Scope_Type": "Secondary Major City",
+      "Research_Priority": "Tier 2",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-SLO-KOPER",
+      "Country": "Slovenia",
+      "City": "Koper",
+      "Scope_Type": "Travel-Destination Secondary City",
+      "Research_Priority": "Tier 2",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-SPA-BARCELON",
+      "Country": "Spain",
+      "City": "Barcelona",
+      "Scope_Type": "Secondary Major City",
+      "Research_Priority": "Tier 1",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-SPA-VALENCIA",
+      "Country": "Spain",
+      "City": "Valencia",
+      "Scope_Type": "Secondary Major City",
+      "Research_Priority": "Tier 1",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-SPA-SEVILLE",
+      "Country": "Spain",
+      "City": "Seville",
+      "Scope_Type": "Secondary Major City",
+      "Research_Priority": "Tier 1",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-SPA-MALAGA",
+      "Country": "Spain",
+      "City": "Málaga",
+      "Scope_Type": "Secondary Major City",
+      "Research_Priority": "Tier 1",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-SPA-TORREMOL",
+      "Country": "Spain",
+      "City": "Torremolinos",
+      "Scope_Type": "Travel-Destination Secondary City",
+      "Research_Priority": "Tier 1",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-SPA-SITGES",
+      "Country": "Spain",
+      "City": "Sitges",
+      "Scope_Type": "Travel-Destination Secondary City",
+      "Research_Priority": "Tier 1",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-SPA-BILBAO",
+      "Country": "Spain",
+      "City": "Bilbao",
+      "Scope_Type": "Secondary Major City",
+      "Research_Priority": "Tier 2",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-SPA-ALICANTE",
+      "Country": "Spain",
+      "City": "Alicante",
+      "Scope_Type": "Secondary Major City",
+      "Research_Priority": "Tier 2",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-SPA-PALMA",
+      "Country": "Spain",
+      "City": "Palma",
+      "Scope_Type": "Travel-Destination Secondary City",
+      "Research_Priority": "Tier 2",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-SPA-IBIZA-TO",
+      "Country": "Spain",
+      "City": "Ibiza Town",
+      "Scope_Type": "Travel-Destination Secondary City",
+      "Research_Priority": "Tier 1",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-SPA-MASPALOM",
+      "Country": "Spain",
+      "City": "Maspalomas / Playa del Inglés",
+      "Scope_Type": "Travel-Destination Secondary City",
+      "Research_Priority": "Tier 1",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-SPA-BENIDORM",
+      "Country": "Spain",
+      "City": "Benidorm",
+      "Scope_Type": "Travel-Destination Secondary City",
+      "Research_Priority": "Tier 2",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-SWE-GOTHENBU",
+      "Country": "Sweden",
+      "City": "Gothenburg",
+      "Scope_Type": "Secondary Major City",
+      "Research_Priority": "Tier 2",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-SWE-MALMO",
+      "Country": "Sweden",
+      "City": "Malmö",
+      "Scope_Type": "Secondary Major City",
+      "Research_Priority": "Tier 2",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-SWE-UPPSALA",
+      "Country": "Sweden",
+      "City": "Uppsala",
+      "Scope_Type": "Secondary Major City",
+      "Research_Priority": "Tier 2",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-SWI-ZURICH",
+      "Country": "Switzerland",
+      "City": "Zürich",
+      "Scope_Type": "Secondary Major City",
+      "Research_Priority": "Tier 1",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-SWI-GENEVA",
+      "Country": "Switzerland",
+      "City": "Geneva",
+      "Scope_Type": "Secondary Major City",
+      "Research_Priority": "Tier 1",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-SWI-BASEL",
+      "Country": "Switzerland",
+      "City": "Basel",
+      "Scope_Type": "Secondary Major City",
+      "Research_Priority": "Tier 2",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-SWI-LAUSANNE",
+      "Country": "Switzerland",
+      "City": "Lausanne",
+      "Scope_Type": "Secondary Major City",
+      "Research_Priority": "Tier 2",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-SWI-LUCERNE",
+      "Country": "Switzerland",
+      "City": "Lucerne",
+      "Scope_Type": "Travel-Destination Secondary City",
+      "Research_Priority": "Tier 2",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-TUR-ISTANBUL",
+      "Country": "Turkey",
+      "City": "Istanbul",
+      "Scope_Type": "Secondary Major City",
+      "Research_Priority": "Tier 1",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-TUR-IZMIR",
+      "Country": "Turkey",
+      "City": "İzmir",
+      "Scope_Type": "Secondary Major City",
+      "Research_Priority": "Tier 2",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-TUR-ANTALYA",
+      "Country": "Turkey",
+      "City": "Antalya",
+      "Scope_Type": "Travel-Destination Secondary City",
+      "Research_Priority": "Tier 2",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-TUR-BODRUM",
+      "Country": "Turkey",
+      "City": "Bodrum",
+      "Scope_Type": "Travel-Destination Secondary City",
+      "Research_Priority": "Tier 2",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-TUR-MARMARIS",
+      "Country": "Turkey",
+      "City": "Marmaris",
+      "Scope_Type": "Travel-Destination Secondary City",
+      "Research_Priority": "Tier 2",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-UKR-LVIV",
+      "Country": "Ukraine",
+      "City": "Lviv",
+      "Scope_Type": "Secondary Major City",
+      "Research_Priority": "Tier 2",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-UKR-ODESA",
+      "Country": "Ukraine",
+      "City": "Odesa",
+      "Scope_Type": "Secondary Major City",
+      "Research_Priority": "Tier 2",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-UKR-KHARKIV",
+      "Country": "Ukraine",
+      "City": "Kharkiv",
+      "Scope_Type": "Secondary Major City",
+      "Research_Priority": "Tier 2",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-UKR-DNIPRO",
+      "Country": "Ukraine",
+      "City": "Dnipro",
+      "Scope_Type": "Secondary Major City",
+      "Research_Priority": "Tier 2",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-UNI-MANCHEST",
+      "Country": "United Kingdom",
+      "City": "Manchester",
+      "Scope_Type": "Secondary Major City",
+      "Research_Priority": "Tier 1",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-UNI-BRIGHTON",
+      "Country": "United Kingdom",
+      "City": "Brighton",
+      "Scope_Type": "Travel-Destination Secondary City",
+      "Research_Priority": "Tier 1",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-UNI-BIRMINGH",
+      "Country": "United Kingdom",
+      "City": "Birmingham",
+      "Scope_Type": "Secondary Major City",
+      "Research_Priority": "Tier 2",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-UNI-LIVERPOO",
+      "Country": "United Kingdom",
+      "City": "Liverpool",
+      "Scope_Type": "Secondary Major City",
+      "Research_Priority": "Tier 2",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-UNI-GLASGOW",
+      "Country": "United Kingdom",
+      "City": "Glasgow",
+      "Scope_Type": "Secondary Major City",
+      "Research_Priority": "Tier 1",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-UNI-EDINBURG",
+      "Country": "United Kingdom",
+      "City": "Edinburgh",
+      "Scope_Type": "Secondary Major City",
+      "Research_Priority": "Tier 1",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-UNI-BRISTOL",
+      "Country": "United Kingdom",
+      "City": "Bristol",
+      "Scope_Type": "Secondary Major City",
+      "Research_Priority": "Tier 2",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-UNI-LEEDS",
+      "Country": "United Kingdom",
+      "City": "Leeds",
+      "Scope_Type": "Secondary Major City",
+      "Research_Priority": "Tier 2",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-UNI-CARDIFF",
+      "Country": "United Kingdom",
+      "City": "Cardiff",
+      "Scope_Type": "Secondary Major City",
+      "Research_Priority": "Tier 2",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-UNI-BELFAST",
+      "Country": "United Kingdom",
+      "City": "Belfast",
+      "Scope_Type": "Secondary Major City",
+      "Research_Priority": "Tier 2",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-UNI-BLACKPOO",
+      "Country": "United Kingdom",
+      "City": "Blackpool",
+      "Scope_Type": "Travel-Destination Secondary City",
+      "Research_Priority": "Tier 2",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-UNI-NEWCASTL",
+      "Country": "United Kingdom",
+      "City": "Newcastle upon Tyne",
+      "Scope_Type": "Secondary Major City",
+      "Research_Priority": "Tier 2",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-UNI-BOURNEMO",
+      "Country": "United Kingdom",
+      "City": "Bournemouth",
+      "Scope_Type": "Travel-Destination Secondary City",
+      "Research_Priority": "Tier 2",
+      "Scope_Notes": ""
+    },
+    {
+      "City_ID": "CRU-UNI-CAMBRIDG",
+      "Country": "United Kingdom",
+      "City": "Cambridge",
+      "Scope_Type": "Secondary Major City",
+      "Research_Priority": "Tier 2",
+      "Scope_Notes": ""
+    }
+  ],
+  "Public_Map_Point_Rules": [
+    "A public listing may display one or more Map_Points when a specific point is supported by a public source or supplied for verification.",
+    "Each Map_Point must include a clean Google Maps URL when coordinates or a direct place link are available.",
+    "Use a short human label that helps a visitor orient themselves, such as a named entrance, landmark, public toilet block or broad section of a park.",
+    "Map_Point_About must be broad, factual orientation only. Do not publish hidden routes, secluded micro-locations or instructions designed to evade public rules.",
+    "A single area may have several distinct Map_Points. Give each point its own confirmation date because one point can be current while another is stale.",
+    "When two URLs resolve to the same coordinates, retain only one public map point and record the duplicate only in the audit notes.",
+    "Do not show an exact map point publicly until its label, access and activity relevance have been reviewed."
+  ]
+}

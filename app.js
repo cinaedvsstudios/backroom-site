@@ -1,5 +1,5 @@
 // --- Application State ---
-const APP_VERSION = "v1.00";
+const APP_VERSION = "v1.01";
 const APP_DATE = "22 June 2026";
 
 let systemInfo = {}, designTheme = {}, venues = [], events = [];
@@ -3774,6 +3774,40 @@ function renderListings(data, isContextView = false, targetContainer = resultsCo
     });
 }
 
+function formatLastUpdatedDate(value) {
+    const raw = String(value || '').trim();
+    if (!raw) return '';
+
+    let year = '';
+    let month = '';
+    let day = '';
+
+    // Preferred source format: YYYY-MM-DD. Also accepts the common DD-MM-YYYY,
+    // DD/MM/YYYY and ISO timestamp forms already used by older listing exports.
+    let match = raw.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})(?:[T\s].*)?$/);
+    if (match) {
+        [, year, month, day] = match;
+    } else {
+        match = raw.match(/^(\d{1,2})[-/](\d{1,2})[-/](\d{4})$/);
+        if (match) [, day, month, year] = match;
+    }
+
+    const numericMonth = Number(month);
+    const numericDay = Number(day);
+    const numericYear = Number(year);
+    if (!Number.isInteger(numericYear) || !Number.isInteger(numericMonth) || !Number.isInteger(numericDay)) return '';
+
+    const date = new Date(numericYear, numericMonth - 1, numericDay);
+    if (
+        date.getFullYear() !== numericYear ||
+        date.getMonth() !== numericMonth - 1 ||
+        date.getDate() !== numericDay
+    ) return '';
+
+    const months = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
+    return `${String(numericDay).padStart(2, '0')} - ${months[numericMonth - 1]} - ${numericYear}`;
+}
+
 function getRatingTooltip(type, val) {
     if(!val) return '';
     const tooltips = {
@@ -3939,6 +3973,7 @@ function openVenueModal(venue) {
                         <p class="meta-text" style="margin:0; color:#fff;"><strong>${venue.Address || ''}</strong></p>
                     </div>
                     ${venue.Nearest_Station ? `<p class="meta-text" style="margin:0; padding-left: 5px; color:#fff;">🚄 Station: ${venue.Nearest_Station}</p>` : ''}
+                    ${formatLastUpdatedDate(venue.Last_Updated) ? `<p class="meta-text" style="margin:0; padding-left: 5px; color:var(--text-light);">⌛ Last updated: ${formatLastUpdatedDate(venue.Last_Updated)}</p>` : ''}
                 </div>
                 
                 <div class="mobile-stats">
