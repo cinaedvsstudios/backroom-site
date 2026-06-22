@@ -1,5 +1,5 @@
 // --- Application State ---
-const APP_VERSION = "v0.98";
+const APP_VERSION = "v0.99";
 const APP_DATE = "22 June 2026";
 
 let systemInfo = {}, designTheme = {}, venues = [], events = [];
@@ -295,6 +295,7 @@ async function recordCommunityVenueView(venueId) {
 
     const sessionKey = `br_view_counted_${safeVenueId}`;
     if (sessionStorage.getItem(sessionKey)) return;
+    sessionStorage.setItem(sessionKey, '1');
 
     try {
         const existing = await communityRequest(`${COMMUNITY_SUPABASE.viewsTable}?select=venue_id,view_count&venue_id=eq.${encodeURIComponent(safeVenueId)}&limit=1`);
@@ -315,10 +316,6 @@ async function recordCommunityVenueView(venueId) {
                 body: { venue_id: safeVenueId, view_count: 1, last_viewed_at: now }
             });
         }
-
-        // Mark this venue only after Supabase confirms the count was written.
-        // A temporary RLS/network failure must be allowed to retry later in this tab.
-        sessionStorage.setItem(sessionKey, '1');
 
         const previous = getCommunityStats(safeVenueId);
         communityVenueStats.set(safeVenueId, { ...previous, viewCount: nextCount });
@@ -2799,7 +2796,24 @@ function applyFilters() {
             ? 'results'
             : `${searchResultTypeFilter.toLowerCase()} result${totalResults === 1 ? '' : 's'}`;
 
-        if(title) title.innerText = savedCity ? `Results in ${savedCity}` : 'Results';
+        if (title) {
+            title.replaceChildren();
+
+            if (savedCity) {
+                title.appendChild(document.createTextNode('RESULTS IN '));
+
+                const cityPill = document.createElement('button');
+                cityPill.type = 'button';
+                cityPill.className = 'location-city-pill pill-btn';
+                cityPill.textContent = savedCity;
+                cityPill.title = 'Change location';
+                cityPill.setAttribute('aria-label', `Change location from ${savedCity}`);
+                cityPill.addEventListener('click', openLocationModal);
+                title.appendChild(cityPill);
+            } else {
+                title.textContent = 'RESULTS';
+            }
+        }
         if(desc) {
             const searchText = query ? ` for “${query}”` : '';
             const fuzzyText = searchUsesFuzzyMatching && query ? ' · Similar words search' : '';
