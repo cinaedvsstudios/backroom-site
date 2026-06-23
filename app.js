@@ -1,5 +1,5 @@
 // --- Application State ---
-const APP_VERSION = "v1.04";
+const APP_VERSION = "v1.05";
 const APP_DATE = "23 June 2026";
 
 let systemInfo = {}, designTheme = {}, venues = [], events = [];
@@ -54,9 +54,21 @@ let sidebarTimeout;
 
 const MASTER_VIBE_TAGS = ["Bar","Party","Cinema","Sauna","Shop","Cruising","Darkroom","Men Only","Dresscode","Naked","Underwear","Dancefloor","Smoking Area","Cocktails","Fetish/Gear","Bear","Mature","Young Crowd","Queer","Pride","Social","Drag","Karaoke","Pop/Dance","Techno"];
 const SHORTLIST_EMOJIS = ['🤠','🚄','👑','🥂','🦄','🫦','💪','🪇','🔥','🍆','🍑','💄','🛁','✈️','💥','💦','🗝️','🧿','🎧','🧭','⛓️','🎼'];
-const PLACEHOLDER_POOL = ['placeholder_venue.jpg', 'placeholder_venue01.jpg', 'placeholder_venue02.jpg', 'placeholder_venue03.jpg', 'placeholder_venue04.jpg', 'placeholder_venue05.jpg', 'placeholder_venue06.jpg', 'placeholder_venue07.jpg'];
+// Generic fallback images are deliberately kept separate from category-specific artwork.
+const PLACEHOLDER_POOL = [
+    'placeholder_venue01.jpg',
+    'placeholder_venue02.jpg',
+    'placeholder_venue03.jpg',
+    'placeholder_venue04.jpg',
+    'placeholder_venue05.jpg',
+    'placeholder_venue06.jpg',
+    'placeholder_venue07.jpg'
+];
 const SPECIAL_PLACEHOLDERS = Object.freeze({
     default: 'placeholder_venue.jpg',
+    shop: 'placeholder_venue08.jpg',
+    cruiseBar: 'placeholder_venue09.jpg',
+    cinema: 'placeholder_venue10.jpg',
     pride: 'placeholder_venue11.jpg',
     cruisingIndoor: 'placeholder_venue12.jpg',
     cruisingOutdoor: 'placeholder_venue13.jpg',
@@ -78,6 +90,59 @@ function isCruisingAreaVenue(venue) {
 
 function isMenOnlyTaggedVenue(venue) {
     return hasExactVibeTag(venue?.Vibe_Tags, 'Men Only');
+}
+
+function getVenueCategoryKey(venue) {
+    return String(venue?.Category || '').trim().toLowerCase();
+}
+
+function isShopVenue(venue) {
+    return getVenueCategoryKey(venue).includes('shop');
+}
+
+function isCinemaVenue(venue) {
+    return getVenueCategoryKey(venue).includes('cinema');
+}
+
+function isSaunaVenue(venue) {
+    return getVenueCategoryKey(venue).includes('sauna');
+}
+
+function isCruiseBarVenue(venue) {
+    const category = getVenueCategoryKey(venue);
+    const isBar = category.includes('bar');
+    const isCruiseMarked = category.includes('cruise')
+        || hasExactVibeTag(venue?.Vibe_Tags, 'Cruising')
+        || hasExactVibeTag(venue?.Vibe_Tags, 'Cruise')
+        || venue?.Feature_Cruise_Focused === true;
+
+    return isBar && isCruiseMarked;
+}
+
+function isRotatingGenericPlaceholder(value) {
+    return PLACEHOLDER_POOL.includes(String(value || '').trim().split('/').pop());
+}
+
+function getGenericPlaceholderImage(seed = '', previousFallback = '') {
+    const text = String(seed || 'backroom-generic-placeholder');
+    let hash = 0;
+
+    for (let index = 0; index < text.length; index += 1) {
+        hash = ((hash << 5) - hash) + text.charCodeAt(index);
+        hash |= 0;
+    }
+
+    let poolIndex = Math.abs(hash) % PLACEHOLDER_POOL.length;
+    let image = PLACEHOLDER_POOL[poolIndex];
+
+    // The calling renderer passes its previous generic image, so ordinary cards do not
+    // repeat the same random-style fallback side by side. Category-specific artwork can repeat.
+    if (image === previousFallback && PLACEHOLDER_POOL.length > 1) {
+        poolIndex = (poolIndex + 1) % PLACEHOLDER_POOL.length;
+        image = PLACEHOLDER_POOL[poolIndex];
+    }
+
+    return image;
 }
 
 
@@ -243,16 +308,21 @@ function isCruisingAreaIndoorLocation(venue) {
     ].some(keyword => text.includes(keyword));
 }
 
-function getVenueFallbackImage(venue) {
+function getVenueFallbackImage(venue, previousGenericFallback = '') {
     if (isCruisingAreaVenue(venue)) {
         return isCruisingAreaIndoorLocation(venue)
             ? SPECIAL_PLACEHOLDERS.cruisingIndoor
             : SPECIAL_PLACEHOLDERS.cruisingOutdoor;
     }
-    if (String(venue?.Category || '').trim().toLowerCase() === 'sauna') {
-        return SPECIAL_PLACEHOLDERS.sauna;
-    }
-    return SPECIAL_PLACEHOLDERS.default;
+    if (isShopVenue(venue)) return SPECIAL_PLACEHOLDERS.shop;
+    if (isCinemaVenue(venue)) return SPECIAL_PLACEHOLDERS.cinema;
+    if (isCruiseBarVenue(venue)) return SPECIAL_PLACEHOLDERS.cruiseBar;
+    if (isSaunaVenue(venue)) return SPECIAL_PLACEHOLDERS.sauna;
+
+    return getGenericPlaceholderImage(
+        venue?.Venue_ID || venue?.Name || venue?.Native_Map_Query || '',
+        previousGenericFallback
+    );
 }
 
 function getVenueImageSource(venue) {
@@ -279,15 +349,15 @@ function getEventImageSource(event, venue) {
     return getVenueImageSource(venue || {});
 }
 
-function getEventFallbackImage(event, venue) {
+function getEventFallbackImage(event, venue, previousGenericFallback = '') {
     if (eventPrefersVenueImageOverPride(event, venue)) {
-        return getVenueFallbackImage(venue || {});
+        return getVenueFallbackImage(venue || {}, previousGenericFallback);
     }
 
     if (hasExactVibeTag(event?.Vibe_Tags, 'Pride') || hasExactVibeTag(venue?.Vibe_Tags, 'Pride')) {
         return SPECIAL_PLACEHOLDERS.pride;
     }
-    return getVenueFallbackImage(venue || {});
+    return getVenueFallbackImage(venue || {}, previousGenericFallback);
 }
 const FORMSUBMIT_ENDPOINT = 'https://formsubmit.cloud/f/ae0e141d-ad94-47fe-ac46-55702c6534a6/';
 
@@ -3087,10 +3157,12 @@ function renderSearchEventResults(items, targetContainer) {
     const container = targetContainer || resultsContainer;
     if (!container) return;
 
+    let previousGenericFallback = '';
     items.forEach(({ event, venue }) => {
         const isSaved = userEvents.includes(event.Event_ID);
         const image = getEventImageSource(event, venue);
-        const imageFallback = getEventFallbackImage(event, venue);
+        const imageFallback = getEventFallbackImage(event, venue, previousGenericFallback);
+        previousGenericFallback = isRotatingGenericPlaceholder(imageFallback) ? imageFallback : '';
         const eventName = String(event.Event_Name || 'Event');
         const safeEventName = eventName.replace(/'/g, "\\'");
         const description = getPlainDescriptionText(event.Event_Description || '');
@@ -4008,8 +4080,9 @@ function handleImageCarousel(imgElement) {
         };
         testImage.onerror = () => {
             // Specialised placeholders stay specialised. Normal venues keep the existing pool.
+            const previousFallback = String(imgElement.src || '').split('/').pop();
             const fallback = imgElement.dataset.fallbackImage
-                || PLACEHOLDER_POOL[Math.floor(Math.random() * PLACEHOLDER_POOL.length)];
+                || getGenericPlaceholderImage(id, previousFallback);
             imgElement.onerror = null;
             imgElement.src = fallback;
             imgElement.setAttribute('data-index', '1');
@@ -4056,6 +4129,7 @@ function renderListings(data, isContextView = false, targetContainer = resultsCo
         return;
     }
 
+    let previousGenericFallback = '';
     data.forEach(venue => {
         let nextEventHtml = '';
         const venueEvents = getVenueEventOccurrences(venue.Venue_ID, { includePast: false, activeOnly: true, now: new Date() });
@@ -4077,7 +4151,8 @@ function renderListings(data, isContextView = false, targetContainer = resultsCo
         card.className = `card${cardStyleClass}`;
 
         const baseImageSrc = getVenueImageSource(venue);
-        const fallbackImage = getVenueFallbackImage(venue);
+        const fallbackImage = getVenueFallbackImage(venue, previousGenericFallback);
+        previousGenericFallback = isRotatingGenericPlaceholder(fallbackImage) ? fallbackImage : '';
         const badgeLabel = getCardStatusLabel(venue);
         const badgeClass = getCardStatusClass(venue);
 

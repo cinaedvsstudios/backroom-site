@@ -1,4 +1,4 @@
-// Backroom Events calendar v0.95 — city, date, vibe filters and event-card image rules.
+// Backroom Events calendar v0.96 — city, date, vibe filters and event-card image rules.
 (function () {
     'use strict';
 
@@ -19,13 +19,28 @@
         'Pop/Dance', 'Techno'
     ];
 
+    const GENERIC_PLACEHOLDER_POOL = [
+        'placeholder_venue01.jpg',
+        'placeholder_venue02.jpg',
+        'placeholder_venue03.jpg',
+        'placeholder_venue04.jpg',
+        'placeholder_venue05.jpg',
+        'placeholder_venue06.jpg',
+        'placeholder_venue07.jpg'
+    ];
+
     const SPECIAL_PLACEHOLDERS = Object.freeze({
         default: 'placeholder_venue.jpg',
+        shop: 'placeholder_venue08.jpg',
+        cruiseBar: 'placeholder_venue09.jpg',
+        cinema: 'placeholder_venue10.jpg',
         pride: 'placeholder_venue11.jpg',
         cruisingIndoor: 'placeholder_venue12.jpg',
         cruisingOutdoor: 'placeholder_venue13.jpg',
         sauna: 'placeholder_venue14.jpg'
     });
+
+    let previousGenericEventFallback = '';
 
     const state = {
         month: new Date(new Date().getFullYear(), new Date().getMonth(), 1),
@@ -158,6 +173,53 @@
         return String(venue?.Category || '').trim().toLowerCase() === 'cruising area';
     }
 
+    function categoryKey(venue) {
+        return String(venue?.Category || '').trim().toLowerCase();
+    }
+
+    function isShopVenue(venue) {
+        return categoryKey(venue).includes('shop');
+    }
+
+    function isCinemaVenue(venue) {
+        return categoryKey(venue).includes('cinema');
+    }
+
+    function isSaunaVenue(venue) {
+        return categoryKey(venue).includes('sauna');
+    }
+
+    function isCruiseBarVenue(venue) {
+        const category = categoryKey(venue);
+        const isBar = category.includes('bar');
+        const tagList = splitTags(venue?.Vibe_Tags);
+        const cruiseMarked = category.includes('cruise')
+            || tagList.includes('Cruising')
+            || tagList.includes('Cruise')
+            || venue?.Feature_Cruise_Focused === true;
+        return isBar && cruiseMarked;
+    }
+
+    function isRotatingGenericPlaceholder(value) {
+        return GENERIC_PLACEHOLDER_POOL.includes(String(value || '').trim().split('/').pop());
+    }
+
+    function genericPlaceholder(seed = '', previousFallback = '') {
+        const text = String(seed || 'backroom-calendar-generic-placeholder');
+        let hash = 0;
+        for (let index = 0; index < text.length; index += 1) {
+            hash = ((hash << 5) - hash) + text.charCodeAt(index);
+            hash |= 0;
+        }
+        let poolIndex = Math.abs(hash) % GENERIC_PLACEHOLDER_POOL.length;
+        let image = GENERIC_PLACEHOLDER_POOL[poolIndex];
+        if (image === previousFallback && GENERIC_PLACEHOLDER_POOL.length > 1) {
+            poolIndex = (poolIndex + 1) % GENERIC_PLACEHOLDER_POOL.length;
+            image = GENERIC_PLACEHOLDER_POOL[poolIndex];
+        }
+        return image;
+    }
+
     function combinedEventTags(event, venue) {
         return [...new Set([
             ...splitTags(event?.Vibe_Tags),
@@ -176,7 +238,7 @@
             || eventTags.includes('Darkroom');
     }
 
-    function venueFallbackImage(venue) {
+    function venueFallbackImage(venue, previousFallback = '') {
         if (isCruisingArea(venue)) {
             const text = normalizeLocation([
                 venue?.Name,
@@ -193,11 +255,12 @@
                 : SPECIAL_PLACEHOLDERS.cruisingOutdoor;
         }
 
-        if (String(venue?.Category || '').trim().toLowerCase() === 'sauna') {
-            return SPECIAL_PLACEHOLDERS.sauna;
-        }
+        if (isShopVenue(venue)) return SPECIAL_PLACEHOLDERS.shop;
+        if (isCinemaVenue(venue)) return SPECIAL_PLACEHOLDERS.cinema;
+        if (isCruiseBarVenue(venue)) return SPECIAL_PLACEHOLDERS.cruiseBar;
+        if (isSaunaVenue(venue)) return SPECIAL_PLACEHOLDERS.sauna;
 
-        return SPECIAL_PLACEHOLDERS.default;
+        return genericPlaceholder(venue?.Venue_ID || venue?.Name || venue?.Native_Map_Query || '', previousFallback);
     }
 
     function venueImageSource(venue) {
@@ -218,14 +281,14 @@
         return venueImageSource(venue || {});
     }
 
-    function eventFallbackImage(event, venue) {
+    function eventFallbackImage(event, venue, previousFallback = '') {
         if (eventPrefersVenueImageOverPride(event, venue)) {
-            return venueFallbackImage(venue || {});
+            return venueFallbackImage(venue || {}, previousFallback);
         }
 
         return combinedEventTags(event, venue).includes('Pride')
             ? SPECIAL_PLACEHOLDERS.pride
-            : venueFallbackImage(venue || {});
+            : venueFallbackImage(venue || {}, previousFallback);
     }
 
     function normalizeLocation(value) {
@@ -653,7 +716,8 @@
         const times = [event.Event_Start_Time, event.Event_End_Time].filter(Boolean).join(' – ');
         const saved = savedEventIds().includes(event.Event_ID);
         const image = eventImageSource(event, venue);
-        const imageFallback = eventFallbackImage(event, venue);
+        const imageFallback = eventFallbackImage(event, venue, previousGenericEventFallback);
+        previousGenericEventFallback = isRotatingGenericPlaceholder(imageFallback) ? imageFallback : '';
         const dateText = includeDate && event.Display_Date
             ? new Date(`${event.Display_Date}T12:00:00`).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' }).toUpperCase()
             : '';
@@ -664,6 +728,7 @@
         const isWindowFilter = state.dateFilter !== 'all';
         const items = eventsForActiveDateFilter();
         const label = activePanelLabel();
+        previousGenericEventFallback = '';
         if (!items.length) return `<section class="calendar-event-panel"><h2 class="display-font">${label}</h2><div class="calendar-empty">No listed events match these filters yet.</div></section>`;
         return `<section class="calendar-event-panel"><h2 class="display-font">${label}</h2><p class="calendar-day-count">${items.length} event${items.length === 1 ? '' : 's'} listed</p>${items.map(event => renderEventCard(event, isWindowFilter)).join('')}</section>`;
     }

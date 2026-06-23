@@ -183,6 +183,24 @@
 
             const root = document.getElementById('preview-root');
             const token = new URLSearchParams(window.location.search).get('token') || '';
+            const PREVIEW_SPECIAL_PLACEHOLDERS = Object.freeze({
+                shop: 'placeholder_venue08.jpg',
+                cruiseBar: 'placeholder_venue09.jpg',
+                cinema: 'placeholder_venue10.jpg',
+                cruisingIndoor: 'placeholder_venue12.jpg',
+                cruisingOutdoor: 'placeholder_venue13.jpg',
+                sauna: 'placeholder_venue14.jpg',
+                default: 'placeholder_venue.jpg'
+            });
+            const PREVIEW_GENERIC_PLACEHOLDERS = [
+                'placeholder_venue01.jpg',
+                'placeholder_venue02.jpg',
+                'placeholder_venue03.jpg',
+                'placeholder_venue04.jpg',
+                'placeholder_venue05.jpg',
+                'placeholder_venue06.jpg',
+                'placeholder_venue07.jpg'
+            ];
             let payload = null;
 
             try {
@@ -352,6 +370,72 @@
                 return String(venue?.Category || '').trim().toLowerCase() === 'cruising area';
             }
 
+            function isGenericPlaceholderImage(value) {
+                const image = String(value || '').trim().split('/').pop().toLowerCase();
+                return /^placeholder_venue(?:0[1-7])?\.jpg$/.test(image);
+            }
+
+            function categoryKey(venue) {
+                return String(venue?.Category || '').trim().toLowerCase();
+            }
+
+            function isShopVenue(venue) {
+                return categoryKey(venue).includes('shop');
+            }
+
+            function isCinemaVenue(venue) {
+                return categoryKey(venue).includes('cinema');
+            }
+
+            function isSaunaVenue(venue) {
+                return categoryKey(venue).includes('sauna');
+            }
+
+            function isCruiseBarVenue(venue) {
+                const category = categoryKey(venue);
+                const tagList = splitTags(venue?.Vibe_Tags);
+                const cruiseMarked = category.includes('cruise')
+                    || tagList.includes('Cruising')
+                    || tagList.includes('Cruise')
+                    || venue?.Feature_Cruise_Focused === true;
+                return category.includes('bar') && cruiseMarked;
+            }
+
+            function genericPreviewPlaceholder(venue) {
+                const seed = String(venue?.Venue_ID || venue?.Name || 'backroom-preview');
+                let hash = 0;
+                for (let index = 0; index < seed.length; index += 1) {
+                    hash = ((hash << 5) - hash) + seed.charCodeAt(index);
+                    hash |= 0;
+                }
+                return PREVIEW_GENERIC_PLACEHOLDERS[Math.abs(hash) % PREVIEW_GENERIC_PLACEHOLDERS.length];
+            }
+
+            function cruisingIndoorLocation(venue) {
+                const text = normalise([venue?.Name, venue?.Description, venue?.Address, venue?.Native_Map_Query].filter(Boolean).join(' '));
+                return ['toilet', 'toilets', 'bathroom', 'bathrooms', 'restroom', 'restrooms', 'urinal', 'urinals', 'publicwc', 'station', 'railway']
+                    .some(word => text.includes(word));
+            }
+
+            function previewFallbackImage(venue) {
+                if (isCruisingArea(venue)) {
+                    return cruisingIndoorLocation(venue)
+                        ? PREVIEW_SPECIAL_PLACEHOLDERS.cruisingIndoor
+                        : PREVIEW_SPECIAL_PLACEHOLDERS.cruisingOutdoor;
+                }
+                if (isShopVenue(venue)) return PREVIEW_SPECIAL_PLACEHOLDERS.shop;
+                if (isCinemaVenue(venue)) return PREVIEW_SPECIAL_PLACEHOLDERS.cinema;
+                if (isCruiseBarVenue(venue)) return PREVIEW_SPECIAL_PLACEHOLDERS.cruiseBar;
+                if (isSaunaVenue(venue)) return PREVIEW_SPECIAL_PLACEHOLDERS.sauna;
+                return genericPreviewPlaceholder(venue);
+            }
+
+            function previewImageSource(venue) {
+                const image = String(venue?.Image_URL || '').trim();
+                if (image && !isGenericPlaceholderImage(image)) return image;
+                return `Venue_images/${venue?.Venue_ID || ''}-01.jpg`;
+            }
+
             function normaliseCoordinate(value) {
                 const number = Number.parseFloat(String(value ?? '').trim());
                 return Number.isFinite(number) ? String(number) : '';
@@ -450,7 +534,8 @@
 
             function renderVenue(venue, events) {
                 const status = String(venue?.Status || 'Live').trim() || 'Live';
-                const image = String(venue?.Image_URL || '').trim() || `Venue_images/${venue?.Venue_ID || ''}-01.jpg`;
+                const image = previewImageSource(venue);
+                const imageFallback = previewFallbackImage(venue);
                 const relatedEvents = (events || []).filter(event => String(event?.Venue_ID || '') === String(venue?.Venue_ID || '') && activeEvent(event));
                 const lastUpdated = formatDate(venue?.Last_Updated);
                 const cruisingArea = isCruisingArea(venue);
@@ -468,7 +553,7 @@
                     <div class="record-content">
                         <div class="venue-top">
                             <section class="media-panel">
-                                <img src="${escapeHTML(image)}" alt="${escapeHTML(venue?.Name || 'Venue')}" onerror="this.onerror=null;this.src='placeholder_venue.jpg';">
+                                <img src="${escapeHTML(image)}" alt="${escapeHTML(venue?.Name || 'Venue')}" onerror="this.onerror=null;this.src='${escapeHTML(imageFallback)}';">
                                 <div class="media-caption">${escapeHTML(cityCountry(venue) || 'Location not listed')}</div>
                             </section>
                             <section class="info-panel">
