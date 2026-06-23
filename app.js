@@ -1,5 +1,5 @@
 // --- Application State ---
-const APP_VERSION = "v1.06";
+const APP_VERSION = "v1.07";
 const APP_DATE = "23 June 2026";
 
 let systemInfo = {}, designTheme = {}, venues = [], events = [];
@@ -901,6 +901,48 @@ function updateLocationActionLabel(value = getLocationInput()?.value || '') {
         : resolved.valid
             ? `Show Results in ${resolved.label}`
             : 'Show Results';
+}
+
+function locationsMatch(left, right) {
+    const leftScope = getSavedLocationScope(left);
+    const rightScope = getSavedLocationScope(right);
+
+    return leftScope.scope === rightScope.scope
+        && normalizeCityName(leftScope.city) === normalizeCityName(rightScope.city)
+        && normalizeCountryName(leftScope.country) === normalizeCountryName(rightScope.country);
+}
+
+function updateLocationDraftStatus(value = getLocationInput()?.value || '') {
+    const display = document.getElementById('current-location-display');
+    if (!display) return;
+
+    const raw = String(value || '').trim();
+    const saved = getSavedLocation();
+    const resolved = resolveLocationInput(raw);
+
+    if (!raw) {
+        updateLocationDisplay(saved);
+        return;
+    }
+
+    if (!resolved.valid) {
+        display.textContent = resolved.message || 'Choose a recognised city or country.';
+        return;
+    }
+
+    const candidate = {
+        scope: resolved.scope,
+        city: resolved.city,
+        country: resolved.country,
+        postcode: String(saved?.postcode || '').trim()
+    };
+
+    if (locationsMatch(candidate, saved)) {
+        updateLocationDisplay(saved);
+        return;
+    }
+
+    display.textContent = `Selected: ${resolved.label} — press Show Results to apply.`;
 }
 
 function announceLocationChange(location) {
@@ -2677,16 +2719,25 @@ function setupEventListeners() {
         }
     });
 
-    addEvt('btn-save-location', 'click', saveLocation);
-    addEvt('btn-clear-location', 'click', clearLocation);
-
+    // The buttons call window.saveBackroomLocation / window.clearBackroomLocation
+    // directly from index.html. This avoids losing the location action when the
+    // listener setup order changes during later feature updates.
     const locationInput = getLocationInput();
-    const refreshLocationActionLabel = () => updateLocationActionLabel(locationInput?.value || '');
+    const refreshLocationActionLabel = () => {
+        const value = locationInput?.value || '';
+        updateLocationActionLabel(value);
+        updateLocationDraftStatus(value);
+    };
 
     if (locationInput && !locationInput.dataset.locationLabelBound) {
         locationInput.dataset.locationLabelBound = 'true';
         locationInput.addEventListener('input', refreshLocationActionLabel);
         locationInput.addEventListener('change', refreshLocationActionLabel);
+        locationInput.addEventListener('keydown', event => {
+            if (event.key !== 'Enter') return;
+            event.preventDefault();
+            window.saveBackroomLocation();
+        });
     }
     refreshLocationActionLabel();
 
@@ -2715,6 +2766,7 @@ function setupEventListeners() {
                         input.dataset.lon = lon;
                     }
                     updateLocationActionLabel(input?.value || '');
+                    updateLocationDraftStatus(input?.value || '');
                 } catch (error) {
                     if (input) {
                         input.value = '';
@@ -2722,6 +2774,7 @@ function setupEventListeners() {
                         input.dataset.lon = lon;
                     }
                     updateLocationActionLabel('');
+                    updateLocationDraftStatus('');
                     showToast('GPS found your coordinates, but could not resolve a city.');
                 }
 
@@ -4550,7 +4603,9 @@ function saveLocation() {
 
     updateLocationDisplay(loc);
     updateLocationActionLabel(locationInput?.value || '');
+    updateLocationDraftStatus(locationInput?.value || '');
     announceLocationChange(loc);
+    showToast(`Location set to ${getLocationDisplayText(loc) || 'All Cities'}.`);
 
     // Location scope and free-text search are intentionally separate. Saving a scope
     // starts a clean location-based result view rather than a double-filtered search.
@@ -4583,6 +4638,7 @@ function clearLocation() {
 
     updateLocationDisplay(null);
     updateLocationActionLabel('');
+    updateLocationDraftStatus('');
     announceLocationChange({ scope: 'all', city: '', country: '', postcode: '' });
 
     if (window.location.hash === '#results') handleRouting();
@@ -4629,6 +4685,14 @@ function updateLocationDisplay(loc) {
     display.textContent = label ? `Current: ${label}` : 'No location set.';
 }
 
+
+window.saveBackroomLocation = function() {
+    saveLocation();
+};
+
+window.clearBackroomLocation = function() {
+    clearLocation();
+};
 
 window.setBackroomSharedLocation = function(location) {
     const city = String(location?.city || '').trim();

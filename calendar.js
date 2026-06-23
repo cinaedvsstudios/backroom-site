@@ -1,4 +1,4 @@
-// Backroom Events calendar v0.97 — city, date, vibe filters and event-card image rules.
+// Backroom Events calendar v0.98 — city, date, vibe filters and event-card image rules.
 (function () {
     'use strict';
 
