@@ -162,7 +162,8 @@ select.filter-header-select:focus, select.cell-edit:focus { border-color: var(--
 
 /* Public-area cards use Category only. A normal sauna or bar can still have a
    Cruising tag without receiving this treatment. */
-.card.card--men-only {
+.card.card--men-only,
+.card.card--men-only-event {
     border: 2px solid var(--bright-red-orange);
 }
 
@@ -176,9 +177,19 @@ select.filter-header-select:focus, select.cell-edit:focus { border-color: var(--
 }
 
 .card.card--men-only.selected,
+.card.card--men-only-event.selected,
 .card.card--cruising-area.selected {
     border-color: var(--bright-red-orange);
     box-shadow: 0 0 0 2px rgba(44, 168, 212, 0.46), 0 0 22px rgba(44, 168, 212, 0.30);
+}
+
+/* v0.95 — Men Only events use the same red outline as Men Only venues. */
+.calendar-event-card.calendar-event-card--men-only,
+.event-card.event-card--men-only {
+    border: 2px solid var(--bright-red-orange);
+}
+.event-card.event-card--men-only.past {
+    border-left-color: var(--bright-red-orange);
 }
 
 .card-image-wrapper { width: 100%; height: 180px; background-color: #000; overflow: hidden; }

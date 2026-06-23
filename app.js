@@ -1,6 +1,6 @@
 // --- Application State ---
-const APP_VERSION = "v1.01";
-const APP_DATE = "22 June 2026";
+const APP_VERSION = "v1.02";
+const APP_DATE = "23 June 2026";
 
 let systemInfo = {}, designTheme = {}, venues = [], events = [];
 let activeFilters = []; // v0.66 Multi-select Array
@@ -80,6 +80,19 @@ function isMenOnlyTaggedVenue(venue) {
     return hasExactVibeTag(venue?.Vibe_Tags, 'Men Only');
 }
 
+// Pride artwork is only for general Pride events. Men Only, Cruising and Darkroom
+// events retain their venue image or category-specific fallback instead.
+function isMenOnlyEvent(event, venue) {
+    return getEventTags(event, venue).includes('Men Only');
+}
+
+function eventPrefersVenueImageOverPride(event, venue) {
+    const eventTags = getEventTags(event, venue);
+    return eventTags.includes('Men Only')
+        || eventTags.includes('Cruising')
+        || eventTags.includes('Darkroom');
+}
+
 function isGenericPlaceholderImage(value) {
     const image = String(value || '').trim().split('/').pop().toLowerCase();
     return /^placeholder_venue(?:0[1-7])?\.jpg$/.test(image);
@@ -123,7 +136,11 @@ function getEventImageSource(event, venue) {
     const eventImage = String(event?.Event_Image_URL || '').trim();
     if (eventImage && !isGenericPlaceholderImage(eventImage)) return eventImage;
 
-    // Pride events deliberately use the Pride artwork when no dedicated event image exists.
+    if (eventPrefersVenueImageOverPride(event, venue)) {
+        return getVenueImageSource(venue || {});
+    }
+
+    // Pride artwork is reserved for non-sexual/general Pride events with no dedicated event image.
     if (hasExactVibeTag(event?.Vibe_Tags, 'Pride') || hasExactVibeTag(venue?.Vibe_Tags, 'Pride')) {
         return SPECIAL_PLACEHOLDERS.pride;
     }
@@ -132,6 +149,10 @@ function getEventImageSource(event, venue) {
 }
 
 function getEventFallbackImage(event, venue) {
+    if (eventPrefersVenueImageOverPride(event, venue)) {
+        return getVenueFallbackImage(venue || {});
+    }
+
     if (hasExactVibeTag(event?.Vibe_Tags, 'Pride') || hasExactVibeTag(venue?.Vibe_Tags, 'Pride')) {
         return SPECIAL_PLACEHOLDERS.pride;
     }
@@ -1569,7 +1590,7 @@ function createShortlistEventCard(event) {
     const safeEventName = String(event.Event_Name || 'Event').replace(/'/g, "\\'");
     const eventTags = getEventTags(event, venue);
     const card = document.createElement('article');
-    card.className = 'card shortlist-event-card';
+    card.className = `card shortlist-event-card${isMenOnlyEvent(event, venue) ? ' card--men-only-event' : ''}`;
     card.innerHTML = `
         <div class="shortlist-event-card-inner">
             ${buildEventDateBadge(event, 'shortlist-event-date')}
@@ -2945,7 +2966,7 @@ function renderSearchEventResults(items, targetContainer) {
         const shortDescription = description.length > 130 ? `${description.slice(0, 130)}...` : description;
         const eventTags = getEventTags(event, venue);
         const card = document.createElement('article');
-        card.className = 'card search-result-event-card';
+        card.className = `card search-result-event-card${isMenOnlyEvent(event, venue) ? ' card--men-only-event' : ''}`;
         card.innerHTML = `
             <div class="card-image-wrapper">
                 <img class="venue-image centered-image" src="${image}" onerror="this.onerror=null; this.src='${imageFallback}'" title="${eventName}">
@@ -3391,7 +3412,7 @@ function renderMyEventsView() {
         const safeEventName = String(event.Event_Name || 'Event').replace(/'/g, "\\'");
         const eventTags = getEventTags(event, venue);
         const card = document.createElement('article');
-        card.className = 'card my-event-card';
+        card.className = `card my-event-card${isMenOnlyEvent(event, venue) ? ' card--men-only-event' : ''}`;
         card.innerHTML = `
             <div class="my-event-card-inner">
                 ${buildEventDateBadge(event, 'my-event-date')}
@@ -4120,7 +4141,7 @@ function openVenueModal(venue) {
             const badgeData = getBadgeDateParts(getEventDisplayDate(ev));
             const safeEventName = String(ev.Event_Name || 'Event').replace(/'/g, "\'");
             eventsHtml += `
-                <article class="event-card ${isPast ? 'past' : ''}">
+                <article class="event-card ${isPast ? 'past' : ''}${isMenOnlyEvent(ev, venue) ? ' event-card--men-only' : ''}">
                     <div class="event-date-badge" aria-label="${getEventDisplayDate(ev)}">
                         <span class="event-day">${badgeData.d}</span>
                         <span class="event-month">${badgeData.m}</span>

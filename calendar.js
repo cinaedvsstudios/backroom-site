@@ -1,4 +1,4 @@
-// Backroom Events calendar — city, date, and vibe filters.
+// Backroom Events calendar v0.95 — city, date, vibe filters and event-card image rules.
 (function () {
     'use strict';
 
@@ -158,6 +158,24 @@
         return String(venue?.Category || '').trim().toLowerCase() === 'cruising area';
     }
 
+    function combinedEventTags(event, venue) {
+        return [...new Set([
+            ...splitTags(event?.Vibe_Tags),
+            ...splitTags(venue?.Vibe_Tags)
+        ])];
+    }
+
+    function isMenOnlyEvent(event, venue) {
+        return combinedEventTags(event, venue).includes('Men Only');
+    }
+
+    function eventPrefersVenueImageOverPride(event, venue) {
+        const eventTags = combinedEventTags(event, venue);
+        return eventTags.includes('Men Only')
+            || eventTags.includes('Cruising')
+            || eventTags.includes('Darkroom');
+    }
+
     function venueFallbackImage(venue) {
         if (isCruisingArea(venue)) {
             const text = normalizeLocation([
@@ -191,12 +209,21 @@
     function eventImageSource(event, venue) {
         const image = String(event?.Event_Image_URL || '').trim();
         if (image && !isGenericPlaceholderImage(image)) return image;
-        if (tagsFor(event).includes('Pride')) return SPECIAL_PLACEHOLDERS.pride;
+
+        if (eventPrefersVenueImageOverPride(event, venue)) {
+            return venueImageSource(venue || {});
+        }
+
+        if (combinedEventTags(event, venue).includes('Pride')) return SPECIAL_PLACEHOLDERS.pride;
         return venueImageSource(venue || {});
     }
 
     function eventFallbackImage(event, venue) {
-        return tagsFor(event).includes('Pride')
+        if (eventPrefersVenueImageOverPride(event, venue)) {
+            return venueFallbackImage(venue || {});
+        }
+
+        return combinedEventTags(event, venue).includes('Pride')
             ? SPECIAL_PLACEHOLDERS.pride
             : venueFallbackImage(venue || {});
     }
@@ -630,7 +657,7 @@
         const dateText = includeDate && event.Display_Date
             ? new Date(`${event.Display_Date}T12:00:00`).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' }).toUpperCase()
             : '';
-        return `<article class="calendar-event-card"><div class="calendar-event-layout"><div class="calendar-event-media"><img class="calendar-venue-thumb" src="${escapeHTML(image)}" alt="${escapeHTML(venueName)}" onerror="this.onerror=null;this.src='${escapeHTML(imageFallback)}';"><button type="button" class="btn primary-btn pill-btn calendar-action ${saved ? 'calendar-saved' : ''}" data-calendar-save="${escapeHTML(event.Event_ID)}">${saved ? '💖 Saved' : '💖 Save Event'}</button><button type="button" class="btn secondary-btn pill-btn calendar-action" data-calendar-shortlist="${escapeHTML(event.Event_ID)}">📑 Shortlist</button>${venue ? `<button type="button" class="btn secondary-btn pill-btn calendar-action" data-calendar-venue="${escapeHTML(venue.Venue_ID)}">Open Venue</button>` : ''}</div><div class="calendar-event-body"><div class="calendar-event-top"><div><h3 class="calendar-event-name display-font">${escapeHTML(event.Event_Name || 'Event')}</h3><p class="calendar-event-meta">${escapeHTML(venueName)}${location ? ` · ${escapeHTML(location)}` : ''}</p>${dateText ? `<p class="calendar-event-date">${escapeHTML(dateText)}</p>` : ''}${times ? `<p class="calendar-event-time">${escapeHTML(times)}</p>` : ''}${event.Is_Recurring ? `<p class="calendar-event-recurrence">${escapeHTML(event.Recurrence_Label)}</p>` : ''}</div>${event.Dresscode_Info ? `<div class="calendar-event-dresscode">${escapeHTML(event.Dresscode_Info)}</div>` : ''}</div>${event.Event_Description ? `<div class="calendar-event-description">${formatEventDescription(event.Event_Description)}</div>` : ''}${renderEventTags(event)}</div></div></article>`;
+        return `<article class="calendar-event-card${isMenOnlyEvent(event, venue) ? ' calendar-event-card--men-only' : ''}"><div class="calendar-event-layout"><div class="calendar-event-media"><img class="calendar-venue-thumb" src="${escapeHTML(image)}" alt="${escapeHTML(venueName)}" onerror="this.onerror=null;this.src='${escapeHTML(imageFallback)}';"><button type="button" class="btn primary-btn pill-btn calendar-action ${saved ? 'calendar-saved' : ''}" data-calendar-save="${escapeHTML(event.Event_ID)}">${saved ? '💖 Saved' : '💖 Save Event'}</button><button type="button" class="btn secondary-btn pill-btn calendar-action" data-calendar-shortlist="${escapeHTML(event.Event_ID)}">📑 Shortlist</button>${venue ? `<button type="button" class="btn secondary-btn pill-btn calendar-action" data-calendar-venue="${escapeHTML(venue.Venue_ID)}">Open Venue</button>` : ''}</div><div class="calendar-event-body"><div class="calendar-event-top"><div><h3 class="calendar-event-name display-font">${escapeHTML(event.Event_Name || 'Event')}</h3><p class="calendar-event-meta">${escapeHTML(venueName)}${location ? ` · ${escapeHTML(location)}` : ''}</p>${dateText ? `<p class="calendar-event-date">${escapeHTML(dateText)}</p>` : ''}${times ? `<p class="calendar-event-time">${escapeHTML(times)}</p>` : ''}${event.Is_Recurring ? `<p class="calendar-event-recurrence">${escapeHTML(event.Recurrence_Label)}</p>` : ''}</div>${event.Dresscode_Info ? `<div class="calendar-event-dresscode">${escapeHTML(event.Dresscode_Info)}</div>` : ''}</div>${event.Event_Description ? `<div class="calendar-event-description">${formatEventDescription(event.Event_Description)}</div>` : ''}${renderEventTags(event)}</div></div></article>`;
     }
 
     function renderPanel() {
