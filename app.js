@@ -55,7 +55,88 @@ let sidebarTimeout;
 const MASTER_VIBE_TAGS = ["Bar","Party","Cinema","Sauna","Shop","Cruising","Darkroom","Men Only","Dresscode","Naked","Underwear","Dancefloor","Smoking Area","Cocktails","Fetish/Gear","Bear","Mature","Young Crowd","Queer","Pride","Social","Drag","Karaoke","Pop/Dance","Techno"];
 const SHORTLIST_EMOJIS = ['🤠','🚄','👑','🥂','🦄','🫦','💪','🪇','🔥','🍆','🍑','💄','🛁','✈️','💥','💦','🗝️','🧿','🎧','🧭','⛓️','🎼'];
 const PLACEHOLDER_POOL = ['placeholder_venue.jpg', 'placeholder_venue01.jpg', 'placeholder_venue02.jpg', 'placeholder_venue03.jpg', 'placeholder_venue04.jpg', 'placeholder_venue05.jpg', 'placeholder_venue06.jpg', 'placeholder_venue07.jpg'];
+const SPECIAL_PLACEHOLDERS = Object.freeze({
+    default: 'placeholder_venue.jpg',
+    pride: 'placeholder_venue11.jpg',
+    cruisingIndoor: 'placeholder_venue12.jpg',
+    cruisingOutdoor: 'placeholder_venue13.jpg',
+    sauna: 'placeholder_venue14.jpg'
+});
 const BR_ICONS = { share: '📣', favourite: '⚜️', savedEvent: '💖', report: 'report.png', link: 'link.png', shortlist: 'shortlist.png' };
+
+function splitStoredTags(value) {
+    return [...new Set(String(value || '').split(',').map(tag => tag.trim()).filter(Boolean))];
+}
+
+function hasExactVibeTag(value, tag) {
+    return splitStoredTags(value).includes(tag);
+}
+
+function isCruisingAreaVenue(venue) {
+    return String(venue?.Category || '').trim().toLowerCase() === 'cruising area';
+}
+
+function isMenOnlyTaggedVenue(venue) {
+    return hasExactVibeTag(venue?.Vibe_Tags, 'Men Only');
+}
+
+function isGenericPlaceholderImage(value) {
+    const image = String(value || '').trim().split('/').pop().toLowerCase();
+    return /^placeholder_venue(?:0[1-7])?\.jpg$/.test(image);
+}
+
+function isCruisingAreaIndoorLocation(venue) {
+    const text = normalizeLocationName([
+        venue?.Name,
+        venue?.Description,
+        venue?.Address,
+        venue?.Native_Map_Query
+    ].filter(Boolean).join(' '));
+
+    return [
+        'toilet', 'toilets', 'bathroom', 'bathrooms', 'restroom', 'restrooms',
+        'urinal', 'urinals', 'publicwc', 'station', 'railway'
+    ].some(keyword => text.includes(keyword));
+}
+
+function getVenueFallbackImage(venue) {
+    if (isCruisingAreaVenue(venue)) {
+        return isCruisingAreaIndoorLocation(venue)
+            ? SPECIAL_PLACEHOLDERS.cruisingIndoor
+            : SPECIAL_PLACEHOLDERS.cruisingOutdoor;
+    }
+    if (String(venue?.Category || '').trim().toLowerCase() === 'sauna') {
+        return SPECIAL_PLACEHOLDERS.sauna;
+    }
+    return SPECIAL_PLACEHOLDERS.default;
+}
+
+function getVenueImageSource(venue) {
+    const image = String(venue?.Image_URL || '').trim();
+    if (image && !isGenericPlaceholderImage(image)) return image;
+    return image && !image.startsWith('placeholder_venue')
+        ? image
+        : `Venue_images/${venue?.Venue_ID || ''}-01.jpg`;
+}
+
+function getEventImageSource(event, venue) {
+    const eventImage = String(event?.Event_Image_URL || '').trim();
+    if (eventImage && !isGenericPlaceholderImage(eventImage)) return eventImage;
+
+    // Pride events deliberately use the Pride artwork when no dedicated event image exists.
+    if (hasExactVibeTag(event?.Vibe_Tags, 'Pride') || hasExactVibeTag(venue?.Vibe_Tags, 'Pride')) {
+        return SPECIAL_PLACEHOLDERS.pride;
+    }
+
+    return getVenueImageSource(venue || {});
+}
+
+function getEventFallbackImage(event, venue) {
+    if (hasExactVibeTag(event?.Vibe_Tags, 'Pride') || hasExactVibeTag(venue?.Vibe_Tags, 'Pride')) {
+        return SPECIAL_PLACEHOLDERS.pride;
+    }
+    return getVenueFallbackImage(venue || {});
+}
 const FORMSUBMIT_ENDPOINT = 'https://formsubmit.cloud/f/ae0e141d-ad94-47fe-ac46-55702c6534a6/';
 
 
@@ -477,26 +558,113 @@ function isAllCitiesLocation(location) {
         && !String(location.postcode || '').trim();
 }
 
-function getLocationResultsLabel(cityValue, countryValue) {
-    const city = String(cityValue ?? document.getElementById('loc-city')?.value ?? '').trim();
-    const country = String(countryValue ?? document.getElementById('loc-country')?.value ?? '').trim();
-
-    if (city && city.toLowerCase() !== 'my location') {
-        // A country typed into the City field is accepted when it does not also match
-        // a real city in the current directory. This keeps ordinary city searches precise.
-        const inferredCountry = !country ? getKnownCountryName(city) : '';
-        if (inferredCountry && !hasKnownCityName(city)) return inferredCountry;
-        return city;
-    }
-
-    if (country) return getKnownCountryName(country) || country;
-    return 'All Cities';
+function getLocationInput() {
+    return document.getElementById('loc-location');
 }
 
-function updateLocationActionLabel(cityValue, countryValue) {
+function getLocationDisplayText(location) {
+    const scope = getSavedLocationScope(location);
+    if (scope.scope === 'city') return scope.country ? `${scope.city}, ${scope.country}` : scope.city;
+    if (scope.scope === 'country') return scope.country;
+    return '';
+}
+
+function getLocationDirectory() {
+    const countries = new Map();
+    const cities = new Map();
+
+    const addRecord = record => {
+        const country = String(record?.Country || '').trim();
+        const countryKey = normalizeCountryName(country);
+        if (country && countryKey && !countries.has(countryKey)) countries.set(countryKey, country);
+
+        getCityTokens(record).forEach(city => {
+            const cityKey = normalizeCityName(city);
+            if (!cityKey) return;
+
+            const entries = cities.get(cityKey) || [];
+            if (!entries.some(entry =>
+                normalizeCityName(entry.city) === cityKey
+                && normalizeCountryName(entry.country) === countryKey
+            )) {
+                entries.push({ city, country });
+            }
+            cities.set(cityKey, entries);
+        });
+    };
+
+    (venues || []).forEach(addRecord);
+    (events || []).forEach(addRecord);
+    return { countries, cities };
+}
+
+function resolveLocationInput(value) {
+    const raw = String(value || '').trim();
+    if (!raw) return { valid: true, scope: 'all', city: '', country: '', label: 'All Cities' };
+
+    const { countries, cities } = getLocationDirectory();
+    const parts = raw.split(',').map(part => part.trim()).filter(Boolean);
+
+    if (parts.length >= 2) {
+        const cityRequest = parts.slice(0, -1).join(', ');
+        const countryRequest = parts.at(-1);
+        const canonicalCountry = countries.get(normalizeCountryName(countryRequest));
+        const candidates = cities.get(normalizeCityName(cityRequest)) || [];
+        const match = candidates.find(candidate =>
+            normalizeCountryName(candidate.country) === normalizeCountryName(canonicalCountry)
+        );
+
+        if (match) {
+            return {
+                valid: true,
+                scope: 'city',
+                city: match.city,
+                country: match.country,
+                label: `${match.city}, ${match.country}`
+            };
+        }
+
+        return { valid: false, message: 'Use a recognised City, Country pair from the directory.' };
+    }
+
+    const cityMatches = cities.get(normalizeCityName(raw)) || [];
+    if (cityMatches.length === 1) {
+        const match = cityMatches[0];
+        return {
+            valid: true,
+            scope: 'city',
+            city: match.city,
+            country: match.country,
+            label: `${match.city}, ${match.country}`
+        };
+    }
+
+    if (cityMatches.length > 1) {
+        return { valid: false, message: `More than one ${raw} is listed. Enter City, Country.` };
+    }
+
+    const country = countries.get(normalizeCountryName(raw));
+    if (country) return { valid: true, scope: 'country', city: '', country, label: country };
+
+    return { valid: false, message: 'Choose a city or country that is already in the directory.' };
+}
+
+function getLocationResultsLabel(value = getLocationInput()?.value || '') {
+    const resolved = resolveLocationInput(value);
+    return resolved.valid ? resolved.label : (String(value || '').trim() || 'All Cities');
+}
+
+function updateLocationActionLabel(value = getLocationInput()?.value || '') {
     const button = document.getElementById('btn-save-location');
     if (!button) return;
-    button.textContent = `Show Results in ${getLocationResultsLabel(cityValue, countryValue)}`;
+
+    const raw = String(value || '').trim();
+    const resolved = resolveLocationInput(raw);
+    button.textContent = !raw
+        ? 'Show Results in All Cities'
+        : resolved.valid
+            ? `Show Results in ${resolved.label}`
+            : 'Show Results';
 }
 
 function announceLocationChange(location) {
@@ -521,6 +689,13 @@ function formatVenueLocation(venue) {
     const countryText = String(venue?.Country || '').trim();
     if (cityText && countryText) return `${cityText} · ${countryText}`;
     return cityText || countryText || '';
+}
+
+function formatEventLocation(event, venue) {
+    return formatVenueLocation({
+        City: venue?.City || event?.City || '',
+        Country: venue?.Country || event?.Country || ''
+    });
 }
 
 function venueMatchesCity(venue, cityName) {
@@ -558,7 +733,7 @@ function getSavedLocationScope(location = getSavedLocation()) {
     const country = String(location.country || '').trim();
 
     if (city && city.toLowerCase() !== 'my location') {
-        return { scope: 'city', city, country, label: city };
+        return { scope: 'city', city, country, label: country ? `${city}, ${country}` : city };
     }
 
     if (country) {
@@ -641,14 +816,22 @@ function getSearchScopeVenues() {
 }
 
 function getSearchScopeEvents(now = new Date()) {
-    const scopedVenues = getSearchScopeVenues();
-    const venueById = new Map(scopedVenues.map(venue => [venue.Venue_ID, venue]));
+    const savedScope = getSavedSearchScope();
+    const publicVenueById = new Map(getPublicVenues().map(venue => [venue.Venue_ID, venue]));
 
     return (events || [])
         .filter(isSearchableEvent)
         .map(event => {
-            const venue = venueById.get(event?.Venue_ID);
-            if (!venue) return null;
+            const venue = publicVenueById.get(event?.Venue_ID) || null;
+            const locationRecord = {
+                City: venue?.City || event?.City || '',
+                Country: venue?.Country || event?.Country || ''
+            };
+
+            // Events can still be useful where a venue was removed, held or is incomplete.
+            // Their own City/Country fields are the location fallback.
+            if (!venueMatchesSavedLocation(locationRecord, savedScope)) return null;
+
             const occurrence = getEventDisplayOccurrence(event, now);
             if (!occurrence || occurrence.Is_Past) return null;
             return { event: occurrence, venue };
@@ -666,9 +849,9 @@ function getEventSearchText(event, venue) {
         event?.Price_Info,
         event?.Ticket_URL,
         venue?.Name,
-        venue?.City,
-        venue?.Country,
-        venue?.Address
+        venue?.City || event?.City,
+        venue?.Country || event?.Country,
+        venue?.Address || event?.Address
     ].filter(Boolean).join(' ');
 }
 
@@ -2261,73 +2444,74 @@ function setupEventListeners() {
     addEvt('btn-save-location', 'click', saveLocation);
     addEvt('btn-clear-location', 'click', clearLocation);
 
-    const locationCityInput = document.getElementById('loc-city');
-    const locationCountryInput = document.getElementById('loc-country');
-    const refreshLocationActionLabel = () => updateLocationActionLabel(
-        locationCityInput?.value || '',
-        locationCountryInput?.value || ''
-    );
+    const locationInput = getLocationInput();
+    const refreshLocationActionLabel = () => updateLocationActionLabel(locationInput?.value || '');
 
-    [locationCityInput, locationCountryInput].forEach(input => {
-        if (!input || input.dataset.locationLabelBound) return;
-        input.dataset.locationLabelBound = 'true';
-        input.addEventListener('input', refreshLocationActionLabel);
-        input.addEventListener('change', refreshLocationActionLabel);
-    });
+    if (locationInput && !locationInput.dataset.locationLabelBound) {
+        locationInput.dataset.locationLabelBound = 'true';
+        locationInput.addEventListener('input', refreshLocationActionLabel);
+        locationInput.addEventListener('change', refreshLocationActionLabel);
+    }
     refreshLocationActionLabel();
-    
+
     addEvt('btn-gps', 'click', () => {
         showToast('Hold up a few seconds, we are confirming your location.');
-        if(navigator.geolocation) {
-            navigator.geolocation.getCurrentPosition(
-                async (pos) => { 
-                    const lat = pos.coords.latitude;
-                    const lon = pos.coords.longitude;
-                    const cityInput = document.getElementById('loc-city');
-                    
-                    try {
-                        const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`);
-                        const data = await res.json();
-                        const city = data.address.city || data.address.town || data.address.village || 'My Location';
-                        if(cityInput) {
-                            cityInput.value = city;
-                            cityInput.dataset.lat = lat;
-                            cityInput.dataset.lon = lon;
-                        }
-                        const countryInput = document.getElementById('loc-country');
-                        if(countryInput) countryInput.value = data.address.country || '';
-                        updateLocationActionLabel(city, countryInput?.value || '');
-                    } catch (e) {
-                        if(cityInput) {
-                            cityInput.value = `My Location`;
-                            updateLocationActionLabel('');
-                        }
+        if (!navigator.geolocation) {
+            alert('Geolocation not supported.');
+            return;
+        }
+
+        navigator.geolocation.getCurrentPosition(
+            async pos => {
+                const lat = pos.coords.latitude;
+                const lon = pos.coords.longitude;
+                const input = getLocationInput();
+
+                try {
+                    const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`);
+                    const data = await res.json();
+                    const city = data?.address?.city || data?.address?.town || data?.address?.village || '';
+                    const country = data?.address?.country || '';
+
+                    if (input) {
+                        input.value = city && country ? `${city}, ${country}` : (city || country);
+                        input.dataset.lat = lat;
+                        input.dataset.lon = lon;
                     }
-                    initLeafletMap(lat, lon);
-                },
-                (err) => { alert("GPS Denied or Unavailable."); }
-            );
-        } else alert("Geolocation not supported.");
+                    updateLocationActionLabel(input?.value || '');
+                } catch (error) {
+                    if (input) {
+                        input.value = '';
+                        input.dataset.lat = lat;
+                        input.dataset.lon = lon;
+                    }
+                    updateLocationActionLabel('');
+                    showToast('GPS found your coordinates, but could not resolve a city.');
+                }
+
+                initLeafletMap(lat, lon);
+            },
+            () => alert('GPS denied or unavailable.')
+        );
     });
 
     addEvt('btn-search-map', 'click', async () => {
-        const country = document.getElementById('loc-country')?.value.trim() || '';
-        const city = document.getElementById('loc-city')?.value.trim() || '';
-        const pc = document.getElementById('loc-postcode')?.value.trim() || '';
-        const query = `${pc} ${city}, ${country}`.trim();
-        
-        if(!query) return;
-        
+        const location = getLocationInput()?.value.trim() || '';
+        const postcode = document.getElementById('loc-postcode')?.value.trim() || '';
+        const query = `${postcode} ${location}`.trim();
+
+        if (!query) return;
+
         try {
             const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}`);
             const data = await res.json();
-            if(data && data.length > 0) {
+            if (data && data.length > 0) {
                 initLeafletMap(data[0].lat, data[0].lon);
             } else {
-                alert("Location not found on map, but will be saved for filtering.");
+                alert('Location not found on map, but you can still save a recognised directory location.');
             }
-        } catch(e) {
-            console.error("OSM Error", e);
+        } catch (error) {
+            console.error('OSM Error', error);
         }
     });
 
@@ -2753,7 +2937,8 @@ function renderSearchEventResults(items, targetContainer) {
 
     items.forEach(({ event, venue }) => {
         const isSaved = userEvents.includes(event.Event_ID);
-        const image = String(event.Event_Image_URL || venue?.Image_URL || '').trim() || `Venue_images/${venue?.Venue_ID || ''}-01.jpg`;
+        const image = getEventImageSource(event, venue);
+        const imageFallback = getEventFallbackImage(event, venue);
         const eventName = String(event.Event_Name || 'Event');
         const safeEventName = eventName.replace(/'/g, "\\'");
         const description = getPlainDescriptionText(event.Event_Description || '');
@@ -2763,14 +2948,14 @@ function renderSearchEventResults(items, targetContainer) {
         card.className = 'card search-result-event-card';
         card.innerHTML = `
             <div class="card-image-wrapper">
-                <img class="venue-image centered-image" src="${image}" onerror="this.onerror=null; this.src='${PLACEHOLDER_POOL[Math.floor(Math.random() * PLACEHOLDER_POOL.length)]}'" title="${eventName}">
+                <img class="venue-image centered-image" src="${image}" onerror="this.onerror=null; this.src='${imageFallback}'" title="${eventName}">
             </div>
             <div class="card-inner-content">
                 <div class="card-header">
                     <div>
                         <h3 class="card-title display-font">${formatEventTitleForDisplay(eventName)}</h3>
                         <div class="card-meta">📅 ${escapeHTML(getEventDisplayMeta(event))}</div>
-                        <div class="card-meta">🏛️ ${escapeHTML(venue?.Name || 'Venue not listed')} · ${escapeHTML(formatVenueLocation(venue))}</div>
+                        <div class="card-meta">🏛️ ${escapeHTML(venue?.Name || 'Venue not listed')}${formatEventLocation(event, venue) ? ` · ${escapeHTML(formatEventLocation(event, venue))}` : ''}</div>
                     </div>
                     <div class="status-badge live">EVENT</div>
                 </div>
@@ -3650,30 +3835,38 @@ function checkImportPreview() {
 
 // v0.66 Random Placeholder Infinite Loop Breaker
 function handleImageCarousel(imgElement) {
-    imgElement.addEventListener('click', (e) => {
-        e.stopPropagation(); 
+    if (!imgElement || imgElement.dataset.carouselBound) return;
+    imgElement.dataset.carouselBound = 'true';
+
+    imgElement.addEventListener('click', event => {
+        event.stopPropagation();
+
         const id = imgElement.getAttribute('data-id');
-        let index = parseInt(imgElement.getAttribute('data-index') || '1') + 1;
-        let numStr = index < 10 ? '0' + index : index;
-        let newSrc = `Venue_images/${id}-${numStr}.jpg`;
-        
-        let tempImg = new Image();
-        tempImg.onload = () => {
-            imgElement.src = newSrc;
-            imgElement.setAttribute('data-index', index);
-            showToast("Double tap the venue name to open");
+        if (!id) return;
+
+        const index = parseInt(imgElement.getAttribute('data-index') || '1', 10) + 1;
+        const number = String(index).padStart(2, '0');
+        const nextSource = `Venue_images/${id}-${number}.jpg`;
+
+        const testImage = new Image();
+        testImage.onload = () => {
+            imgElement.src = nextSource;
+            imgElement.setAttribute('data-index', String(index));
+            showToast('Double tap the venue name to open');
         };
-        tempImg.onerror = () => {
-            // v0.66 Random image pool selection
-            const randomFallback = PLACEHOLDER_POOL[Math.floor(Math.random() * PLACEHOLDER_POOL.length)];
-            imgElement.onerror = null; 
-            imgElement.src = randomFallback;
-            imgElement.setAttribute('data-index', 1);
-            showToast("Double tap the venue name to open");
+        testImage.onerror = () => {
+            // Specialised placeholders stay specialised. Normal venues keep the existing pool.
+            const fallback = imgElement.dataset.fallbackImage
+                || PLACEHOLDER_POOL[Math.floor(Math.random() * PLACEHOLDER_POOL.length)];
+            imgElement.onerror = null;
+            imgElement.src = fallback;
+            imgElement.setAttribute('data-index', '1');
+            showToast('Double tap the venue name to open');
         };
-        tempImg.src = newSrc;
+        testImage.src = nextSource;
     });
 }
+
 
 function renderListings(data, isContextView = false, targetContainer = resultsContainer) {
     const container = targetContainer || resultsContainer;
@@ -3683,9 +3876,9 @@ function renderListings(data, isContextView = false, targetContainer = resultsCo
     if(!data || data.length === 0) {
         let emptyHtml = `<p style="text-align:center; color:var(--label-grey); margin-top:20px; width: 100%; grid-column: 1 / -1;">No venues found.</p>`;
 
-        const cityInput = document.getElementById('loc-city');
-        const userLat = parseFloat(cityInput?.dataset.lat || 'NaN');
-        const userLon = parseFloat(cityInput?.dataset.lon || 'NaN');
+        const locationInput = getLocationInput();
+        const userLat = parseFloat(locationInput?.dataset.lat || 'NaN');
+        const userLon = parseFloat(locationInput?.dataset.lon || 'NaN');
 
         if (!isNaN(userLat) && !isNaN(userLon) && venues.length > 0) {
             let nearest = null;
@@ -3724,15 +3917,21 @@ function renderListings(data, isContextView = false, targetContainer = resultsCo
         const shortDescSource = venue.Description || '';
         const shortDesc = shortDescSource.length > 90 ? shortDescSource.substring(0, 90) + '...' : shortDescSource;
         const card = document.createElement('div');
-        card.className = 'card';
+        const cardStyleClass = isCruisingAreaVenue(venue)
+            ? ' card--cruising-area'
+            : isMenOnlyTaggedVenue(venue)
+                ? ' card--men-only'
+                : '';
+        card.className = `card${cardStyleClass}`;
 
-        const baseImageSrc = (venue.Image_URL && venue.Image_URL.trim()) ? venue.Image_URL.trim() : `Venue_images/${venue.Venue_ID}-01.jpg`;
+        const baseImageSrc = getVenueImageSource(venue);
+        const fallbackImage = getVenueFallbackImage(venue);
         const badgeLabel = getCardStatusLabel(venue);
         const badgeClass = getCardStatusClass(venue);
 
         card.innerHTML = `
             <div class="card-image-wrapper">
-                <img class="venue-image centered-image" src="${baseImageSrc}" onerror="this.onerror=null; this.src='${PLACEHOLDER_POOL[Math.floor(Math.random() * PLACEHOLDER_POOL.length)]}'" data-id="${venue.Venue_ID}" data-index="1" title="Tap to see next photo">
+                <img class="venue-image centered-image" src="${baseImageSrc}" onerror="this.onerror=null; this.src='${fallbackImage}'" data-fallback-image="${fallbackImage}" data-id="${venue.Venue_ID}" data-index="1" title="Tap to see next photo">
             </div>
             <div class="card-inner-content">
                 <div class="card-header">
@@ -3869,6 +4068,8 @@ function openVenueModal(venue) {
 
     const features = getVenueTags(venue);
     const featureHtml = renderTagPills(features);
+    const modalImageSource = getVenueImageSource(venue);
+    const modalImageFallback = getVenueFallbackImage(venue);
 
     const statsHtml = `
         ${renderCommunityStats(venue.Venue_ID)}
@@ -3956,7 +4157,7 @@ function openVenueModal(venue) {
         <div class="modal-top-split">
             <div class="modal-left-col">
                 <div class="modal-image-container">
-                    <img id="modal-venue-image" class="venue-image centered-image" src="Venue_images/${venue.Venue_ID}-01.jpg" onerror="this.onerror=null; this.src='${PLACEHOLDER_POOL[Math.floor(Math.random() * PLACEHOLDER_POOL.length)]}'" data-id="${venue.Venue_ID}" data-index="1" title="Tap for next image">
+                    <img id="modal-venue-image" class="venue-image centered-image" src="${modalImageSource}" onerror="this.onerror=null; this.src='${modalImageFallback}'" data-fallback-image="${modalImageFallback}" data-id="${venue.Venue_ID}" data-index="1" title="Tap for next image">
                 </div>
                 
                 <div class="desktop-stats">
@@ -4060,141 +4261,109 @@ async function shareURL(url, title) {
 function saveLocation() {
     recordUserInteraction();
 
-    const cityInp = document.getElementById('loc-city');
-    const countryInp = document.getElementById('loc-country');
-    const postcodeInp = document.getElementById('loc-postcode');
+    const locationInput = getLocationInput();
+    const postcode = document.getElementById('loc-postcode')?.value.trim() || '';
+    const resolved = resolveLocationInput(locationInput?.value || '');
 
-    const requestedCity = cityInp?.value.trim() || '';
-    const requestedCountry = countryInp?.value.trim() || '';
-    const postcode = postcodeInp?.value.trim() || '';
-
-    if (requestedCity.toLowerCase() === 'my location') {
-        showToast('Choose a city or country, or leave both blank to browse all cities.');
+    if (!resolved.valid) {
+        showToast(resolved.message || 'Choose a recognised city or country, or leave Location blank to browse all cities.');
         return;
     }
 
-    const canonicalCountry = getKnownCountryName(requestedCountry) || requestedCountry;
-    const inferredCountry = !canonicalCountry ? getKnownCountryName(requestedCity) : '';
-    const cityIsKnown = hasKnownCityName(requestedCity);
-
-    let loc;
-    if (requestedCity && inferredCountry && !cityIsKnown) {
-        // Country names typed into the City box are treated as a country-only browse scope.
-        loc = { country: inferredCountry, city: '', postcode, scope: 'country' };
-    } else if (requestedCity) {
-        // A city with an optional country stays city-specific. When country is supplied,
-        // it prevents a same-named city in another country from matching.
-        loc = { country: canonicalCountry, city: requestedCity, postcode, scope: 'city' };
-    } else if (canonicalCountry) {
-        loc = { country: canonicalCountry, city: '', postcode, scope: 'country' };
-    } else {
-        loc = { country: '', city: '', postcode: '', scope: 'all' };
-    }
+    const loc = {
+        country: resolved.country,
+        city: resolved.city,
+        postcode: resolved.scope === 'all' ? '' : postcode,
+        scope: resolved.scope
+    };
 
     localStorage.setItem('br_location', JSON.stringify(loc));
+
+    if (locationInput) {
+        locationInput.value = getLocationDisplayText(loc);
+        locationInput.dataset.lat = '';
+        locationInput.dataset.lon = '';
+    }
+
     updateLocationDisplay(loc);
-    updateLocationActionLabel(loc.city, loc.country);
+    updateLocationActionLabel(locationInput?.value || '');
     announceLocationChange(loc);
+
+    // Location scope and free-text search are intentionally separate. Saving a scope
+    // starts a clean location-based result view rather than a double-filtered search.
+    if (searchInput) searchInput.value = '';
+    updateSearchClearButton();
+
     locModal?.classList.add('hidden');
 
-    // Location sets the shared scope for Results, Venues and Events. It opens Search Results rather than a separate location screen.
+    // Location sets the shared scope for Results, Venues and Events.
     if (window.location.hash === '#results') handleRouting();
     else window.location.hash = '#results';
 }
 
 function clearLocation() {
     localStorage.removeItem('br_location');
-    const cInp = document.getElementById('loc-country');
-    const ciInp = document.getElementById('loc-city');
-    const pInp = document.getElementById('loc-postcode');
-    const lMap = document.getElementById('loc-map');
-    const mPlace = document.getElementById('map-preview-placeholder');
 
-    if(cInp) cInp.value = ''; 
-    if(ciInp) { ciInp.value = ''; ciInp.dataset.lat = ''; ciInp.dataset.lon = ''; }
-    if(pInp) pInp.value = '';
-    if(lMap) lMap.style.display = 'none';
-    if(mPlace) mPlace.classList.remove('hidden');
-    
+    const locationInput = getLocationInput();
+    const postcodeInput = document.getElementById('loc-postcode');
+    const map = document.getElementById('loc-map');
+    const mapPlaceholder = document.getElementById('map-preview-placeholder');
+
+    if (locationInput) {
+        locationInput.value = '';
+        locationInput.dataset.lat = '';
+        locationInput.dataset.lon = '';
+    }
+    if (postcodeInput) postcodeInput.value = '';
+    if (map) map.style.display = 'none';
+    if (mapPlaceholder) mapPlaceholder.classList.remove('hidden');
+
     updateLocationDisplay(null);
     updateLocationActionLabel('');
     announceLocationChange({ scope: 'all', city: '', country: '', postcode: '' });
+
     if (window.location.hash === '#results') handleRouting();
 }
 
 function loadSavedLocation() {
     const loc = getSavedLocation();
-    const cInp = document.getElementById('loc-country');
-    const ciInp = document.getElementById('loc-city');
-    const pInp = document.getElementById('loc-postcode');
+    const locationInput = getLocationInput();
+    const postcodeInput = document.getElementById('loc-postcode');
 
-    if (!loc) {
-        if(cInp) cInp.value = '';
-        if(ciInp) ciInp.value = '';
-        if(pInp) pInp.value = '';
+    if (!loc || isAllCitiesLocation(loc)) {
+        if (locationInput) {
+            locationInput.value = '';
+            locationInput.dataset.lat = '';
+            locationInput.dataset.lon = '';
+        }
+        if (postcodeInput) postcodeInput.value = '';
+        updateLocationDisplay(loc);
         updateLocationActionLabel('');
         return;
     }
 
-    const isAllCities = isAllCitiesLocation(loc);
-    if(cInp) cInp.value = isAllCities ? '' : (loc.country || '');
-    if(ciInp) ciInp.value = isAllCities ? '' : (loc.city || '');
-    if(pInp) pInp.value = isAllCities ? '' : (loc.postcode || '');
+    if (locationInput) {
+        locationInput.value = getLocationDisplayText(loc);
+        locationInput.dataset.lat = '';
+        locationInput.dataset.lon = '';
+    }
+    if (postcodeInput) postcodeInput.value = loc.postcode || '';
+
     updateLocationDisplay(loc);
-    updateLocationActionLabel(isAllCities ? '' : loc.city || '', isAllCities ? '' : loc.country || '');
+    updateLocationActionLabel(locationInput?.value || '');
 }
 
 function updateLocationDisplay(loc) {
     const display = document.getElementById('current-location-display');
     if (!display) return;
 
-    if (!loc) {
+    if (!loc || isAllCitiesLocation(loc)) {
         display.textContent = 'No location set.';
         return;
     }
 
-    const savedScope = getSavedLocationScope(loc);
-    display.replaceChildren();
-
-    if (savedScope.scope === 'all') {
-        const label = document.createElement('span');
-        label.className = 'location-current-label';
-        label.textContent = 'Current location:';
-
-        const allCities = document.createElement('span');
-        allCities.className = 'location-current-city';
-        allCities.textContent = 'All Cities';
-        display.append(label, allCities);
-        return;
-    }
-
-    if (savedScope.scope === 'country') {
-        const label = document.createElement('span');
-        label.className = 'location-current-label';
-        label.textContent = 'Current country:';
-
-        const countryName = document.createElement('span');
-        countryName.className = 'location-current-country';
-        countryName.textContent = savedScope.country;
-        display.append(label, countryName);
-        return;
-    }
-
-    const label = document.createElement('span');
-    label.className = 'location-current-label';
-    label.textContent = 'Current city:';
-
-    const cityName = document.createElement('span');
-    cityName.className = 'location-current-city';
-    cityName.textContent = savedScope.city;
-    display.append(label, cityName);
-
-    if (savedScope.country) {
-        const countryName = document.createElement('span');
-        countryName.className = 'location-current-country';
-        countryName.textContent = savedScope.country;
-        display.append(countryName);
-    }
+    const label = getLocationDisplayText(loc);
+    display.textContent = label ? `Current: ${label}` : 'No location set.';
 }
 
 
@@ -4210,8 +4379,12 @@ window.setBackroomSharedLocation = function(location) {
             : { country: '', city: '', postcode: '', scope: 'all' };
 
     localStorage.setItem('br_location', JSON.stringify(nextLocation));
+
+    const input = getLocationInput();
+    if (input) input.value = getLocationDisplayText(nextLocation);
+
     updateLocationDisplay(nextLocation);
-    updateLocationActionLabel(nextLocation.city, nextLocation.country);
+    updateLocationActionLabel(input?.value || '');
     announceLocationChange(nextLocation);
     return nextLocation;
 };

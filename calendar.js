@@ -19,6 +19,14 @@
         'Pop/Dance', 'Techno'
     ];
 
+    const SPECIAL_PLACEHOLDERS = Object.freeze({
+        default: 'placeholder_venue.jpg',
+        pride: 'placeholder_venue11.jpg',
+        cruisingIndoor: 'placeholder_venue12.jpg',
+        cruisingOutdoor: 'placeholder_venue13.jpg',
+        sauna: 'placeholder_venue14.jpg'
+    });
+
     const state = {
         month: new Date(new Date().getFullYear(), new Date().getMonth(), 1),
         selectedDate: dateKey(new Date()),
@@ -141,6 +149,58 @@
             });
     }
 
+    function isGenericPlaceholderImage(value) {
+        const image = String(value || '').trim().split('/').pop().toLowerCase();
+        return /^placeholder_venue(?:0[1-7])?\.jpg$/.test(image);
+    }
+
+    function isCruisingArea(venue) {
+        return String(venue?.Category || '').trim().toLowerCase() === 'cruising area';
+    }
+
+    function venueFallbackImage(venue) {
+        if (isCruisingArea(venue)) {
+            const text = normalizeLocation([
+                venue?.Name,
+                venue?.Description,
+                venue?.Address,
+                venue?.Native_Map_Query
+            ].filter(Boolean).join(' '));
+            const indoor = [
+                'toilet', 'toilets', 'bathroom', 'bathrooms', 'restroom', 'restrooms',
+                'urinal', 'urinals', 'publicwc', 'station', 'railway'
+            ];
+            return indoor.some(word => text.includes(word))
+                ? SPECIAL_PLACEHOLDERS.cruisingIndoor
+                : SPECIAL_PLACEHOLDERS.cruisingOutdoor;
+        }
+
+        if (String(venue?.Category || '').trim().toLowerCase() === 'sauna') {
+            return SPECIAL_PLACEHOLDERS.sauna;
+        }
+
+        return SPECIAL_PLACEHOLDERS.default;
+    }
+
+    function venueImageSource(venue) {
+        const image = String(venue?.Image_URL || '').trim();
+        if (image && !isGenericPlaceholderImage(image)) return image;
+        return `Venue_images/${venue?.Venue_ID || ''}-01.jpg`;
+    }
+
+    function eventImageSource(event, venue) {
+        const image = String(event?.Event_Image_URL || '').trim();
+        if (image && !isGenericPlaceholderImage(image)) return image;
+        if (tagsFor(event).includes('Pride')) return SPECIAL_PLACEHOLDERS.pride;
+        return venueImageSource(venue || {});
+    }
+
+    function eventFallbackImage(event, venue) {
+        return tagsFor(event).includes('Pride')
+            ? SPECIAL_PLACEHOLDERS.pride
+            : venueFallbackImage(venue || {});
+    }
+
     function normalizeLocation(value) {
         return String(value || '')
             .trim()
@@ -162,9 +222,41 @@
     }
 
     function cityOptions() {
-        const venueCities = state.venues.flatMap(venue => String(venue?.City || '').split(',').map(city => city.trim()));
-        const eventCities = state.events.map(event => String(event?.City || '').trim());
-        return uniqueLocationValues([...venueCities, ...eventCities]);
+        return cityOptionRecords().map(option => option.city)
+            .filter((city, index, values) => values.findIndex(value => normalizeLocation(value) === normalizeLocation(city)) === index);
+    }
+
+    function cityOptionRecords() {
+        const records = new Map();
+
+        const addRecord = record => {
+            const country = String(record?.Country || '').trim();
+            String(record?.City || '').split(',').map(city => city.trim()).filter(Boolean).forEach(city => {
+                const key = `${normalizeLocation(city)}::${normalizeLocation(country)}`;
+                if (!key || records.has(key)) return;
+                records.set(key, { city, country });
+            });
+        };
+
+        state.venues.forEach(addRecord);
+        state.events.forEach(addRecord);
+
+        const countsByCity = new Map();
+        [...records.values()].forEach(record => {
+            const cityKey = normalizeLocation(record.city);
+            countsByCity.set(cityKey, (countsByCity.get(cityKey) || 0) + 1);
+        });
+
+        return [...records.values()]
+            .map(record => {
+                const duplicate = (countsByCity.get(normalizeLocation(record.city)) || 0) > 1;
+                return {
+                    ...record,
+                    label: duplicate && record.country ? `${record.city}, ${record.country}` : record.city,
+                    value: `city::${encodeURIComponent(record.city)}::${encodeURIComponent(record.country || '')}`
+                };
+            })
+            .sort((left, right) => left.label.localeCompare(right.label));
     }
 
     function countryOptions() {
@@ -206,11 +298,15 @@
         const shared = readSharedLocation();
 
         if (shared.scope === 'city') {
-            state.location = {
-                scope: 'city',
-                city: findDisplayLocation(shared.city, cityOptions()) || shared.city,
-                country: findDisplayLocation(shared.country, countryOptions()) || shared.country
-            };
+            const city = findDisplayLocation(shared.city, cityOptions()) || shared.city;
+            let country = findDisplayLocation(shared.country, countryOptions()) || shared.country;
+
+            if (!country) {
+                const matches = cityOptionRecords().filter(option => normalizeLocation(option.city) === normalizeLocation(city));
+                if (matches.length === 1) country = matches[0].country;
+            }
+
+            state.location = { scope: 'city', city, country };
             return;
         }
 
@@ -227,7 +323,11 @@
     }
 
     function getLocationLabel(location = state.location) {
-        if (location?.scope === 'city') return String(location.city || '').trim();
+        if (location?.scope === 'city') {
+            const city = String(location.city || '').trim();
+            const country = String(location.country || '').trim();
+            return country ? `${city}, ${country}` : city;
+        }
         if (location?.scope === 'country') return String(location.country || '').trim();
         return '';
     }
@@ -246,14 +346,13 @@
                 postcode: ''
             };
         } else if (selected.startsWith('city::')) {
-            const city = selected.slice('city::'.length);
-            const linkedVenue = state.venues.find(venue =>
-                String(venue?.City || '').split(',').some(part => normalizeLocation(part) === normalizeLocation(city))
-            );
+            const [, encodedCity = '', encodedCountry = ''] = selected.split('::');
+            const city = decodeURIComponent(encodedCity);
+            const country = decodeURIComponent(encodedCountry);
             next = {
                 scope: 'city',
                 city,
-                country: String(linkedVenue?.Country || '').trim(),
+                country,
                 postcode: ''
             };
         } else {
@@ -461,11 +560,11 @@
 
     function renderCityPicker() {
         const countries = countryOptions();
-        const cities = cityOptions();
+        const cities = cityOptionRecords();
         const selectedValue = state.location.scope === 'country'
             ? `country::${state.location.country}`
             : state.location.scope === 'city'
-                ? `city::${state.location.city}`
+                ? `city::${encodeURIComponent(state.location.city)}::${encodeURIComponent(state.location.country || '')}`
                 : 'all';
 
         const countryOptionsHtml = countries.length
@@ -473,11 +572,12 @@
             : '';
 
         const cityOptionsHtml = cities.length
-            ? `<optgroup label="Cities">${cities.map(city => `<option value="city::${escapeHTML(city)}" ${selectedValue === `city::${city}` ? 'selected' : ''}>${escapeHTML(city)}</option>`).join('')}</optgroup>`
+            ? `<optgroup label="Cities">${cities.map(city => `<option value="${escapeHTML(city.value)}" ${selectedValue === city.value ? 'selected' : ''}>${escapeHTML(city.label)}</option>`).join('')}</optgroup>`
             : '';
 
-        return `<label class="calendar-city-label"><span class="calendar-city-prefix display-font">LOCATION</span><span class="calendar-city-control"><select id="calendar-location-select" class="calendar-city-select calendar-city-pulse" aria-label="Set the shared location for events and venues"><option value="all" ${selectedValue === 'all' ? 'selected' : ''}>All cities</option>${countryOptionsHtml}${cityOptionsHtml}</select></span></label>`;
+        return `<label class="calendar-city-label"><span class="calendar-city-prefix display-font">LOCATION</span><span class="calendar-city-control"><select id="calendar-location-select" class="calendar-city-select calendar-city-pulse" aria-label="Set the shared location for events and venues"><option value="all" ${selectedValue === 'all' ? 'selected' : ''}>All locations</option>${countryOptionsHtml}${cityOptionsHtml}</select></span></label>`;
     }
+
 
     function filterChip(label, value, extraClass = '') {
         const isAll = value === 'all';
@@ -522,14 +622,15 @@
     function renderEventCard(event, includeDate = false) {
         const venue = venueFor(event);
         const venueName = venue?.Name || 'Venue not listed';
-        const location = [venue?.City, venue?.Country].filter(Boolean).join(' · ');
+        const location = [venue?.City || event?.City, venue?.Country || event?.Country].filter(Boolean).join(' · ');
         const times = [event.Event_Start_Time, event.Event_End_Time].filter(Boolean).join(' – ');
         const saved = savedEventIds().includes(event.Event_ID);
-        const image = String(event?.Event_Image_URL || venue?.Image_URL || '').trim() || 'placeholder_venue.jpg';
+        const image = eventImageSource(event, venue);
+        const imageFallback = eventFallbackImage(event, venue);
         const dateText = includeDate && event.Display_Date
             ? new Date(`${event.Display_Date}T12:00:00`).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' }).toUpperCase()
             : '';
-        return `<article class="calendar-event-card"><div class="calendar-event-layout"><div class="calendar-event-media"><img class="calendar-venue-thumb" src="${escapeHTML(image)}" alt="${escapeHTML(venueName)}" onerror="this.onerror=null;this.src='placeholder_venue.jpg';"><button type="button" class="btn primary-btn pill-btn calendar-action ${saved ? 'calendar-saved' : ''}" data-calendar-save="${escapeHTML(event.Event_ID)}">${saved ? '💖 Saved' : '💖 Save Event'}</button><button type="button" class="btn secondary-btn pill-btn calendar-action" data-calendar-shortlist="${escapeHTML(event.Event_ID)}">📑 Shortlist</button>${venue ? `<button type="button" class="btn secondary-btn pill-btn calendar-action" data-calendar-venue="${escapeHTML(venue.Venue_ID)}">Open Venue</button>` : ''}</div><div class="calendar-event-body"><div class="calendar-event-top"><div><h3 class="calendar-event-name display-font">${escapeHTML(event.Event_Name || 'Event')}</h3><p class="calendar-event-meta">${escapeHTML(venueName)}${location ? ` · ${escapeHTML(location)}` : ''}</p>${dateText ? `<p class="calendar-event-date">${escapeHTML(dateText)}</p>` : ''}${times ? `<p class="calendar-event-time">${escapeHTML(times)}</p>` : ''}${event.Is_Recurring ? `<p class="calendar-event-recurrence">${escapeHTML(event.Recurrence_Label)}</p>` : ''}</div>${event.Dresscode_Info ? `<div class="calendar-event-dresscode">${escapeHTML(event.Dresscode_Info)}</div>` : ''}</div>${event.Event_Description ? `<div class="calendar-event-description">${formatEventDescription(event.Event_Description)}</div>` : ''}${renderEventTags(event)}</div></div></article>`;
+        return `<article class="calendar-event-card"><div class="calendar-event-layout"><div class="calendar-event-media"><img class="calendar-venue-thumb" src="${escapeHTML(image)}" alt="${escapeHTML(venueName)}" onerror="this.onerror=null;this.src='${escapeHTML(imageFallback)}';"><button type="button" class="btn primary-btn pill-btn calendar-action ${saved ? 'calendar-saved' : ''}" data-calendar-save="${escapeHTML(event.Event_ID)}">${saved ? '💖 Saved' : '💖 Save Event'}</button><button type="button" class="btn secondary-btn pill-btn calendar-action" data-calendar-shortlist="${escapeHTML(event.Event_ID)}">📑 Shortlist</button>${venue ? `<button type="button" class="btn secondary-btn pill-btn calendar-action" data-calendar-venue="${escapeHTML(venue.Venue_ID)}">Open Venue</button>` : ''}</div><div class="calendar-event-body"><div class="calendar-event-top"><div><h3 class="calendar-event-name display-font">${escapeHTML(event.Event_Name || 'Event')}</h3><p class="calendar-event-meta">${escapeHTML(venueName)}${location ? ` · ${escapeHTML(location)}` : ''}</p>${dateText ? `<p class="calendar-event-date">${escapeHTML(dateText)}</p>` : ''}${times ? `<p class="calendar-event-time">${escapeHTML(times)}</p>` : ''}${event.Is_Recurring ? `<p class="calendar-event-recurrence">${escapeHTML(event.Recurrence_Label)}</p>` : ''}</div>${event.Dresscode_Info ? `<div class="calendar-event-dresscode">${escapeHTML(event.Dresscode_Info)}</div>` : ''}</div>${event.Event_Description ? `<div class="calendar-event-description">${formatEventDescription(event.Event_Description)}</div>` : ''}${renderEventTags(event)}</div></div></article>`;
     }
 
     function renderPanel() {
