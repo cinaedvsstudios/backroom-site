@@ -1,4 +1,4 @@
-/* Backroom public stylesheet v1.00 */
+/* Backroom public stylesheet v1.03 */
 :root {
     --bg-color: #000000;
     --primary-blue: #2CA8D4;
@@ -204,6 +204,12 @@ select.filter-header-select:focus, select.cell-edit:focus { border-color: var(--
 .card-about { font-size: 1rem; color: var(--text-light); margin-bottom: 15px; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; word-wrap: break-word; min-width: 0; }
 .card-next-event { background-color: var(--panel-dark); padding: 8px; border-left: 3px solid var(--primary-blue); border-radius: 0 var(--radius-btn) var(--radius-btn) 0; font-size: 0.9rem; color: #fff; margin-bottom: 15px; }
 .card-stats { display: flex; align-items: center; gap: 15px; font-size: 0.95rem; color: var(--text-light); margin-top: auto; padding-top: 10px; border-top: 1px solid var(--panel-mid); }
+.card-quick-actions { margin-left: auto; display: flex; gap: 10px; align-items: center; flex-shrink: 0; }
+.shortlist-card-btn { opacity: 0.68; }
+.shortlist-card-btn img { width: 24px; height: 24px; object-fit: contain; }
+.shortlist-card-btn:hover { opacity: 1; }
+.shortlist-card-btn.active-shortlist { opacity: 1; filter: drop-shadow(0 0 5px var(--primary-blue)); }
+.shortlist-card-btn.active-shortlist img { filter: brightness(1.25) drop-shadow(0 0 4px var(--primary-blue)); }
 
 .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 2000; display: flex; align-items: center; justify-content: center; padding: 20px; }
 .modal-content { background-color: var(--panel-standard); width: 100%; max-width: 800px; max-height: 90vh; border-radius: var(--radius-window); border: 1px solid var(--panel-mid); box-shadow: 0 0 25px rgba(44, 168, 212, 0.2); display: flex; flex-direction: column; position: relative; overflow: hidden; }

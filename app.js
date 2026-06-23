@@ -1,5 +1,5 @@
 // --- Application State ---
-const APP_VERSION = "v1.09";
+const APP_VERSION = "v1.10";
 const APP_DATE = "23 June 2026";
 
 let systemInfo = {}, designTheme = {}, venues = [], events = [];
@@ -1524,6 +1524,12 @@ function openShortlistPicker(target) {
                 if (target.type === 'venue') {
                     const buttonEl = document.getElementById('modal-shortlist');
                     if (buttonEl) buttonEl.classList.toggle('active-star', hasItemInAnyShortlist('venue', target.id));
+
+                    document.querySelectorAll('.shortlist-card-btn[data-venue-id]').forEach(cardButton => {
+                        if (String(cardButton.dataset.venueId || '') === String(target.id)) {
+                            cardButton.classList.toggle('active-shortlist', hasItemInAnyShortlist('venue', target.id));
+                        }
+                    });
                 }
             });
             container.appendChild(button);
@@ -1540,6 +1546,15 @@ function promptAddToShortlist(venue) {
         label: venue?.Name || 'Venue'
     });
 }
+
+window.promptAddVenueToShortlist = function(venueId) {
+    const venue = (venues || []).find(item => String(item.Venue_ID || '') === String(venueId || ''));
+    if (!venue) {
+        showToast('Venue not available');
+        return;
+    }
+    promptAddToShortlist(venue);
+};
 
 window.promptAddEventToShortlist = function(eventId) {
     const event = (events || []).find(item => item.Event_ID === eventId);
@@ -4289,6 +4304,7 @@ function renderListings(data, isContextView = false, targetContainer = resultsCo
         }
 
         const isFav = userFavorites.includes(venue.Venue_ID);
+        const isShortlisted = hasItemInAnyShortlist('venue', venue.Venue_ID);
         const shortDescSource = venue.Description || '';
         const shortDesc = shortDescSource.length > 90 ? shortDescSource.substring(0, 90) + '...' : shortDescSource;
         const card = document.createElement('div');
@@ -4318,8 +4334,9 @@ function renderListings(data, isContextView = false, targetContainer = resultsCo
                 ${nextEventHtml}
                 <div class="card-stats">
                     ${renderCommunityStats(venue.Venue_ID)}
-                    <div style="margin-left:auto; display:flex; gap:10px; align-items:center;">
+                    <div class="card-quick-actions" aria-label="Venue actions">
                         <span class="icon-btn" onclick="event.stopPropagation(); shareURL('${window.location.origin}${window.location.pathname}?venue=${venue.Venue_ID}#venue=${venue.Venue_ID}', '${String(venue.Name || '').replace(/'/g, "\\'")}')" title="Share" style="font-size:1.5rem;">${BR_ICONS.share}</span>
+                        <span class="icon-btn shortlist-card-btn ${isShortlisted ? 'active-shortlist' : ''}" data-venue-id="${venue.Venue_ID}" onclick="event.stopPropagation(); window.promptAddVenueToShortlist('${venue.Venue_ID}')" title="Add ${String(venue.Name || 'venue').replace(/"/g, '&quot;')} to Shortlist"><img src="shortlist.png" alt="" aria-hidden="true"></span>
                         <span class="icon-btn" onclick="event.stopPropagation(); window.flagListing('${venue.Venue_ID}', '${String(venue.Name || '').replace(/'/g, "\\'")}', 'Venue Report')" title="Report" style="display:flex; align-items:center; justify-content:center;"><img src="report.png" style="width:24px; height:24px; object-fit:contain;"></span>
                         <span class="star-btn icon-btn fav-btn ${isFav ? 'active-star' : ''}" style="font-size:1.8rem; line-height:1;">⚜️</span>
                     </div>

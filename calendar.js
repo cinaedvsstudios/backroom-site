@@ -1,4 +1,4 @@
-// Backroom Events calendar v0.99 — location pill, date, vibe filters and event-card image rules.
+// Backroom Events calendar v1.00 — location pill, date, vibe filters and event-card image rules.
 (function () {
     'use strict';
 
