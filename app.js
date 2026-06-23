@@ -1,5 +1,5 @@
 // --- Application State ---
-const APP_VERSION = "v1.05";
+const APP_VERSION = "v1.06";
 const APP_DATE = "23 June 2026";
 
 let systemInfo = {}, designTheme = {}, venues = [], events = [];
@@ -97,15 +97,18 @@ function getVenueCategoryKey(venue) {
 }
 
 function isShopVenue(venue) {
-    return getVenueCategoryKey(venue).includes('shop');
+    return getVenueCategoryKey(venue).includes('shop')
+        || hasExactVibeTag(venue?.Vibe_Tags, 'Shop');
 }
 
 function isCinemaVenue(venue) {
-    return getVenueCategoryKey(venue).includes('cinema');
+    return getVenueCategoryKey(venue).includes('cinema')
+        || hasExactVibeTag(venue?.Vibe_Tags, 'Cinema');
 }
 
 function isSaunaVenue(venue) {
-    return getVenueCategoryKey(venue).includes('sauna');
+    return getVenueCategoryKey(venue).includes('sauna')
+        || hasExactVibeTag(venue?.Vibe_Tags, 'Sauna');
 }
 
 function isCruiseBarVenue(venue) {
@@ -294,6 +297,11 @@ function isGenericPlaceholderImage(value) {
     return /^placeholder_venue(?:0[1-7])?\.jpg$/.test(image);
 }
 
+function isAnyPlaceholderImage(value) {
+    const image = String(value || '').trim().split('/').pop().toLowerCase();
+    return /^placeholder_venue(?:0[1-9]|1[0-4])?\.jpg$/.test(image);
+}
+
 function isCruisingAreaIndoorLocation(venue) {
     const text = normalizeLocationName([
         venue?.Name,
@@ -325,20 +333,26 @@ function getVenueFallbackImage(venue, previousGenericFallback = '') {
     );
 }
 
-function getVenueImageSource(venue) {
+function getVenueImageSource(venue, preferredFallback = '') {
+    // Shops and cinemas deliberately use their fixed directory artwork, even where an
+    // older generic placeholder had previously been stored in the listing data.
+    if (isShopVenue(venue)) return SPECIAL_PLACEHOLDERS.shop;
+    if (isCinemaVenue(venue)) return SPECIAL_PLACEHOLDERS.cinema;
+
     const image = String(venue?.Image_URL || '').trim();
-    if (image && !isGenericPlaceholderImage(image)) return image;
-    return image && !image.startsWith('placeholder_venue')
-        ? image
-        : `Venue_images/${venue?.Venue_ID || ''}-01.jpg`;
+    if (image && !isAnyPlaceholderImage(image)) return image;
+
+    return preferredFallback || getVenueFallbackImage(venue);
 }
 
-function getEventImageSource(event, venue) {
+function getEventImageSource(event, venue, preferredFallback = '') {
     const eventImage = String(event?.Event_Image_URL || '').trim();
-    if (eventImage && !isGenericPlaceholderImage(eventImage)) return eventImage;
+    if (eventImage && !isAnyPlaceholderImage(eventImage)) return eventImage;
+
+    const fallback = preferredFallback || getEventFallbackImage(event, venue);
 
     if (eventPrefersVenueImageOverPride(event, venue)) {
-        return getVenueImageSource(venue || {});
+        return getVenueImageSource(venue || {}, fallback);
     }
 
     // Pride artwork is reserved for non-sexual/general Pride events with no dedicated event image.
@@ -346,7 +360,7 @@ function getEventImageSource(event, venue) {
         return SPECIAL_PLACEHOLDERS.pride;
     }
 
-    return getVenueImageSource(venue || {});
+    return getVenueImageSource(venue || {}, fallback);
 }
 
 function getEventFallbackImage(event, venue, previousGenericFallback = '') {
@@ -3160,8 +3174,8 @@ function renderSearchEventResults(items, targetContainer) {
     let previousGenericFallback = '';
     items.forEach(({ event, venue }) => {
         const isSaved = userEvents.includes(event.Event_ID);
-        const image = getEventImageSource(event, venue);
         const imageFallback = getEventFallbackImage(event, venue, previousGenericFallback);
+        const image = getEventImageSource(event, venue, imageFallback);
         previousGenericFallback = isRotatingGenericPlaceholder(imageFallback) ? imageFallback : '';
         const eventName = String(event.Event_Name || 'Event');
         const safeEventName = eventName.replace(/'/g, "\\'");
@@ -4150,8 +4164,8 @@ function renderListings(data, isContextView = false, targetContainer = resultsCo
                 : '';
         card.className = `card${cardStyleClass}`;
 
-        const baseImageSrc = getVenueImageSource(venue);
         const fallbackImage = getVenueFallbackImage(venue, previousGenericFallback);
+        const baseImageSrc = getVenueImageSource(venue, fallbackImage);
         previousGenericFallback = isRotatingGenericPlaceholder(fallbackImage) ? fallbackImage : '';
         const badgeLabel = getCardStatusLabel(venue);
         const badgeClass = getCardStatusClass(venue);
@@ -4297,8 +4311,8 @@ function openVenueModal(venue) {
 
     const features = getVenueTags(venue);
     const featureHtml = renderTagPills(features);
-    const modalImageSource = getVenueImageSource(venue);
     const modalImageFallback = getVenueFallbackImage(venue);
+    const modalImageSource = getVenueImageSource(venue, modalImageFallback);
 
     const statsHtml = `
         ${renderCommunityStats(venue.Venue_ID)}

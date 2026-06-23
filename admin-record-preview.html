@@ -375,20 +375,25 @@
                 return /^placeholder_venue(?:0[1-7])?\.jpg$/.test(image);
             }
 
+            function isAnyPlaceholderImage(value) {
+                const image = String(value || '').trim().split('/').pop().toLowerCase();
+                return /^placeholder_venue(?:0[1-9]|1[0-4])?\.jpg$/.test(image);
+            }
+
             function categoryKey(venue) {
                 return String(venue?.Category || '').trim().toLowerCase();
             }
 
             function isShopVenue(venue) {
-                return categoryKey(venue).includes('shop');
+                return categoryKey(venue).includes('shop') || splitTags(venue?.Vibe_Tags).includes('Shop');
             }
 
             function isCinemaVenue(venue) {
-                return categoryKey(venue).includes('cinema');
+                return categoryKey(venue).includes('cinema') || splitTags(venue?.Vibe_Tags).includes('Cinema');
             }
 
             function isSaunaVenue(venue) {
-                return categoryKey(venue).includes('sauna');
+                return categoryKey(venue).includes('sauna') || splitTags(venue?.Vibe_Tags).includes('Sauna');
             }
 
             function isCruiseBarVenue(venue) {
@@ -430,10 +435,13 @@
                 return genericPreviewPlaceholder(venue);
             }
 
-            function previewImageSource(venue) {
+            function previewImageSource(venue, preferredFallback = '') {
+                if (isShopVenue(venue)) return PREVIEW_SPECIAL_PLACEHOLDERS.shop;
+                if (isCinemaVenue(venue)) return PREVIEW_SPECIAL_PLACEHOLDERS.cinema;
+
                 const image = String(venue?.Image_URL || '').trim();
-                if (image && !isGenericPlaceholderImage(image)) return image;
-                return `Venue_images/${venue?.Venue_ID || ''}-01.jpg`;
+                if (image && !isAnyPlaceholderImage(image)) return image;
+                return preferredFallback || previewFallbackImage(venue);
             }
 
             function normaliseCoordinate(value) {
@@ -534,8 +542,8 @@
 
             function renderVenue(venue, events) {
                 const status = String(venue?.Status || 'Live').trim() || 'Live';
-                const image = previewImageSource(venue);
                 const imageFallback = previewFallbackImage(venue);
+                const image = previewImageSource(venue, imageFallback);
                 const relatedEvents = (events || []).filter(event => String(event?.Venue_ID || '') === String(venue?.Venue_ID || '') && activeEvent(event));
                 const lastUpdated = formatDate(venue?.Last_Updated);
                 const cruisingArea = isCruisingArea(venue);

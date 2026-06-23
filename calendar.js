@@ -1,4 +1,4 @@
-// Backroom Events calendar v0.96 — city, date, vibe filters and event-card image rules.
+// Backroom Events calendar v0.97 — city, date, vibe filters and event-card image rules.
 (function () {
     'use strict';
 
@@ -169,6 +169,11 @@
         return /^placeholder_venue(?:0[1-7])?\.jpg$/.test(image);
     }
 
+    function isAnyPlaceholderImage(value) {
+        const image = String(value || '').trim().split('/').pop().toLowerCase();
+        return /^placeholder_venue(?:0[1-9]|1[0-4])?\.jpg$/.test(image);
+    }
+
     function isCruisingArea(venue) {
         return String(venue?.Category || '').trim().toLowerCase() === 'cruising area';
     }
@@ -178,15 +183,15 @@
     }
 
     function isShopVenue(venue) {
-        return categoryKey(venue).includes('shop');
+        return categoryKey(venue).includes('shop') || splitTags(venue?.Vibe_Tags).includes('Shop');
     }
 
     function isCinemaVenue(venue) {
-        return categoryKey(venue).includes('cinema');
+        return categoryKey(venue).includes('cinema') || splitTags(venue?.Vibe_Tags).includes('Cinema');
     }
 
     function isSaunaVenue(venue) {
-        return categoryKey(venue).includes('sauna');
+        return categoryKey(venue).includes('sauna') || splitTags(venue?.Vibe_Tags).includes('Sauna');
     }
 
     function isCruiseBarVenue(venue) {
@@ -263,22 +268,28 @@
         return genericPlaceholder(venue?.Venue_ID || venue?.Name || venue?.Native_Map_Query || '', previousFallback);
     }
 
-    function venueImageSource(venue) {
+    function venueImageSource(venue, preferredFallback = '') {
+        // Shop and cinema images are intentional fixed artwork, not ordinary generic fallbacks.
+        if (isShopVenue(venue)) return SPECIAL_PLACEHOLDERS.shop;
+        if (isCinemaVenue(venue)) return SPECIAL_PLACEHOLDERS.cinema;
+
         const image = String(venue?.Image_URL || '').trim();
-        if (image && !isGenericPlaceholderImage(image)) return image;
-        return `Venue_images/${venue?.Venue_ID || ''}-01.jpg`;
+        if (image && !isAnyPlaceholderImage(image)) return image;
+        return preferredFallback || venueFallbackImage(venue);
     }
 
-    function eventImageSource(event, venue) {
+    function eventImageSource(event, venue, preferredFallback = '') {
         const image = String(event?.Event_Image_URL || '').trim();
-        if (image && !isGenericPlaceholderImage(image)) return image;
+        if (image && !isAnyPlaceholderImage(image)) return image;
+
+        const fallback = preferredFallback || eventFallbackImage(event, venue);
 
         if (eventPrefersVenueImageOverPride(event, venue)) {
-            return venueImageSource(venue || {});
+            return venueImageSource(venue || {}, fallback);
         }
 
         if (combinedEventTags(event, venue).includes('Pride')) return SPECIAL_PLACEHOLDERS.pride;
-        return venueImageSource(venue || {});
+        return venueImageSource(venue || {}, fallback);
     }
 
     function eventFallbackImage(event, venue, previousFallback = '') {
@@ -715,8 +726,8 @@
         const location = [venue?.City || event?.City, venue?.Country || event?.Country].filter(Boolean).join(' · ');
         const times = [event.Event_Start_Time, event.Event_End_Time].filter(Boolean).join(' – ');
         const saved = savedEventIds().includes(event.Event_ID);
-        const image = eventImageSource(event, venue);
         const imageFallback = eventFallbackImage(event, venue, previousGenericEventFallback);
+        const image = eventImageSource(event, venue, imageFallback);
         previousGenericEventFallback = isRotatingGenericPlaceholder(imageFallback) ? imageFallback : '';
         const dateText = includeDate && event.Display_Date
             ? new Date(`${event.Display_Date}T12:00:00`).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' }).toUpperCase()
