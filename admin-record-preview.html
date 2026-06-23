@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Backroom Draft Preview v0.95</title>
+    <title>Backroom Draft Preview</title>
     <link href="https://fonts.googleapis.com/css2?family=Antonio:wght@400;700&family=Barlow+Condensed:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -52,11 +52,6 @@
 
         .page { width: min(1320px, 100%); padding: 28px; margin: 0 auto; }
         .preview-shell { background: var(--surface); border: 1px solid var(--line); border-radius: 22px; overflow: hidden; box-shadow: 0 22px 70px rgba(0,0,0,.44); }
-        .preview-shell.preview-men-only,
-        .preview-shell.preview-men-only-event { border: 2px solid var(--red); }
-        .preview-shell.preview-cruising-area { border: 2px solid var(--red); background: linear-gradient(180deg, var(--surface) 0%, #3a1014 100%); }
-        .preview-shell.preview-cruising-area .record-header,
-        .preview-shell.preview-cruising-area .record-content { background-color: rgba(72,11,17,.48); }
         .record-header { display: flex; align-items: center; justify-content: space-between; gap: 18px; padding: 21px 26px; background: #1a2232; border-bottom: 1px solid var(--line); }
         h1, h2, h3, h4 { font-family: 'Antonio', sans-serif; letter-spacing: .04em; }
         h1 { margin: 0; font-size: clamp(2rem, 5vw, 3.4rem); text-transform: uppercase; }
@@ -182,39 +177,6 @@
                 return [...new Set(String(value || '').split(',').map(item => item.trim()).filter(Boolean))];
             }
 
-            function isGenericPlaceholderImage(value) {
-                const image = String(value || '').trim().split('/').pop().toLowerCase();
-                return /^placeholder_venue(?:0[1-7])?\.jpg$/.test(image);
-            }
-
-            function isCruisingArea(venue) {
-                return String(venue?.Category || '').trim().toLowerCase() === 'cruising area';
-            }
-
-            function isMenOnlyVenue(venue) {
-                return splitTags(venue?.Vibe_Tags).includes('Men Only');
-            }
-
-            function previewVenueFallback(venue) {
-                if (isCruisingArea(venue)) {
-                    const text = normalise([venue?.Name, venue?.Description, venue?.Address, venue?.Native_Map_Query].filter(Boolean).join(' '));
-                    const indoor = ['toilet', 'toilets', 'bathroom', 'bathrooms', 'restroom', 'restrooms', 'urinal', 'urinals', 'publicwc', 'station', 'railway'];
-                    return indoor.some(word => text.includes(word)) ? 'placeholder_venue12.jpg' : 'placeholder_venue13.jpg';
-                }
-                if (String(venue?.Category || '').trim().toLowerCase() === 'sauna') return 'placeholder_venue14.jpg';
-                return 'placeholder_venue.jpg';
-            }
-
-            function previewVenueImageSource(venue) {
-                const image = String(venue?.Image_URL || '').trim();
-                if (image && !isGenericPlaceholderImage(image)) return image;
-                return `Venue_images/${venue?.Venue_ID || ''}-01.jpg`;
-            }
-
-            function eventIsMenOnly(event, venue) {
-                return [...new Set([...splitTags(event?.Vibe_Tags), ...splitTags(venue?.Vibe_Tags)])].includes('Men Only');
-            }
-
             function tagClass(tag) {
                 const adult = ['Cruising', 'Darkroom', 'Men Only', 'Dresscode', 'Naked', 'Underwear', 'Smoking Area', 'Fetish/Gear'];
                 const social = ['Bear', 'Mature', 'Young Crowd', 'Queer', 'Pride', 'Social', 'Drag', 'Karaoke'];
@@ -311,7 +273,7 @@
             }
 
             function ratingRows(venue) {
-                const rows = [
+                const standardRows = [
                     ['Overall', 'Rating_General', '🍆'],
                     ['Age Range', 'Rating_Age_Range', '🧍'],
                     ['Size', 'Rating_Size', '📏'],
@@ -320,6 +282,15 @@
                     ['Location', 'Rating_Location', '🍑'],
                     ['Popularity', 'Rating_Busyness', '🧑‍🤝‍🧑']
                 ];
+                const cruisingAreaRows = [
+                    ['Overall', 'Rating_General', '🍆'],
+                    ['Age Range', 'Rating_Age_Range', '🧍'],
+                    ['Location', 'Rating_Location', '🍑'],
+                    ['Popularity', 'Rating_Busyness', '🧑‍🤝‍🧑']
+                ];
+                const rows = String(venue?.Category || '').trim().toLowerCase() === 'cruising area'
+                    ? cruisingAreaRows
+                    : standardRows;
                 return `<div class="rating-grid">${rows.map(([label, key, icon]) => {
                     const value = Number(venue?.[key]);
                     const hasRating = Number.isFinite(value) && value > 0;
@@ -342,13 +313,7 @@
 
             function renderVenue(venue, events) {
                 const status = String(venue?.Status || 'Live').trim() || 'Live';
-                const image = previewVenueImageSource(venue);
-                const imageFallback = previewVenueFallback(venue);
-                const previewClass = isCruisingArea(venue)
-                    ? ' preview-cruising-area'
-                    : isMenOnlyVenue(venue)
-                        ? ' preview-men-only'
-                        : '';
+                const image = String(venue?.Image_URL || '').trim() || `Venue_images/${venue?.Venue_ID || ''}-01.jpg`;
                 const relatedEvents = (events || []).filter(event => String(event?.Venue_ID || '') === String(venue?.Venue_ID || '') && activeEvent(event));
                 const lastUpdated = formatDate(venue?.Last_Updated);
                 const opening = venue?.Opening_Days || venue?.Opening_Open_Time || venue?.Opening_Close_Time || venue?.Opening_Notes;
@@ -356,7 +321,7 @@
                 document.title = `${venue?.Name || 'Venue'} — Backroom Draft Preview`;
                 document.getElementById('preview-kicker').textContent = '👁️ DRAFT VENUE PREVIEW';
 
-                return `<section class="preview-shell${previewClass}">
+                return `<section class="preview-shell">
                     <header class="record-header">
                         <h1>${escapeHTML(venue?.Name || 'Unnamed Venue')}</h1>
                         <span class="status ${normalise(status)}">${escapeHTML(status)}</span>
@@ -364,7 +329,7 @@
                     <div class="record-content">
                         <div class="venue-top">
                             <section class="media-panel">
-                                <img src="${escapeHTML(image)}" alt="${escapeHTML(venue?.Name || 'Venue')}" onerror="this.onerror=null;this.src='${escapeHTML(imageFallback)}';">
+                                <img src="${escapeHTML(image)}" alt="${escapeHTML(venue?.Name || 'Venue')}" onerror="this.onerror=null;this.src='placeholder_venue.jpg';">
                                 <div class="media-caption">${escapeHTML(cityCountry(venue) || 'Location not listed')}</div>
                             </section>
                             <section class="info-panel">
@@ -396,7 +361,7 @@
                 document.title = `${event?.Event_Name || 'Event'} — Backroom Draft Preview`;
                 document.getElementById('preview-kicker').textContent = '👁️ DRAFT EVENT PREVIEW';
 
-                return `<section class="preview-shell${eventIsMenOnly(event, venue) ? ' preview-men-only-event' : ''}">
+                return `<section class="preview-shell">
                     <header class="record-header">
                         <h1>${escapeHTML(event?.Event_Name || 'Unnamed Event')}</h1>
                         <span class="status ${normalise(status)}">${escapeHTML(status)}</span>

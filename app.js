@@ -1,5 +1,5 @@
 // --- Application State ---
-const APP_VERSION = "v1.02";
+const APP_VERSION = "v1.03";
 const APP_DATE = "23 June 2026";
 
 let systemInfo = {}, designTheme = {}, venues = [], events = [];
@@ -4098,7 +4098,7 @@ function openVenueModal(venue) {
         <div class="feature-chips" style="margin-top: 15px;">${featureHtml}</div>
     `;
     
-    const ratingTypes = [
+    const standardRatingTypes = [
         { label: 'Overall', key: 'Rating_General', type: 'Overall' },
         { label: 'Age Range', key: 'Rating_Age_Range', type: 'Age' },
         { label: 'Size', key: 'Rating_Size', type: 'Size' },
@@ -4107,6 +4107,13 @@ function openVenueModal(venue) {
         { label: 'Location', key: 'Rating_Location', type: 'Location' },
         { label: 'Popularity', key: 'Rating_Busyness', type: 'Popularity' }
     ];
+    const cruisingAreaRatingTypes = [
+        { label: 'Overall', key: 'Rating_General', type: 'Overall' },
+        { label: 'Age Range', key: 'Rating_Age_Range', type: 'Age' },
+        { label: 'Location', key: 'Rating_Location', type: 'Location' },
+        { label: 'Popularity', key: 'Rating_Busyness', type: 'Popularity' }
+    ];
+    const ratingTypes = isCruisingAreaVenue(venue) ? cruisingAreaRatingTypes : standardRatingTypes;
 
     let ratingsTableHtml = `<div class="ratings-table" style="display: grid; grid-template-columns: 1fr repeat(5, 30px); gap: 16px 8px; align-items: center; background-color: var(--near-black); padding: 15px; border-radius: var(--radius-card); border: 1px solid var(--panel-mid);">`;
     
