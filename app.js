@@ -1,5 +1,5 @@
 // --- Application State ---
-const APP_VERSION = "v1.07";
+const APP_VERSION = "v1.08";
 const APP_DATE = "23 June 2026";
 
 let systemInfo = {}, designTheme = {}, venues = [], events = [];
@@ -834,7 +834,60 @@ function getLocationDirectory() {
     return { countries, cities };
 }
 
-function resolveLocationInput(value) {
+function getMapResolvedLocation(value = getLocationInput()?.value || '') {
+    const input = getLocationInput();
+    if (!input) return null;
+
+    const requested = normalizeLocationName(value);
+    const resolvedFor = String(input.dataset.mapResolvedFor || '').trim();
+    const city = String(input.dataset.mapResolvedCity || '').trim();
+    const country = String(input.dataset.mapResolvedCountry || '').trim();
+
+    if (!requested || !city || !country || requested !== resolvedFor) return null;
+    return { city, country };
+}
+
+function clearMapResolvedLocation(input = getLocationInput()) {
+    if (!input) return;
+    delete input.dataset.mapResolvedFor;
+    delete input.dataset.mapResolvedCity;
+    delete input.dataset.mapResolvedCountry;
+}
+
+function rememberMapResolvedLocation(input, sourceQuery, result) {
+    if (!input || !result || typeof result !== 'object') return null;
+
+    const address = result.address || {};
+    const city = String(
+        address.city
+        || address.town
+        || address.village
+        || address.municipality
+        || address.county
+        || ''
+    ).trim();
+    const country = String(address.country || '').trim();
+
+    if (!city || !country) {
+        clearMapResolvedLocation(input);
+        return null;
+    }
+
+    input.dataset.mapResolvedFor = normalizeLocationName(sourceQuery);
+    input.dataset.mapResolvedCity = city;
+    input.dataset.mapResolvedCountry = country;
+    input.dataset.lat = String(result.lat || '');
+    input.dataset.lon = String(result.lon || '');
+
+    // A successful map choice makes an ambiguous city explicit for both the user
+    // and the subsequent save action.
+    input.value = `${city}, ${country}`;
+    input.dataset.mapResolvedFor = normalizeLocationName(input.value);
+
+    return { city, country };
+}
+
+function resolveLocationInput(value, mapResolution = getMapResolvedLocation(value)) {
     const raw = String(value || '').trim();
     if (!raw) return { valid: true, scope: 'all', city: '', country: '', label: 'All Cities' };
 
@@ -876,6 +929,21 @@ function resolveLocationInput(value) {
     }
 
     if (cityMatches.length > 1) {
+        const resolvedCountry = normalizeCountryName(mapResolution?.country || '');
+        const mapMatch = resolvedCountry
+            ? cityMatches.find(candidate => normalizeCountryName(candidate.country) === resolvedCountry)
+            : null;
+
+        if (mapMatch) {
+            return {
+                valid: true,
+                scope: 'city',
+                city: mapMatch.city,
+                country: mapMatch.country,
+                label: `${mapMatch.city}, ${mapMatch.country}`
+            };
+        }
+
         return { valid: false, message: `More than one ${raw} is listed. Enter City, Country.` };
     }
 
@@ -2731,8 +2799,14 @@ function setupEventListeners() {
 
     if (locationInput && !locationInput.dataset.locationLabelBound) {
         locationInput.dataset.locationLabelBound = 'true';
-        locationInput.addEventListener('input', refreshLocationActionLabel);
-        locationInput.addEventListener('change', refreshLocationActionLabel);
+        locationInput.addEventListener('input', () => {
+            clearMapResolvedLocation(locationInput);
+            refreshLocationActionLabel();
+        });
+        locationInput.addEventListener('change', () => {
+            clearMapResolvedLocation(locationInput);
+            refreshLocationActionLabel();
+        });
         locationInput.addEventListener('keydown', event => {
             if (event.key !== 'Enter') return;
             event.preventDefault();
@@ -2785,18 +2859,26 @@ function setupEventListeners() {
     });
 
     addEvt('btn-search-map', 'click', async () => {
-        const location = getLocationInput()?.value.trim() || '';
+        const input = getLocationInput();
+        const location = input?.value.trim() || '';
         const postcode = document.getElementById('loc-postcode')?.value.trim() || '';
         const query = `${postcode} ${location}`.trim();
 
         if (!query) return;
 
         try {
-            const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}`);
+            const res = await fetch(
+                `https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&accept-language=en&limit=1&q=${encodeURIComponent(query)}`
+            );
             const data = await res.json();
             if (data && data.length > 0) {
-                initLeafletMap(data[0].lat, data[0].lon);
+                const selected = data[0];
+                rememberMapResolvedLocation(input, location, selected);
+                initLeafletMap(selected.lat, selected.lon);
+                updateLocationActionLabel(input?.value || '');
+                updateLocationDraftStatus(input?.value || '');
             } else {
+                clearMapResolvedLocation(input);
                 alert('Location not found on map, but you can still save a recognised directory location.');
             }
         } catch (error) {
@@ -4579,7 +4661,8 @@ function saveLocation() {
 
     const locationInput = getLocationInput();
     const postcode = document.getElementById('loc-postcode')?.value.trim() || '';
-    const resolved = resolveLocationInput(locationInput?.value || '');
+    const rawLocation = locationInput?.value || '';
+    const resolved = resolveLocationInput(rawLocation, getMapResolvedLocation(rawLocation));
 
     if (!resolved.valid) {
         showToast(resolved.message || 'Choose a recognised city or country, or leave Location blank to browse all cities.');
@@ -4599,6 +4682,7 @@ function saveLocation() {
         locationInput.value = getLocationDisplayText(loc);
         locationInput.dataset.lat = '';
         locationInput.dataset.lon = '';
+        clearMapResolvedLocation(locationInput);
     }
 
     updateLocationDisplay(loc);
@@ -4631,6 +4715,7 @@ function clearLocation() {
         locationInput.value = '';
         locationInput.dataset.lat = '';
         locationInput.dataset.lon = '';
+        clearMapResolvedLocation(locationInput);
     }
     if (postcodeInput) postcodeInput.value = '';
     if (map) map.style.display = 'none';
