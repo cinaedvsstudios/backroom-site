@@ -1754,3 +1754,41 @@ td.hidden-col * { display: none !important; }
         padding: 15px;
     }
 }
+
+
+/* v1.02 — Calendar location control: use the shared Set Location modal, not a second location picker. */
+.calendar-location-pill {
+    width: auto;
+    min-height: 36px;
+    margin: 3px 0 4px;
+    padding: 7px 14px;
+    border: 1px solid var(--bright-red-orange);
+    background: var(--dark-red);
+    color: #fff;
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 1.02rem;
+    font-weight: 700;
+    line-height: 1.1;
+    cursor: pointer;
+    text-align: left;
+    transition: background-color 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease;
+}
+
+.calendar-location-pill:hover,
+.calendar-location-pill:focus-visible {
+    background: var(--bright-red-orange);
+    border-color: var(--bright-red-orange);
+    box-shadow: 0 0 0 2px rgba(213, 80, 54, 0.20);
+    outline: none;
+}
+
+.calendar-location-pill:active {
+    transform: translateY(1px);
+}
+
+@media (max-width: 640px) {
+    .calendar-location-pill {
+        max-width: 100%;
+        white-space: normal;
+    }
+}

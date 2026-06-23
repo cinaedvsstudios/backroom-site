@@ -1,4 +1,4 @@
-// Backroom Events calendar v0.98 — city, date, vibe filters and event-card image rules.
+// Backroom Events calendar v0.99 — location pill, date, vibe filters and event-card image rules.
 (function () {
     'use strict';
 
@@ -659,24 +659,9 @@
         }
     }
 
-    function renderCityPicker() {
-        const countries = countryOptions();
-        const cities = cityOptionRecords();
-        const selectedValue = state.location.scope === 'country'
-            ? `country::${state.location.country}`
-            : state.location.scope === 'city'
-                ? `city::${encodeURIComponent(state.location.city)}::${encodeURIComponent(state.location.country || '')}`
-                : 'all';
-
-        const countryOptionsHtml = countries.length
-            ? `<optgroup label="Countries">${countries.map(country => `<option value="country::${escapeHTML(country)}" ${selectedValue === `country::${country}` ? 'selected' : ''}>All ${escapeHTML(country)}</option>`).join('')}</optgroup>`
-            : '';
-
-        const cityOptionsHtml = cities.length
-            ? `<optgroup label="Cities">${cities.map(city => `<option value="${escapeHTML(city.value)}" ${selectedValue === city.value ? 'selected' : ''}>${escapeHTML(city.label)}</option>`).join('')}</optgroup>`
-            : '';
-
-        return `<label class="calendar-city-label"><span class="calendar-city-prefix display-font">LOCATION</span><span class="calendar-city-control"><select id="calendar-location-select" class="calendar-city-select calendar-city-pulse" aria-label="Set the shared location for events and venues"><option value="all" ${selectedValue === 'all' ? 'selected' : ''}>All locations</option>${countryOptionsHtml}${cityOptionsHtml}</select></span></label>`;
+    function renderLocationPill() {
+        const label = getLocationLabel() || 'All Cities';
+        return `<button type="button" id="calendar-location-pill" class="calendar-location-pill pill-btn" aria-label="Change shared location">${escapeHTML(label)}</button>`;
     }
 
 
@@ -747,9 +732,7 @@
     function render() {
         const container = ensureContainer();
         ensureSelectedDate();
-        const locationLabel = getLocationLabel();
-        const title = locationLabel ? `📅 EVENTS IN ${escapeHTML(locationLabel.toUpperCase())}` : '📅 EVENTS';
-        container.innerHTML = `<div class="calendar-page"><div class="calendar-title-row"><div class="calendar-title-block"><h1 class="display-font">${title}</h1>${renderCityPicker()}<p>Choose a date to see what is on.</p></div>${renderFilterStrip()}</div><div class="calendar-layout"><section class="calendar-selector"><div class="calendar-month-row"><button type="button" class="calendar-month-button" id="calendar-prev-month" aria-label="Previous month">‹</button><h2 class="display-font">${monthLabel()}</h2><button type="button" class="calendar-month-button" id="calendar-next-month" aria-label="Next month">›</button></div>${renderGrid()}<p class="calendar-key"><span class="calendar-dot"></span> Events listed on this date</p></section>${renderPanel()}</div></div>`;
+        container.innerHTML = `<div class="calendar-page"><div class="calendar-title-row"><div class="calendar-title-block"><h1 class="display-font">📅 EVENTS IN</h1>${renderLocationPill()}<p>Choose a date to see what is on.</p></div>${renderFilterStrip()}</div><div class="calendar-layout"><section class="calendar-selector"><div class="calendar-month-row"><button type="button" class="calendar-month-button" id="calendar-prev-month" aria-label="Previous month">‹</button><h2 class="display-font">${monthLabel()}</h2><button type="button" class="calendar-month-button" id="calendar-next-month" aria-label="Next month">›</button></div>${renderGrid()}<p class="calendar-key"><span class="calendar-dot"></span> Events listed on this date</p></section>${renderPanel()}</div></div>`;
         bindControls();
     }
 
@@ -779,10 +762,14 @@
             ensureSelectedDate();
             render();
         });
-        document.getElementById('calendar-location-select')?.addEventListener('change', event => {
-            setSharedLocationFromSelection(event.target.value);
-            ensureSelectedDate();
-            render();
+        document.getElementById('calendar-location-pill')?.addEventListener('click', () => {
+            if (typeof window.openBackroomLocationModal === 'function') {
+                window.openBackroomLocationModal();
+                return;
+            }
+
+            // Fallback for an older app.js: reuse the normal top-bar location control.
+            document.getElementById('btn-location')?.click();
         });
         document.querySelectorAll('[data-calendar-filter]').forEach(button => button.addEventListener('click', () => activateFilter(button.dataset.calendarFilter)));
         document.querySelectorAll('[data-calendar-date]').forEach(button => button.addEventListener('click', () => {

@@ -1,5 +1,5 @@
 // --- Application State ---
-const APP_VERSION = "v1.08";
+const APP_VERSION = "v1.09";
 const APP_DATE = "23 June 2026";
 
 let systemInfo = {}, designTheme = {}, venues = [], events = [];
@@ -4770,6 +4770,10 @@ function updateLocationDisplay(loc) {
     display.textContent = label ? `Current: ${label}` : 'No location set.';
 }
 
+
+window.openBackroomLocationModal = function() {
+    openLocationModal();
+};
 
 window.saveBackroomLocation = function() {
     saveLocation();
