@@ -1,5 +1,5 @@
 // --- Application State ---
-const APP_VERSION = "v1.03";
+const APP_VERSION = "v1.04";
 const APP_DATE = "23 June 2026";
 
 let systemInfo = {}, designTheme = {}, venues = [], events = [];
@@ -78,6 +78,137 @@ function isCruisingAreaVenue(venue) {
 
 function isMenOnlyTaggedVenue(venue) {
     return hasExactVibeTag(venue?.Vibe_Tags, 'Men Only');
+}
+
+
+function getCruisingAreaMapPointArray(venue) {
+    const raw = venue?.Map_Points;
+    if (Array.isArray(raw)) return raw;
+    if (typeof raw === 'string' && raw.trim().startsWith('[')) {
+        try {
+            const parsed = JSON.parse(raw);
+            return Array.isArray(parsed) ? parsed : [];
+        } catch (error) {
+            return [];
+        }
+    }
+    return [];
+}
+
+function normaliseCoordinate(value) {
+    const number = Number.parseFloat(String(value ?? '').trim());
+    return Number.isFinite(number) ? String(number) : '';
+}
+
+function coordinatesFromGoogleMapsURL(value) {
+    const decoded = decodeURIComponent(String(value || '').replace(/\+/g, ' '));
+    const patterns = [
+        /@(-?\d+(?:\.\d+)?),\s*(-?\d+(?:\.\d+)?)/,
+        /[?&](?:q|query|ll|center)=(-?\d+(?:\.\d+)?),\s*(-?\d+(?:\.\d+)?)/i,
+        /\/search\/(-?\d+(?:\.\d+)?),\s*(-?\d+(?:\.\d+)?)/i
+    ];
+
+    for (const pattern of patterns) {
+        const match = decoded.match(pattern);
+        if (match) return { latitude: normaliseCoordinate(match[1]), longitude: normaliseCoordinate(match[2]) };
+    }
+    return { latitude: '', longitude: '' };
+}
+
+function getMapPointCoordinates(point) {
+    const latitude = normaliseCoordinate(point?.Latitude);
+    const longitude = normaliseCoordinate(point?.Longitude);
+    if (latitude && longitude) return { latitude, longitude };
+    return coordinatesFromGoogleMapsURL(point?.Google_Maps_URL);
+}
+
+function getCruisingAreaMapLinks(venue) {
+    const mainPoint = {
+        Label: '',
+        Google_Maps_URL: String(venue?.Google_Maps_URL || '').trim(),
+        Latitude: venue?.Latitude,
+        Longitude: venue?.Longitude
+    };
+
+    const points = [mainPoint, ...getCruisingAreaMapPointArray(venue)];
+    const seen = new Set();
+
+    return points.map((point, index) => {
+        const coordinates = getMapPointCoordinates(point);
+        let url = String(point?.Google_Maps_URL || '').trim();
+
+        if (!url && coordinates.latitude && coordinates.longitude) {
+            url = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${coordinates.latitude},${coordinates.longitude}`)}`;
+        }
+        if (!url || seen.has(url)) return null;
+        seen.add(url);
+
+        const coordinateLabel = coordinates.latitude && coordinates.longitude
+            ? `${coordinates.latitude}, ${coordinates.longitude}`
+            : String(point?.Label || venue?.Native_Map_Query || venue?.Address || venue?.Name || 'Map search').trim();
+
+        return { url, label: coordinateLabel, index };
+    }).filter(Boolean);
+}
+
+function hasGenuineCruisingAreaTiming(venue) {
+    const days = String(venue?.Opening_Days || '').trim();
+    const open = String(venue?.Opening_Open_Time || '').trim();
+    const close = String(venue?.Opening_Close_Time || '').trim();
+    const notes = String(venue?.Opening_Notes || '').trim();
+    const combined = [days, open, close, notes].join(' ');
+
+    const clockTime = /\b(?:[01]?\d|2[0-3])[:.][0-5]\d\b/.test(combined);
+    const namedSchedule = /\b(?:mon|tue|wed|thu|fri|sat|sun|daily|every day|weekdays|weekends|24\/?7|24 hours|sunrise|sunset|dawn|dusk|gate(?:s)?\s+(?:open|close)|locked?)\b/i.test(combined);
+
+    return clockTime || namedSchedule;
+}
+
+function getCruisingAreaHoursText(venue) {
+    if (!hasGenuineCruisingAreaTiming(venue)) return 'N/A';
+
+    const days = String(venue?.Opening_Days || '').trim();
+    const open = String(venue?.Opening_Open_Time || '').trim();
+    const close = String(venue?.Opening_Close_Time || '').trim();
+    const notes = String(venue?.Opening_Notes || '').trim();
+
+    const timeRange = [open, close].filter(Boolean).join(open && close ? ' – ' : '');
+    const main = [days, timeRange].filter(Boolean).join(' ');
+    return [main, notes].filter(Boolean).join(main && notes ? ' — ' : '') || 'N/A';
+}
+
+function stripGenericCruisingAreaRules(value) {
+    const text = String(value || '').trim();
+    if (!text) return '';
+
+    const genericRulePatterns = [
+        /no gps link available yet/i,
+        /send it to us/i,
+        /do not enter (?:private|fenced|protected)/i,
+        /keep anything sexual out of public view/i,
+        /keep the place comfortable for everyone/i,
+        /access can change with local rules/i,
+        /conditions and local patterns can change/i,
+        /treat it as a starting point rather than a guarantee/i
+    ];
+
+    const sentences = text.match(/[^.!?]+[.!?]+|[^.!?]+$/g) || [text];
+    return sentences
+        .map(sentence => sentence.trim())
+        .filter(sentence => sentence && !genericRulePatterns.some(pattern => pattern.test(sentence)))
+        .join(' ')
+        .trim();
+}
+
+function renderCruisingAreaMapLinks(venue) {
+    const links = getCruisingAreaMapLinks(venue);
+    if (!links.length) {
+        return `<div class="cruising-area-gps-links"><div class="cruising-area-gps-line">📍 <strong>GPS Link:</strong> No GPS Link available yet…</div></div>`;
+    }
+
+    return `<div class="cruising-area-gps-links">${links.map(link => `
+        <div class="cruising-area-gps-line">📍 <strong>GPS Link:</strong> <a href="${escapeHTML(link.url)}" target="_blank" rel="noopener noreferrer">${escapeHTML(link.label)}</a></div>
+    `).join('')}</div>`;
 }
 
 // Pride artwork is only for general Pride events. Men Only, Cruising and Darkroom
@@ -4080,6 +4211,8 @@ function getRatingCells(val, type) {
 }
 
 function openVenueModal(venue) {
+    const isCruisingAreaDetail = isCruisingAreaVenue(venue);
+    venueModal?.classList.toggle('venue-modal--cruising-area', isCruisingAreaDetail);
     void recordCommunityVenueView(venue?.Venue_ID);
     const mTitle = document.getElementById('modal-title');
     if(mTitle) mTitle.innerText = venue.Name;
@@ -4170,8 +4303,17 @@ function openVenueModal(venue) {
         });
         eventsHtml += `</div>`;
     }
+    const cruisingAreaMapLinks = isCruisingAreaDetail ? renderCruisingAreaMapLinks(venue) : '';
+    const cruisingAreaHours = isCruisingAreaDetail ? getCruisingAreaHoursText(venue) : '';
+
     let openingHtml = '';
-    if (venue.Opening_Days || venue.Opening_Open_Time) {
+    if (isCruisingAreaDetail) {
+        openingHtml = `
+            <div class="cruising-area-hours"><strong>Hours:</strong> ${escapeHTML(cruisingAreaHours)}</div>
+            ${cruisingAreaMapLinks}
+            <hr class="cruising-area-about-divider">
+        `;
+    } else if (venue.Opening_Days || venue.Opening_Open_Time) {
         openingHtml = `
             <div style="margin-bottom: 15px; color: var(--text-light); line-height: 1.5;">
                 <strong style="color: #fff;">Hours:</strong> ${venue.Opening_Days || ''} ${venue.Opening_Open_Time || ''} - ${venue.Opening_Close_Time || ''}<br>
@@ -4181,8 +4323,12 @@ function openVenueModal(venue) {
         `;
     }
 
+    const aboutDescription = isCruisingAreaDetail
+        ? stripGenericCruisingAreaRules(venue.Description)
+        : venue.Description;
+
     dynamicLayout.innerHTML = `
-        <div class="modal-top-split">
+        <div class="modal-top-split${isCruisingAreaDetail ? ' cruising-area-detail-top' : ''}">
             <div class="modal-left-col">
                 <div class="modal-image-container">
                     <img id="modal-venue-image" class="venue-image centered-image" src="${modalImageSource}" onerror="this.onerror=null; this.src='${modalImageFallback}'" data-fallback-image="${modalImageFallback}" data-id="${venue.Venue_ID}" data-index="1" title="Tap for next image">
@@ -4195,7 +4341,7 @@ function openVenueModal(venue) {
                 </div>
             </div>
 
-            <div class="modal-right-col">
+            <div class="modal-right-col${isCruisingAreaDetail ? ' cruising-area-detail-panel' : ''}">
                 <div style="display:flex; align-items:flex-start; gap:8px; margin-bottom:10px; flex-direction: column;">
                     <div style="display:flex; align-items:center; gap:8px;">
                         <button id="btn-map" class="btn secondary-btn pill-btn" style="padding: 2px 8px; font-size: 0.75rem; width: auto; flex-shrink: 0;">🗺️ Directions</button>
@@ -4216,7 +4362,7 @@ function openVenueModal(venue) {
         <div class="full-width-about" style="background-color: var(--near-black); padding: 20px; border-radius: var(--radius-card); margin-bottom: 15px; margin-top: 15px;">
             <h3 class="display-font" style="color: var(--primary-blue); margin-bottom:10px;">ABOUT</h3>
             ${openingHtml}
-            <div style="color: #fff; line-height: 1.5;">${formatAboutText(venue.Description)}</div>
+            <div style="color: #fff; line-height: 1.5;">${formatAboutText(aboutDescription)}</div>
         </div>
         
         ${eventsHtml}

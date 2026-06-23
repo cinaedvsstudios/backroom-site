@@ -1,4 +1,4 @@
-/* Backroom public stylesheet v0.96 */
+/* Backroom public stylesheet v0.97 */
 :root {
     --bg-color: #000000;
     --primary-blue: #2CA8D4;
@@ -1674,3 +1674,83 @@ td.hidden-col * { display: none !important; }
     .community-rating-option { min-height: 60px; }
 }
 
+
+
+/* v0.97 — Cruising Area detail view: burgundy outer shell with dark information panels. */
+#venue-modal.venue-modal--cruising-area .venue-modal-style,
+#venue-modal.venue-modal--cruising-area .modal-header,
+#venue-modal.venue-modal--cruising-area .modal-body {
+    background: linear-gradient(180deg, #4a1118 0%, var(--dark-red) 100%);
+}
+
+#venue-modal.venue-modal--cruising-area .venue-modal-style {
+    border-color: var(--bright-red-orange);
+    box-shadow: 0 0 18px rgba(213, 80, 54, 0.34);
+}
+
+#venue-modal.venue-modal--cruising-area .modal-right-col,
+#venue-modal.venue-modal--cruising-area .desktop-stats-container,
+#venue-modal.venue-modal--cruising-area .full-width-about,
+#venue-modal.venue-modal--cruising-area .ratings-table {
+    background-color: var(--near-black) !important;
+    border: 1px solid var(--panel-mid);
+}
+
+#venue-modal.venue-modal--cruising-area .modal-right-col {
+    padding: 20px;
+    border-radius: var(--radius-card);
+}
+
+#venue-modal.venue-modal--cruising-area .modal-image-container {
+    padding: 1px;
+    background: var(--near-black);
+    border: 1px solid var(--panel-mid);
+    border-radius: var(--radius-card);
+}
+
+#venue-modal.venue-modal--cruising-area .modal-image-container img {
+    display: block;
+}
+
+.cruising-area-hours,
+.cruising-area-gps-line {
+    color: var(--text-light);
+    line-height: 1.55;
+    margin-bottom: 9px;
+}
+
+.cruising-area-hours strong,
+.cruising-area-gps-line strong {
+    color: #fff;
+}
+
+.cruising-area-gps-links {
+    display: grid;
+    gap: 6px;
+    margin: 0 0 14px;
+}
+
+.cruising-area-gps-line a {
+    color: var(--primary-blue);
+    font-weight: 700;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+}
+
+.cruising-area-gps-line a:hover,
+.cruising-area-gps-line a:focus-visible {
+    color: #fff;
+}
+
+.cruising-area-about-divider {
+    border: 0;
+    height: 1px;
+    background: var(--bright-red-orange);
+    margin: 15px 0;
+}
+
+@media (max-width: 1023px) {
+    #venue-modal.venue-modal--cruising-area .modal-right-col {
+        padding: 15px;
+    }
+}

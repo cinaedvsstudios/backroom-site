@@ -118,6 +118,42 @@
         .error { max-width: 760px; margin: 80px auto; padding: 28px; border: 1px solid var(--red); border-radius: 16px; background: #1f1418; color: #fff; }
         .error h1 { color: #ff9f90; font-size: 2rem; }
 
+
+        .preview-shell.preview-cruising-area {
+            border: 2px solid var(--red);
+            background: linear-gradient(180deg, #4a1118 0%, #871300 100%);
+        }
+        .preview-shell.preview-cruising-area .record-header,
+        .preview-shell.preview-cruising-area .record-content {
+            background: transparent;
+        }
+        .preview-shell.preview-cruising-area .media-panel,
+        .preview-shell.preview-cruising-area .info-panel,
+        .preview-shell.preview-cruising-area .about-panel,
+        .preview-shell.preview-cruising-area .events-panel {
+            background: var(--surface-deep);
+        }
+        .preview-shell.preview-cruising-area .cruising-hours,
+        .preview-shell.preview-cruising-area .cruising-gps-line {
+            color: var(--muted);
+            line-height: 1.45;
+            margin: 0 0 9px;
+        }
+        .preview-shell.preview-cruising-area .cruising-hours strong,
+        .preview-shell.preview-cruising-area .cruising-gps-line strong { color: #fff; }
+        .preview-shell.preview-cruising-area .cruising-gps-line a {
+            color: var(--cyan);
+            font-weight: 700;
+            text-decoration: underline;
+            text-underline-offset: 2px;
+        }
+        .preview-shell.preview-cruising-area .cruising-divider {
+            border: 0;
+            height: 1px;
+            background: var(--red);
+            margin: 16px 0;
+        }
+
         @media (max-width: 780px) {
             .preview-bar { align-items: flex-start; }
             .page { padding: 12px; }
@@ -311,17 +347,120 @@
                 return !['hold', 'flag', 'closed', 'cancelled', 'canceled'].includes(status);
             }
 
+
+            function isCruisingArea(venue) {
+                return String(venue?.Category || '').trim().toLowerCase() === 'cruising area';
+            }
+
+            function normaliseCoordinate(value) {
+                const number = Number.parseFloat(String(value ?? '').trim());
+                return Number.isFinite(number) ? String(number) : '';
+            }
+
+            function coordinatesFromMapURL(value) {
+                const decoded = decodeURIComponent(String(value || '').replace(/\+/g, ' '));
+                const patterns = [
+                    /@(-?\d+(?:\.\d+)?),\s*(-?\d+(?:\.\d+)?)/,
+                    /[?&](?:q|query|ll|center)=(-?\d+(?:\.\d+)?),\s*(-?\d+(?:\.\d+)?)/i,
+                    /\/search\/(-?\d+(?:\.\d+)?),\s*(-?\d+(?:\.\d+)?)/i
+                ];
+                for (const pattern of patterns) {
+                    const match = decoded.match(pattern);
+                    if (match) return { latitude: normaliseCoordinate(match[1]), longitude: normaliseCoordinate(match[2]) };
+                }
+                return { latitude: '', longitude: '' };
+            }
+
+            function mapPointsFor(venue) {
+                let extra = venue?.Map_Points;
+                if (typeof extra === 'string' && extra.trim().startsWith('[')) {
+                    try { extra = JSON.parse(extra); } catch { extra = []; }
+                }
+                if (!Array.isArray(extra)) extra = [];
+
+                const all = [{
+                    Label: '',
+                    Google_Maps_URL: venue?.Google_Maps_URL,
+                    Latitude: venue?.Latitude,
+                    Longitude: venue?.Longitude
+                }, ...extra];
+                const seen = new Set();
+
+                return all.map(point => {
+                    let latitude = normaliseCoordinate(point?.Latitude);
+                    let longitude = normaliseCoordinate(point?.Longitude);
+                    let url = String(point?.Google_Maps_URL || '').trim();
+                    if ((!latitude || !longitude) && url) {
+                        const parsed = coordinatesFromMapURL(url);
+                        latitude = latitude || parsed.latitude;
+                        longitude = longitude || parsed.longitude;
+                    }
+                    if (!url && latitude && longitude) {
+                        url = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${latitude},${longitude}`)}`;
+                    }
+                    if (!url || seen.has(url)) return null;
+                    seen.add(url);
+                    const label = latitude && longitude
+                        ? `${latitude}, ${longitude}`
+                        : String(point?.Label || venue?.Native_Map_Query || venue?.Address || venue?.Name || 'Map search').trim();
+                    return { url, label };
+                }).filter(Boolean);
+            }
+
+            function hasCruisingTiming(venue) {
+                const text = [venue?.Opening_Days, venue?.Opening_Open_Time, venue?.Opening_Close_Time, venue?.Opening_Notes].filter(Boolean).join(' ');
+                return /\b(?:[01]?\d|2[0-3])[:.][0-5]\d\b/.test(text)
+                    || /\b(?:mon|tue|wed|thu|fri|sat|sun|daily|every day|weekdays|weekends|24\/?7|24 hours|sunrise|sunset|dawn|dusk|gate(?:s)?\s+(?:open|close)|locked?)\b/i.test(text);
+            }
+
+            function cruisingHoursText(venue) {
+                if (!hasCruisingTiming(venue)) return 'N/A';
+                const days = String(venue?.Opening_Days || '').trim();
+                const open = String(venue?.Opening_Open_Time || '').trim();
+                const close = String(venue?.Opening_Close_Time || '').trim();
+                const note = String(venue?.Opening_Notes || '').trim();
+                const range = [open, close].filter(Boolean).join(open && close ? ' – ' : '');
+                const main = [days, range].filter(Boolean).join(' ');
+                return [main, note].filter(Boolean).join(main && note ? ' — ' : '') || 'N/A';
+            }
+
+            function stripGenericCruisingText(value) {
+                const text = String(value || '').trim();
+                const generic = [
+                    /no gps link available yet/i,
+                    /send it to us/i,
+                    /do not enter (?:private|fenced|protected)/i,
+                    /keep anything sexual out of public view/i,
+                    /keep the place comfortable for everyone/i,
+                    /access can change with local rules/i,
+                    /conditions and local patterns can change/i,
+                    /treat it as a starting point rather than a guarantee/i
+                ];
+                const sentences = text.match(/[^.!?]+[.!?]+|[^.!?]+$/g) || [text];
+                return sentences.filter(sentence => !generic.some(pattern => pattern.test(sentence))).join(' ').trim();
+            }
+
+            function cruisingDetailLines(venue) {
+                const points = mapPointsFor(venue);
+                const gps = points.length
+                    ? points.map(point => `<div class="cruising-gps-line">📍 <strong>GPS Link:</strong> <a href="${escapeHTML(point.url)}" target="_blank" rel="noopener noreferrer">${escapeHTML(point.label)}</a></div>`).join('')
+                    : '<div class="cruising-gps-line">📍 <strong>GPS Link:</strong> No GPS Link available yet…</div>';
+                return `<div class="cruising-hours"><strong>Hours:</strong> ${escapeHTML(cruisingHoursText(venue))}</div>${gps}<hr class="cruising-divider">`;
+            }
+
             function renderVenue(venue, events) {
                 const status = String(venue?.Status || 'Live').trim() || 'Live';
                 const image = String(venue?.Image_URL || '').trim() || `Venue_images/${venue?.Venue_ID || ''}-01.jpg`;
                 const relatedEvents = (events || []).filter(event => String(event?.Venue_ID || '') === String(venue?.Venue_ID || '') && activeEvent(event));
                 const lastUpdated = formatDate(venue?.Last_Updated);
+                const cruisingArea = isCruisingArea(venue);
                 const opening = venue?.Opening_Days || venue?.Opening_Open_Time || venue?.Opening_Close_Time || venue?.Opening_Notes;
+                const aboutText = cruisingArea ? stripGenericCruisingText(venue?.Description) : venue?.Description;
 
                 document.title = `${venue?.Name || 'Venue'} — Backroom Draft Preview`;
                 document.getElementById('preview-kicker').textContent = '👁️ DRAFT VENUE PREVIEW';
 
-                return `<section class="preview-shell">
+                return `<section class="preview-shell${cruisingArea ? ' preview-cruising-area' : ''}">
                     <header class="record-header">
                         <h1>${escapeHTML(venue?.Name || 'Unnamed Venue')}</h1>
                         <span class="status ${normalise(status)}">${escapeHTML(status)}</span>
@@ -343,8 +482,8 @@
                         </div>
                         <section class="about-panel">
                             <h2>About</h2>
-                            ${opening ? `<div class="opening"><strong>Hours:</strong> ${escapeHTML([venue?.Opening_Days, venue?.Opening_Open_Time, venue?.Opening_Close_Time].filter(Boolean).join(' '))}${venue?.Opening_Notes ? `<em>${escapeHTML(venue.Opening_Notes)}</em>` : ''}</div>` : ''}
-                            <div class="formatted-copy">${formatDescription(venue?.Description)}</div>
+                            ${cruisingArea ? cruisingDetailLines(venue) : (opening ? `<div class="opening"><strong>Hours:</strong> ${escapeHTML([venue?.Opening_Days, venue?.Opening_Open_Time, venue?.Opening_Close_Time].filter(Boolean).join(' '))}${venue?.Opening_Notes ? `<em>${escapeHTML(venue.Opening_Notes)}</em>` : ''}</div>` : '')}
+                            <div class="formatted-copy">${formatDescription(aboutText)}</div>
                         </section>
                         ${relatedEvents.length ? `<section class="events-panel"><h2>📅 Upcoming Events</h2><div class="event-list">${relatedEvents.map(event => `<article class="event-mini">${eventDateBadge(event)}<div><h3>${escapeHTML(event?.Event_Name || 'Event')}</h3><p class="event-meta">${escapeHTML([formatTimeRange(event), event?.Recurrence_Type === 'Weekly' && event?.Recurrence_Day ? `Every ${event.Recurrence_Day}` : ''].filter(Boolean).join(' · '))}</p></div></article>`).join('')}</div></section>` : ''}
                     </div>
